@@ -895,20 +895,18 @@
   </section>
 
   <section class="card score-card">
-    <h2>Loch-Eingabe</h2>
-    <div class="body">
-      <p class="mobile-hint">Tipp: Auf dem Handy die Tabelle seitlich wischen. Der Setup-Bereich ist oben einklappbar.</p>
-      <p class="help">Eingabe nur Brutto-Schläge. Punkte und Netto werden automatisch nach Kopenhagen berechnet.</p>
-      <div class="actions">
-  <button class="secondary" type="button" id="voiceBtn">🎙️ Score sprechen</button>
-</div>
-<div id="voiceStatus" class="help" style="margin-top:8px"></div>
+  <h2>Loch-Eingabe</h2>
+  <div class="body">
+    <div class="actions">
+      <button class="secondary" type="button" id="voiceBtn">🎙️ Score sprechen</button>
     </div>
-    <div class="table-wrap">
-      <table id="scoreTable"></table>
-    </div>
-    <div id="mobileCards" class="mobile-cards"></div>
-  </section>
+    <div id="voiceStatus" class="help" style="margin-top:8px"></div>
+  </div>
+  <div class="table-wrap">
+    <table id="scoreTable"></table>
+  </div>
+  <div id="mobileCards" class="mobile-cards"></div>
+</section>
 </main>
 
 <button class="floating-summary-btn" id="summaryJumpBtn" type="button">🏆 Stand</button>
@@ -1008,6 +1006,17 @@ const speechNumberWords = {
   "achtzehn": 18,
   "neunzehn": 19,
   "zwanzig": 20
+};
+
+const speechPlayerAliases = {
+  "olaf": ["olaf", "olaff", "ola", "oder"],
+  "frank": ["frank", "franck", "franz"],
+  "dirk": ["dirk", "dierk", "dir", "derk"],
+  "thomas": ["thomas", "tomas", "tommes", "tom"],
+  "astrid": ["astrid", "astrit", "astri"],
+  "helge": ["helge", "helga", "hellge", "helde"],
+  "caroline": ["caroline", "karoline", "carolin", "karolin", "caro", "karo"],
+  "alexander": ["alexander", "alex", "aleksander", "aleks", "alexandra"]
 };
 
 function getCourse() {
@@ -2094,28 +2103,49 @@ function findSpokenHole(tokens) {
   return null;
 }
 
+function getAliasesForPlayer(playerName) {
+  const normalizedName = normalizeSpeechText(playerName);
+  const firstName = normalizedName.split(" ")[0];
+
+  let aliases = [normalizedName, firstName];
+
+  if (speechPlayerAliases[firstName]) {
+    aliases = aliases.concat(speechPlayerAliases[firstName]);
+  }
+
+  aliases = aliases
+    .map(normalizeSpeechText)
+    .filter(Boolean);
+
+  return Array.from(new Set(aliases));
+}
+
 function findNumberAfterPlayer(tokens, playerName) {
-  const nameTokens = normalizeSpeechText(playerName).split(" ").filter(Boolean);
-  if (nameTokens.length === 0) return null;
+  const aliases = getAliasesForPlayer(playerName);
 
-  for (let i = 0; i <= tokens.length - nameTokens.length; i++) {
-    let matches = true;
+  for (const alias of aliases) {
+    const nameTokens = alias.split(" ").filter(Boolean);
+    if (nameTokens.length === 0) continue;
 
-    for (let j = 0; j < nameTokens.length; j++) {
-      if (tokens[i + j] !== nameTokens[j]) {
-        matches = false;
-        break;
+    for (let i = 0; i <= tokens.length - nameTokens.length; i++) {
+      let matches = true;
+
+      for (let j = 0; j < nameTokens.length; j++) {
+        if (tokens[i + j] !== nameTokens[j]) {
+          matches = false;
+          break;
+        }
       }
-    }
 
-    if (!matches) continue;
+      if (!matches) continue;
 
-    const start = i + nameTokens.length;
-    const end = Math.min(tokens.length, start + 5);
+      const start = i + nameTokens.length;
+      const end = Math.min(tokens.length, start + 5);
 
-    for (let k = start; k < end; k++) {
-      const n = speechTokenToNumber(tokens[k]);
-      if (n !== null && n >= 1 && n <= 20) return n;
+      for (let k = start; k < end; k++) {
+        const n = speechTokenToNumber(tokens[k]);
+        if (n !== null && n >= 1 && n <= 20) return n;
+      }
     }
   }
 
