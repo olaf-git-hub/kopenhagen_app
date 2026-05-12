@@ -1341,6 +1341,7 @@ function buildSetup() {
       state.players[i].allowance = Math.max(0, toIntOrZero(allowance.value));
       saveState(false);
       buildTable();
+      renderMobileCards();
       renderSummary();
       renderHandicapPreview();
     });
@@ -1489,6 +1490,7 @@ function buildTable() {
   table.appendChild(thead);
 
   const tbody = document.createElement("tbody");
+
   for (const h of getCourseHoles()) {
     const key = String(h.hole);
     const data = state.holes[key];
@@ -1498,10 +1500,13 @@ function buildTable() {
 
     const tdHole = document.createElement("td");
     tdHole.className = "hole-meta";
+
     let meta = "Loch " + h.hole;
     let details = [];
+
     if (course.hasPar && h.par !== null && h.par !== undefined) details.push("PAR " + h.par);
     if (course.hasHcp && h.hcp !== null && h.hcp !== undefined) details.push("HCP " + h.hcp);
+
     tdHole.innerHTML = meta + (details.length ? "<div class='hole-small'>" + details.join(" · ") + "</div>" : "");
     tr.appendChild(tdHole);
 
@@ -1514,6 +1519,7 @@ function buildTable() {
       const grossLab = document.createElement("div");
       grossLab.className = "mini-label";
       grossLab.textContent = "Brutto";
+
       const grossInput = document.createElement("input");
       grossInput.type = "number";
       grossInput.inputMode = "numeric";
@@ -1523,24 +1529,31 @@ function buildTable() {
       grossInput.dataset.player = String(i);
       grossInput.value = data.gross[i] === null ? "" : String(data.gross[i]);
       grossInput.addEventListener("input", onScoreInput);
+
       grossWrap.appendChild(grossLab);
       grossWrap.appendChild(grossInput);
-
       scorebox.appendChild(grossWrap);
 
       const points = document.createElement("div");
       points.className = "points-cell";
 
-      const strokeText = result.strokes[i] > 0 ? "<span class='stroke-note'>Vorgabe " + result.strokes[i] + "</span>" : "";
+      const scoreDetail = result.strokes[i] > 0
+        ? data.gross[i] + " → " + result.netto[i]
+        : String(data.gross[i]);
+
+      const strokeText = result.strokes[i] > 0
+        ? "<span class='stroke-note'>Vorgabe " + result.strokes[i] + "</span>"
+        : "";
 
       if (result.complete) {
         points.innerHTML = formatNum(result.points[i]) + " P." +
-          "<div class='points-detail'>" + data.gross[i] + " → " + result.netto[i] + "<br>" + strokeText + "</div>";
+          "<div class='points-detail'>" + scoreDetail + (strokeText ? "<br>" + strokeText : "") + "</div>";
       } else if (data.gross[i] !== null) {
         points.innerHTML = "–" +
-          "<div class='points-detail'>" + data.gross[i] + " → " + result.netto[i] + "<br>" + strokeText + "</div>";
+          "<div class='points-detail'>" + scoreDetail + (strokeText ? "<br>" + strokeText : "") + "</div>";
       } else {
-        points.innerHTML = "–" + (strokeText ? "<div class='points-detail'>" + strokeText + "</div>" : "");
+        points.innerHTML = "–" +
+          (strokeText ? "<div class='points-detail'>" + strokeText + "</div>" : "");
       }
 
       td.appendChild(scorebox);
@@ -1617,15 +1630,19 @@ function renderMobileCards() {
       const points = document.createElement("div");
       points.className = "mobile-player-points";
 
-      const strokeText = result.strokes[i] > 0 ? " · V" + result.strokes[i] : "";
+     const scoreDetail = result.strokes[i] > 0
+      ? data.gross[i] + "→" + result.netto[i]
+      : String(data.gross[i]);
 
-      if (result.complete) {
-        points.innerHTML = formatNum(result.points[i]) + " P." +
-          "<div class='mobile-player-detail'>" + data.gross[i] + "→" + result.netto[i] + strokeText + "</div>";
-      } else if (data.gross[i] !== null) {
-        points.innerHTML = "–" +
-          "<div class='mobile-player-detail'>" + data.gross[i] + "→" + result.netto[i] + strokeText + "</div>";
-      } else {
+    const strokeText = result.strokes[i] > 0 ? " · V" + result.strokes[i] : "";
+
+    if (result.complete) {
+      points.innerHTML = formatNum(result.points[i]) + " P." +
+        "<div class='mobile-player-detail'>" + scoreDetail + strokeText + "</div>";
+    } else if (data.gross[i] !== null) {
+      points.innerHTML = "–" +
+        "<div class='mobile-player-detail'>" + scoreDetail + strokeText + "</div>";
+    } else {
         points.innerHTML = "–" + (strokeText ? "<div class='mobile-player-detail'>" + strokeText.substring(3) + "</div>" : "");
       }
 
@@ -1831,6 +1848,7 @@ function importData() {
     saveState(true);
     buildSetup();
     buildTable();
+    renderMobileCards();
     renderSummary();
     showToast("Import übernommen");
   } catch (e) {
