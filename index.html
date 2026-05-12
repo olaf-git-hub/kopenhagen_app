@@ -35,13 +35,13 @@
     }
 
     header {
-      position: sticky;
-      top: 0;
-      z-index: 30;
-      background: rgba(245, 247, 242, 0.94);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--line);
-      padding: env(safe-area-inset-top) 10px 12px 10px 12px;
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    background: rgba(245, 247, 242, 0.94);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--line);
+    padding: calc(env(safe-area-inset-top) + 10px) 10px 12px 10px;
     }
 
     .topbar {
@@ -2094,6 +2094,7 @@ function findSpokenHole(tokens) {
   const holeWords = [
     "loch",
     "noch",
+    "Noch",
     "lok",
     "lock",
     "lochh",
