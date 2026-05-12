@@ -2091,11 +2091,29 @@ function getNextIncompleteHoleNumber() {
 }
 
 function findSpokenHole(tokens) {
+
+  const holeWords = [
+    "loch",
+    "noch",
+    "lok",
+    "lock",
+    "lochh",
+    "luch",
+    "bahn",
+    "hole",
+    "whole"
+  ];
+
   for (let i = 0; i < tokens.length; i++) {
-    if (tokens[i] === "loch" || tokens[i] === "bahn") {
+
+    if (holeWords.includes(tokens[i])) {
+
       if (i + 1 < tokens.length) {
         const n = speechTokenToNumber(tokens[i + 1]);
-        if (n >= 1 && n <= 18) return n;
+
+        if (n >= 1 && n <= 18) {
+          return n;
+        }
       }
     }
   }
