@@ -823,13 +823,15 @@
 <header>
   <div class="topbar">
     <div>
-      <h1>🏌️ Kopenhagen Golf Rechner</h1>
+      <h1>🏌️ Kopenhagen</h1>
       <div class="subtitle" id="appBuildInfo">Build wird geladen...</div>
+      <div id="voiceStatus" class="subtitle"></div>
     </div>
     <div class="actions">
-      <button class="secondary small" id="saveBtn" type="button">Speichern</button>
-      <button class="danger small" id="resetBtn" type="button">Neue Runde</button>
-    </div>
+    <button class="secondary small" id="voiceBtn" type="button">🎙️</button>
+    <button class="secondary small" id="saveBtn" type="button">Speichern</button>
+    <button class="danger small" id="resetBtn" type="button">Neue Runde</button>
+  </div>
   </div>
 </header>
 
@@ -897,10 +899,7 @@
   <section class="card score-card">
   <h2>Loch-Eingabe</h2>
   <div class="body">
-    <div class="actions">
-      <button class="secondary" type="button" id="voiceBtn">🎙️ Score sprechen</button>
-    </div>
-    <div id="voiceStatus" class="help" style="margin-top:8px"></div>
+  
   </div>
   <div class="table-wrap">
     <table id="scoreTable"></table>
