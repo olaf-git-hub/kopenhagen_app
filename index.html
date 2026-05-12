@@ -1537,24 +1537,24 @@ function buildTable() {
       const points = document.createElement("div");
       points.className = "points-cell";
 
-      const scoreDetail = result.strokes[i] > 0
-        ? data.gross[i] + " → " + result.netto[i]
-        : String(data.gross[i]);
+      const hasStroke = result.strokes[i] > 0;
 
-      const strokeText = result.strokes[i] > 0
-        ? "<span class='stroke-note'>Vorgabe " + result.strokes[i] + "</span>"
+      const scoreDetail = hasStroke
+        ? "<div class='points-detail'>" + data.gross[i] + " → " + result.netto[i] + "</div>"
+        : "";
+
+      const strokeText = hasStroke
+        ? "<div class='points-detail'><span class='stroke-note'>Vorgabe " + result.strokes[i] + "</span></div>"
         : "";
 
       if (result.complete) {
-        points.innerHTML = formatNum(result.points[i]) + " P." +
-          "<div class='points-detail'>" + scoreDetail + (strokeText ? "<br>" + strokeText : "") + "</div>";
+        points.innerHTML = formatNum(result.points[i]) + " P." + scoreDetail + strokeText;
       } else if (data.gross[i] !== null) {
-        points.innerHTML = "–" +
-          "<div class='points-detail'>" + scoreDetail + (strokeText ? "<br>" + strokeText : "") + "</div>";
+        points.innerHTML = "–" + scoreDetail + strokeText;
       } else {
-        points.innerHTML = "–" +
-          (strokeText ? "<div class='points-detail'>" + strokeText + "</div>" : "");
+        points.innerHTML = "–" + strokeText;
       }
+
 
       td.appendChild(scorebox);
       td.appendChild(points);
@@ -1630,21 +1630,19 @@ function renderMobileCards() {
       const points = document.createElement("div");
       points.className = "mobile-player-points";
 
-     const scoreDetail = result.strokes[i] > 0
-      ? data.gross[i] + "→" + result.netto[i]
-      : String(data.gross[i]);
+     const hasStroke = result.strokes[i] > 0;
 
-    const strokeText = result.strokes[i] > 0 ? " · V" + result.strokes[i] : "";
+    const scoreDetail = hasStroke
+      ? "<div class='mobile-player-detail'>" + data.gross[i] + "→" + result.netto[i] + " · V" + result.strokes[i] + "</div>"
+      : "";
 
     if (result.complete) {
-      points.innerHTML = formatNum(result.points[i]) + " P." +
-        "<div class='mobile-player-detail'>" + scoreDetail + strokeText + "</div>";
+      points.innerHTML = formatNum(result.points[i]) + " P." + scoreDetail;
     } else if (data.gross[i] !== null) {
-      points.innerHTML = "–" +
-        "<div class='mobile-player-detail'>" + scoreDetail + strokeText + "</div>";
+      points.innerHTML = "–" + scoreDetail;
     } else {
-        points.innerHTML = "–" + (strokeText ? "<div class='mobile-player-detail'>" + strokeText.substring(3) + "</div>" : "");
-      }
+      points.innerHTML = "–";
+    }
 
       row.appendChild(name);
       row.appendChild(inputWrap);
