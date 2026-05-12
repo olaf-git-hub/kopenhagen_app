@@ -249,11 +249,9 @@
     .setup-details[open] > summary::after { content: "einklappen"; }
 
     
-  .summary-card {
-  position: sticky;
-  top: 72px;
-  z-index: 25;
-}
+    .summary-card {
+    position: static;
+    }
 
     .summary-list {
       display: grid;
@@ -759,9 +757,7 @@
         padding: 10px 8px;
       }
 
-      .summary-card {
-        top: 92px;
-      }
+     
 
       .summary-list {
         grid-template-columns: 1fr 1fr;
@@ -818,7 +814,7 @@
   <div class="topbar">
     <div>
       <h1>🏌️ Kopenhagen Golf Rechner</h1>
-      <div class="subtitle">eine HTML-Datei · iPhone-Kartenansicht · offlinefähig</div>
+      <div class="subtitle" id="appBuildInfo">Build wird geladen...</div>
     </div>
     <div class="actions">
       <button class="secondary small" id="saveBtn" type="button">Speichern</button>
@@ -1843,6 +1839,28 @@ function showToast(msg) {
   toastTimer = setTimeout(() => toast.classList.remove("show"), 1800);
 }
 
+function setBuildInfo() {
+  const el = document.getElementById("appBuildInfo");
+  if (!el) return;
+
+  const d = new Date(document.lastModified);
+
+  if (isNaN(d.getTime())) {
+    el.textContent = "Build: unbekannt";
+    return;
+  }
+
+  const text = d.toLocaleString("de-DE", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+
+  el.textContent = "Build: " + text;
+}
+
 function init() {
   state = normalizeState(state);
 
@@ -1864,6 +1882,7 @@ function init() {
   saveState(false);
 }
 
+setBuildInfo();
 init();
 </script>
 </body>
