@@ -1,0 +1,1871 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Kopenhagen Golf Rechner</title>
+  <style>
+    :root {
+      --bg: #f5f7f2;
+      --card: #ffffff;
+      --text: #172016;
+      --muted: #637062;
+      --line: #dce4d8;
+      --accent: #2f7d46;
+      --accent-dark: #245f36;
+      --warn: #b45f06;
+      --bad: #b00020;
+      --good: #1b7f3a;
+      --soft: #edf5ec;
+      --soft2: #f9fbf7;
+      --shadow: 0 10px 24px rgba(20, 45, 20, 0.10);
+      --radius: 16px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: var(--sans);
+      background: linear-gradient(180deg, #eaf3e8 0%, var(--bg) 32%, var(--bg) 100%);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      background: rgba(245, 247, 242, 0.94);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--line);
+      padding: env(safe-area-inset-top) 10px 12px 10px 12px;
+    }
+
+    .topbar {
+      max-width: 1220px;
+      margin: 0 auto;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 20px;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+    }
+
+    .subtitle {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 3px;
+    }
+
+    main {
+      max-width: 1220px;
+      margin: 0 auto;
+      padding: 14px 12px 40px 12px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .card h2 {
+      font-size: 17px;
+      margin: 0;
+      padding: 14px 14px 8px;
+    }
+
+    .card .body {
+      padding: 0 14px 14px;
+    }
+
+    .help {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+      margin: 0 0 12px;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 4px;
+      font-weight: 700;
+    }
+
+    input, select, button, textarea {
+      font: inherit;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    select,
+    textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 11px 10px;
+      background: #fff;
+      color: var(--text);
+      outline: none;
+      font-size: 16px;
+    }
+
+    input[type="number"] {
+      text-align: center;
+      appearance: textfield;
+      -moz-appearance: textfield;
+    }
+
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(47, 125, 70, .14);
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .players {
+      display: grid;
+      gap: 9px;
+    }
+
+    .player-line {
+      display: grid;
+      grid-template-columns: 30px 1fr 92px;
+      gap: 8px;
+      align-items: end;
+    }
+
+    .badge {
+      width: 30px;
+      height: 30px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      background: var(--soft);
+      color: var(--accent-dark);
+      font-weight: 900;
+      margin-bottom: 3px;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 999px;
+      padding: 10px 14px;
+      background: var(--accent);
+      color: white;
+      font-weight: 800;
+      cursor: pointer;
+      min-height: 42px;
+    }
+
+    button.secondary {
+      background: #e8eee5;
+      color: var(--accent-dark);
+    }
+
+    button.danger {
+      background: #f4e6e6;
+      color: var(--bad);
+    }
+
+    button.small {
+      padding: 7px 10px;
+      min-height: 34px;
+      font-size: 13px;
+    }
+
+    button:hover { filter: brightness(.98); }
+    button:active { transform: translateY(1px); }
+
+    .setup-details {
+      border: 0;
+      border-radius: 0;
+      padding: 0;
+      background: transparent;
+      margin: 0;
+    }
+
+    .setup-details > summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      list-style: none;
+      padding: 14px;
+      font-size: 17px;
+      font-weight: 950;
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .setup-details > summary::-webkit-details-marker { display: none; }
+
+    .setup-details > summary::after {
+      content: "ausklappen";
+      color: var(--accent-dark);
+      background: var(--soft);
+      border-radius: 999px;
+      padding: 5px 9px;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .setup-details[open] > summary::after { content: "einklappen"; }
+
+    .summary-card {
+      position: sticky;
+      top: 63px;
+      z-index: 18;
+    }
+
+    .summary-list {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      padding: 0 14px 14px;
+    }
+
+    .summary-item {
+      display: grid;
+      grid-template-columns: 30px 1fr;
+      grid-template-rows: auto auto;
+      gap: 4px 8px;
+      align-items: center;
+      background: var(--soft2);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 9px;
+      min-width: 0;
+    }
+
+    .rank {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: white;
+      display: grid;
+      place-items: center;
+      font-weight: 900;
+      font-size: 13px;
+      grid-row: span 2;
+    }
+
+    .summary-name {
+      font-weight: 900;
+      font-size: 15px;
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .summary-sub {
+      color: var(--muted);
+      font-size: 12px;
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .summary-points {
+      font-weight: 950;
+    }
+
+    .validation-mini {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 0 14px 14px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .mini-pill {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 999px;
+      padding: 5px 8px;
+      font-weight: 800;
+    }
+
+    .mini-pill.ok { color: var(--good); background: #e3f5e8; }
+    .mini-pill.bad { color: var(--bad); background: #fde8ea; }
+
+    .table-wrap {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      border-top: 1px solid var(--line);
+    }
+
+    .mobile-cards {
+      display: none;
+      padding: 0 10px 12px;
+      gap: 10px;
+    }
+
+    .hole-card {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 5px 14px rgba(20,45,20,.06);
+    }
+
+    .hole-card-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: center;
+      background: #eef6eb;
+      padding: 9px 10px;
+      font-weight: 950;
+    }
+
+    .hole-card-meta {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .hole-card-body {
+      display: grid;
+      gap: 8px;
+      padding: 10px;
+    }
+
+    .mobile-player-row {
+      display: grid;
+      grid-template-columns: minmax(82px, 1fr) 76px 88px;
+      gap: 8px;
+      align-items: center;
+      border-bottom: 1px dashed var(--line);
+      padding-bottom: 8px;
+    }
+
+    .mobile-player-row:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .mobile-player-name {
+      font-weight: 900;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .mobile-player-points {
+      font-weight: 950;
+      text-align: right;
+      font-size: 14px;
+    }
+
+    .mobile-player-detail {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+      text-align: right;
+      margin-top: 2px;
+    }
+
+    .mobile-score-input input {
+      font-size: 18px;
+      font-weight: 900;
+      padding: 10px 6px;
+      border-radius: 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      min-width: 620px;
+    }
+
+    th, td {
+      border-bottom: 1px solid var(--line);
+      border-right: 1px solid var(--line);
+      padding: 8px;
+      vertical-align: top;
+      background: #fff;
+    }
+
+    th:first-child, td:first-child {
+      border-left: 0;
+      position: sticky;
+      left: 0;
+      z-index: 5;
+      background: #fbfdf9;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 8;
+      background: #eef6eb;
+      text-align: center;
+      font-size: 13px;
+    }
+
+    th:first-child {
+      z-index: 9;
+      background: #e8f2e5;
+    }
+
+    .hole-meta {
+      min-width: 72px;
+      text-align: center;
+      font-weight: 900;
+    }
+
+    .hole-small {
+      color: var(--muted);
+      font-weight: 700;
+      font-size: 11px;
+      margin-top: 4px;
+    }
+
+    .scorebox {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 6px;
+      min-width: 108px;
+    }
+
+    .scorebox input {
+      padding: 12px 6px;
+      border-radius: 10px;
+      font-size: 18px;
+      font-weight: 800;
+    }
+
+    .mini-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      color: var(--muted);
+      font-weight: 900;
+      text-align: center;
+      margin-bottom: 3px;
+    }
+
+    .points-cell {
+      min-width: 104px;
+      font-weight: 950;
+      text-align: center;
+      font-size: 15px;
+      margin-top: 6px;
+    }
+
+    .points-detail {
+      color: var(--muted);
+      font-weight: 700;
+      font-size: 11px;
+      margin-top: 4px;
+      line-height: 1.25;
+    }
+
+    .stroke-note {
+      display: inline-block;
+      color: var(--accent-dark);
+      background: var(--soft);
+      border-radius: 999px;
+      padding: 2px 6px;
+      margin-top: 3px;
+      font-size: 10px;
+      font-weight: 900;
+    }
+
+    .mobile-hint {
+      display: none;
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+
+    .toast {
+      position: fixed;
+      left: 12px;
+      right: 12px;
+      bottom: calc(12px + env(safe-area-inset-bottom));
+      z-index: 50;
+      background: #172016;
+      color: #fff;
+      border-radius: 14px;
+      padding: 12px 14px;
+      box-shadow: var(--shadow);
+      opacity: 0;
+      transform: translateY(12px);
+      pointer-events: none;
+      transition: .2s ease;
+      max-width: 720px;
+      margin: 0 auto;
+      text-align: center;
+      font-weight: 800;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    details.inner {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 9px 10px;
+      background: #fbfdf9;
+      margin-top: 10px;
+    }
+
+    details.inner > summary {
+      cursor: pointer;
+      font-weight: 900;
+      color: var(--accent-dark);
+    }
+
+    .exportbox {
+      margin-top: 10px;
+      min-height: 120px;
+      font-family: var(--mono);
+      font-size: 12px;
+    }
+
+    .course-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .choice-btn {
+      background: #fff;
+      color: var(--accent-dark);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      text-align: left;
+      min-height: 52px;
+      padding: 9px 10px;
+    }
+
+    .choice-btn.active {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    .choice-btn .small {
+      display: block;
+      font-size: 11px;
+      opacity: .8;
+      margin-top: 3px;
+      font-weight: 700;
+    }
+
+    .handicap-preview {
+      display: grid;
+      gap: 10px;
+      margin-top: 10px;
+      font-size: 12px;
+    }
+
+    .hcp-player {
+      background: #fbfdf9;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 9px;
+      line-height: 1.35;
+    }
+
+    .hcp-player-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .hcp-player strong {
+      color: var(--accent-dark);
+      font-size: 13px;
+    }
+
+    .hcp-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 5px;
+    }
+
+    .hcp-btn {
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--muted);
+      border-radius: 10px;
+      min-height: 38px;
+      padding: 4px 2px;
+      font-size: 11px;
+      line-height: 1.1;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .hcp-btn.auto,
+    .hcp-btn.override-on {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    .hcp-btn.override-off {
+      background: #f9e9e9;
+      color: var(--bad);
+      border-color: #efbfc4;
+    }
+
+    .hcp-btn .small {
+      display: block;
+      font-size: 9px;
+      opacity: .85;
+      margin-top: 2px;
+    }
+
+    .hcp-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .legend-pill {
+      border-radius: 999px;
+      padding: 3px 7px;
+      background: #fff;
+      border: 1px solid var(--line);
+      font-weight: 800;
+    }
+
+    .legend-pill.green {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    .legend-pill.red {
+      background: #f9e9e9;
+      color: var(--bad);
+      border-color: #efbfc4;
+    }
+
+    .course-warning {
+      background: #fff8e8;
+      color: #774c00;
+      border: 1px solid #f2d59a;
+      border-radius: 12px;
+      padding: 9px;
+      font-size: 13px;
+      font-weight: 800;
+      line-height: 1.35;
+      margin-bottom: 10px;
+    }
+
+    @media (max-width: 700px) {
+      .table-wrap {
+        display: none;
+      }
+
+      .mobile-cards {
+        display: grid;
+      }
+
+      header { padding-left: 8px; padding-right: 8px; }
+      main { padding-left: 8px; padding-right: 8px; }
+
+      .topbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 6px;
+      }
+
+      .topbar .actions {
+        justify-content: space-between;
+      }
+
+      .topbar .actions button {
+        flex: 1;
+      }
+
+      h1 { font-size: 18px; }
+      .card { border-radius: 14px; }
+      .mobile-hint { display: block; }
+      .row { grid-template-columns: 1fr; }
+      .player-line {
+        grid-template-columns: 26px 1fr 72px;
+        gap: 6px;
+      }
+
+      .badge {
+        width: 26px;
+        height: 26px;
+        font-size: 12px;
+      }
+
+      .course-buttons {
+        grid-template-columns: 1fr;
+      }
+
+      input[type="text"], input[type="number"], select {
+        padding: 10px 8px;
+      }
+
+      .summary-card {
+        top: 92px;
+      }
+
+      .summary-list {
+        grid-template-columns: 1fr 1fr;
+        padding-left: 10px;
+        padding-right: 10px;
+      }
+
+      .summary-item {
+        grid-template-columns: 26px 1fr;
+        padding: 8px;
+      }
+
+      .rank {
+        width: 24px;
+        height: 24px;
+        font-size: 12px;
+      }
+
+      .summary-name {
+        font-size: 14px;
+      }
+
+      .summary-sub {
+        font-size: 11px;
+      }
+
+      .summary-card h2,
+      .score-card h2 {
+        padding-left: 10px;
+        padding-right: 10px;
+      }
+
+      .card .body {
+        padding-left: 10px;
+        padding-right: 10px;
+      }
+
+      table {
+        min-width: 590px;
+      }
+    }
+
+    @media (max-width: 420px) {
+      .summary-list {
+        grid-template-columns: 1fr;
+      }
+
+      .summary-card {
+        position: static;
+      }
+    }
+  </style>
+</head>
+<body>
+<header>
+  <div class="topbar">
+    <div>
+      <h1>🏌️ Kopenhagen Golf Rechner</h1>
+      <div class="subtitle">eine HTML-Datei · iPhone-Kartenansicht · offlinefähig</div>
+    </div>
+    <div class="actions">
+      <button class="secondary small" id="saveBtn" type="button">Speichern</button>
+      <button class="danger small" id="resetBtn" type="button">Neue Runde</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="card setup-card">
+    <details class="setup-details" id="setupDetails">
+      <summary>Runde einrichten</summary>
+      <div class="body">
+        <p class="help">
+          Anfangsdaten eintragen, danach diesen Bereich einklappen. Velte Golf ist Standard.
+        </p>
+
+        <label>Golfplatz</label>
+        <div class="course-buttons" id="courseButtons"></div>
+        <div id="courseWarning" class="course-warning" style="display:none"></div>
+
+        <div class="row">
+          <div>
+            <label for="playerCount">Spieleranzahl</label>
+            <select id="playerCount">
+              <option value="4">4 Spieler</option>
+              <option value="3">3 Spieler</option>
+            </select>
+          </div>
+          <div></div>
+        </div>
+
+        <div class="players" id="playersBox"></div>
+
+        <div class="actions">
+          <button type="button" id="applySetupBtn">Runde übernehmen</button>
+          <button class="secondary" type="button" id="clearScoresBtn">Scores löschen</button>
+        </div>
+
+        <details class="inner" open>
+          <summary>Vorgaben-Vorschau / Anpassung</summary>
+          <p class="help" style="margin-top:8px">
+            Alle 18 Löcher werden angezeigt. Grün = Vorgabe aktiv. Tippen: automatische Vorgabe ausschalten
+            oder zusätzliche Vorgabe einschalten. Noch einmal tippen setzt auf Automatik zurück.
+          </p>
+          <div id="handicapPreview" class="handicap-preview"></div>
+        </details>
+
+        <details class="inner">
+          <summary>Daten sichern / wiederherstellen</summary>
+          <p class="help" style="margin-top:8px">
+            Die Runde wird lokal im Browser gespeichert. Zusätzlich kannst du sie als Text sichern und wieder importieren.
+          </p>
+          <div class="actions">
+            <button class="secondary small" type="button" id="exportBtn">Export erzeugen</button>
+            <button class="secondary small" type="button" id="importBtn">Import übernehmen</button>
+          </div>
+          <textarea id="exportBox" class="exportbox" placeholder="Exportdaten erscheinen hier oder Importdaten hier einfügen"></textarea>
+        </details>
+      </div>
+    </details>
+  </section>
+
+  <section class="card summary-card">
+    <h2>Gesamtstand</h2>
+    <div id="summaryBox" class="summary-list"></div>
+    <div id="validationBox" class="validation-mini"></div>
+  </section>
+
+  <section class="card score-card">
+    <h2>Loch-Eingabe</h2>
+    <div class="body">
+      <p class="mobile-hint">Tipp: Auf dem Handy die Tabelle seitlich wischen. Der Setup-Bereich ist oben einklappbar.</p>
+      <p class="help">Eingabe nur Brutto-Schläge. Punkte und Netto werden automatisch nach Kopenhagen berechnet.</p>
+    </div>
+    <div class="table-wrap">
+      <table id="scoreTable"></table>
+    </div>
+    <div id="mobileCards" class="mobile-cards"></div>
+  </section>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+
+const STORAGE_KEY = "kopenhagen-golf-rechner-v5";
+
+const courses = {
+  velte: {
+    id: "velte",
+    name: "Velte Golf St. Urbanus, Köln",
+    shortName: "Velte Golf",
+    hasPar: true,
+    hasHcp: true,
+    holes: [
+      { hole: 1, par: 5, length: 528, hcp: 5 },
+      { hole: 2, par: 4, length: 353, hcp: 7 },
+      { hole: 3, par: 3, length: 163, hcp: 15 },
+      { hole: 4, par: 4, length: 345, hcp: 11 },
+      { hole: 5, par: 3, length: 135, hcp: 17 },
+      { hole: 6, par: 5, length: 472, hcp: 1 },
+      { hole: 7, par: 4, length: 317, hcp: 13 },
+      { hole: 8, par: 5, length: 485, hcp: 9 },
+      { hole: 9, par: 4, length: 377, hcp: 3 },
+      { hole: 10, par: 4, length: 346, hcp: 10 },
+      { hole: 11, par: 4, length: 372, hcp: 6 },
+      { hole: 12, par: 3, length: 169, hcp: 14 },
+      { hole: 13, par: 5, length: 493, hcp: 2 },
+      { hole: 14, par: 4, length: 324, hcp: 12 },
+      { hole: 15, par: 3, length: 175, hcp: 16 },
+      { hole: 16, par: 5, length: 486, hcp: 8 },
+      { hole: 17, par: 3, length: 138, hcp: 18 },
+      { hole: 18, par: 4, length: 377, hcp: 4 }
+    ]
+  },
+  unknown18: {
+    id: "unknown18",
+    name: "Anderer Golfplatz / keine Lochdaten",
+    shortName: "Anderer Platz",
+    hasPar: false,
+    hasHcp: false,
+    holes: Array.from({ length: 18 }, (_, i) => ({ hole: i + 1, par: null, length: null, hcp: null }))
+  }
+};
+
+const defaultState = {
+  version: 5,
+  courseId: "velte",
+  playerCount: 4,
+  players: [
+    { name: "Thomas", allowance: 0 },
+    { name: "Dirk", allowance: 0 },
+    { name: "Frank", allowance: 0 },
+    { name: "Olaf", allowance: 0 }
+  ],
+  handicapOverrides: {},
+  holes: {}
+};
+
+let state = loadState();
+
+function getCourse() {
+  return courses[state.courseId] || courses.velte;
+}
+
+function getCourseHoles() {
+  return getCourse().holes;
+}
+
+function cloneDefault() {
+  return JSON.parse(JSON.stringify(defaultState));
+}
+
+function normalizeState(s) {
+  const base = cloneDefault();
+  if (!s || typeof s !== "object") return buildEmptyState(base);
+
+  const playerCount = Number(s.playerCount) === 3 ? 3 : 4;
+  const courseId = courses[s.courseId] ? s.courseId : "velte";
+  const courseHoles = courses[courseId].holes;
+
+  let players = [];
+  if (Array.isArray(s.players) && s.players.length > 0 && typeof s.players[0] === "object") {
+    players = s.players.slice(0, playerCount).map((p, idx) => ({
+      name: (p.name && String(p.name).trim()) ? String(p.name).trim() : "Spieler " + (idx + 1),
+      allowance: Math.max(0, toIntOrZero(p.allowance))
+    }));
+  } else if (Array.isArray(s.players)) {
+    players = s.players.slice(0, playerCount).map((name, idx) => ({
+      name: (name && String(name).trim()) ? String(name).trim() : "Spieler " + (idx + 1),
+      allowance: 0
+    }));
+  }
+
+  while (players.length < playerCount) {
+    const idx = players.length;
+    players.push({
+      name: base.players[idx] ? base.players[idx].name : "Spieler " + (idx + 1),
+      allowance: 0
+    });
+  }
+
+  const holes = {};
+  for (const h of courseHoles) {
+    const key = String(h.hole);
+    const src = s.holes && typeof s.holes === "object" ? (s.holes[key] || {}) : {};
+    holes[key] = {
+      gross: Array.isArray(src.gross) ? src.gross.slice(0, playerCount).map(toNullableInt) : Array(playerCount).fill(null)
+    };
+    while (holes[key].gross.length < playerCount) holes[key].gross.push(null);
+  }
+
+  const overrides = {};
+  if (s.handicapOverrides && typeof s.handicapOverrides === "object") {
+    for (const h of courseHoles) {
+      const key = String(h.hole);
+      const arr = Array.isArray(s.handicapOverrides[key]) ? s.handicapOverrides[key].slice(0, playerCount) : Array(playerCount).fill(null);
+      overrides[key] = arr.map(v => {
+        if (v === null || v === undefined || v === "") return null;
+        return Math.max(0, toIntOrZero(v));
+      });
+      while (overrides[key].length < playerCount) overrides[key].push(null);
+    }
+  } else {
+    for (const h of courseHoles) {
+      overrides[String(h.hole)] = Array(playerCount).fill(null);
+    }
+  }
+
+  // Migration aus älteren Versionen.
+  if (!s.handicapOverrides && s.holes && typeof s.holes === "object") {
+    for (const h of courseHoles) {
+      const key = String(h.hole);
+      const src = s.holes[key] || {};
+      if (Array.isArray(src.manualStrokes)) {
+        overrides[key] = src.manualStrokes.slice(0, playerCount).map(v => {
+          if (v === null || v === undefined || v === "") return null;
+          return Math.max(0, toIntOrZero(v));
+        });
+        while (overrides[key].length < playerCount) overrides[key].push(null);
+      }
+    }
+  }
+
+  return {
+    version: 5,
+    courseId,
+    playerCount,
+    players,
+    handicapOverrides: overrides,
+    holes
+  };
+}
+
+function buildEmptyState(base) {
+  const s = JSON.parse(JSON.stringify(base));
+  const courseHoles = courses[s.courseId || "velte"].holes;
+  s.holes = {};
+  s.handicapOverrides = {};
+  for (const h of courseHoles) {
+    s.holes[String(h.hole)] = { gross: Array(s.playerCount).fill(null) };
+    s.handicapOverrides[String(h.hole)] = Array(s.playerCount).fill(null);
+  }
+  return s;
+}
+
+function loadState() {
+  try {
+    const keys = [
+      STORAGE_KEY,
+      "kopenhagen-golf-rechner-v3",
+      "kopenhagen-golf-rechner-v2",
+      "kopenhagen-golf-rechner-v1"
+    ];
+    for (const key of keys) {
+      const raw = localStorage.getItem(key);
+      if (raw) return normalizeState(JSON.parse(raw));
+    }
+    return buildEmptyState(cloneDefault());
+  } catch (e) {
+    return buildEmptyState(cloneDefault());
+  }
+}
+
+function saveState(show) {
+  state = normalizeState(state);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  if (show) showToast("Runde gespeichert");
+}
+
+function toNullableInt(v) {
+  if (v === null || v === undefined || v === "") return null;
+  const n = Number(v);
+  if (!Number.isFinite(n)) return null;
+  return Math.trunc(n);
+}
+
+function toIntOrZero(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return 0;
+  return Math.trunc(n);
+}
+
+function formatNum(n) {
+  if (n === null || n === undefined || Number.isNaN(n)) return "";
+  const rounded = Math.round(n * 10) / 10;
+  return String(rounded).replace(".", ",");
+}
+
+function pointVector(playerCount) {
+  return playerCount === 3 ? [2, 1, 0] : [3, 2, 1, 0];
+}
+
+function expectedPoints(playerCount) {
+  return playerCount === 3 ? 3 : 6;
+}
+
+function automaticStrokeForHole(totalAllowance, hole) {
+  const course = getCourse();
+  if (!course.hasHcp || hole.hcp === null || hole.hcp === undefined) return 0;
+
+  const v = Math.max(0, toIntOrZero(totalAllowance));
+  const q = Math.floor(v / 18);
+  const r = v % 18;
+  return q + (hole.hcp <= r ? 1 : 0);
+}
+
+function getOverride(playerIndex, hole) {
+  const key = String(hole.hole);
+  const arr = state.handicapOverrides[key];
+  if (!arr) return null;
+  const val = arr[playerIndex];
+  if (val === null || val === undefined || val === "") return null;
+  return Math.max(0, toIntOrZero(val));
+}
+
+function getStrokeForPlayerHole(playerIndex, hole) {
+  const override = getOverride(playerIndex, hole);
+  if (override !== null) return override;
+  return automaticStrokeForHole(state.players[playerIndex].allowance, hole);
+}
+
+function calculateHole(hole, gross, playerCount) {
+  const complete = gross.slice(0, playerCount).every(v => v !== null && v !== undefined && v !== "");
+  const strokes = Array(playerCount).fill(0).map((_, i) => getStrokeForPlayerHole(i, hole));
+
+  if (!complete) {
+    return {
+      complete: false,
+      points: Array(playerCount).fill(null),
+      netto: gross.slice(0, playerCount).map((g, i) => g === null ? null : g - strokes[i]),
+      strokes,
+      valid: false,
+      sum: 0
+    };
+  }
+
+  const B = pointVector(playerCount);
+  const rows = [];
+  for (let i = 0; i < playerCount; i++) {
+    rows.push({
+      index: i,
+      gross: Number(gross[i]),
+      strokes: strokes[i],
+      netto: Number(gross[i]) - strokes[i]
+    });
+  }
+
+  rows.sort((a, b) => {
+    if (a.netto !== b.netto) return a.netto - b.netto;
+    return a.index - b.index;
+  });
+
+  const points = Array(playerCount).fill(0);
+  let pos = 0;
+
+  while (pos < rows.length) {
+    let end = pos;
+    while (end + 1 < rows.length && rows[end + 1].netto === rows[pos].netto) {
+      end++;
+    }
+
+    let groupPointSum = 0;
+    for (let r = pos; r <= end; r++) {
+      groupPointSum += B[r];
+    }
+
+    const groupSize = end - pos + 1;
+    const pointsPerPlayer = groupPointSum / groupSize;
+
+    for (let r = pos; r <= end; r++) {
+      points[rows[r].index] = pointsPerPlayer;
+    }
+
+    pos = end + 1;
+  }
+
+  const sum = points.reduce((a, b) => a + b, 0);
+  const valid = Math.abs(sum - expectedPoints(playerCount)) < 0.0001;
+  const netto = Array(playerCount).fill(null);
+  rows.forEach(r => { netto[r.index] = r.netto; });
+
+  return {
+    complete: true,
+    points,
+    netto,
+    strokes,
+    valid,
+    sum
+  };
+}
+
+function calculateRound() {
+  const playerCount = state.playerCount;
+  const totals = state.players.slice(0, playerCount).map((player, index) => ({
+    index,
+    name: player.name,
+    points: 0,
+    gross: 0,
+    parDelta: 0,
+    holesPlayed: 0
+  }));
+
+  const holeResults = {};
+  let playedHoles = 0;
+  let invalidHoles = 0;
+  let totalExpected = 0;
+  let totalGiven = 0;
+
+  for (const h of getCourseHoles()) {
+    const key = String(h.hole);
+    const data = state.holes[key] || { gross: [] };
+    const gross = data.gross || [];
+    const result = calculateHole(h, gross, playerCount);
+
+    holeResults[key] = result;
+
+    if (result.complete) {
+      playedHoles++;
+      totalExpected += expectedPoints(playerCount);
+      totalGiven += result.sum;
+      if (!result.valid) invalidHoles++;
+
+      for (let i = 0; i < playerCount; i++) {
+        totals[i].points += result.points[i];
+        totals[i].gross += Number(gross[i]);
+        if (getCourse().hasPar && h.par !== null && h.par !== undefined) {
+          totals[i].parDelta += Number(gross[i]) - h.par;
+        }
+        totals[i].holesPlayed++;
+      }
+    }
+  }
+
+  const sortedTotals = totals.slice().sort((a, b) => {
+    if (b.points !== a.points) return b.points - a.points;
+    if (a.gross !== b.gross) return a.gross - b.gross;
+    return a.index - b.index;
+  });
+
+  return {
+    totals,
+    sortedTotals,
+    holeResults,
+    playedHoles,
+    invalidHoles,
+    totalExpected,
+    totalGiven
+  };
+}
+
+function buildSetup() {
+  buildCourseButtons();
+
+  const playerCountSelect = document.getElementById("playerCount");
+  playerCountSelect.value = String(state.playerCount);
+
+  const warning = document.getElementById("courseWarning");
+  const course = getCourse();
+  if (!course.hasPar || !course.hasHcp) {
+    warning.style.display = "block";
+    warning.textContent = "Für diesen Golfplatz sind keine PAR-/HCP-Daten hinterlegt. PAR und HCP werden nicht angezeigt. Automatische Vorgaben nach HCP sind nicht möglich; du kannst Vorgaben in der 18-Loch-Matrix direkt setzen.";
+  } else {
+    warning.style.display = "none";
+    warning.textContent = "";
+  }
+
+  const box = document.getElementById("playersBox");
+  box.innerHTML = "";
+
+  for (let i = 0; i < state.playerCount; i++) {
+    const wrap = document.createElement("div");
+    wrap.className = "player-line";
+
+    const badge = document.createElement("div");
+    badge.className = "badge";
+    badge.textContent = String(i + 1);
+
+    const fieldWrap = document.createElement("div");
+    const label = document.createElement("label");
+    label.textContent = "Spieler " + (i + 1);
+    label.htmlFor = "playerName_" + i;
+
+    const inp = document.createElement("input");
+    inp.type = "text";
+    inp.id = "playerName_" + i;
+    inp.value = state.players[i].name || ("Spieler " + (i + 1));
+    inp.autocomplete = "off";
+
+    fieldWrap.appendChild(label);
+    fieldWrap.appendChild(inp);
+
+    const allowanceWrap = document.createElement("div");
+    const allowanceLabel = document.createElement("label");
+    allowanceLabel.textContent = "Vorgabe";
+    allowanceLabel.htmlFor = "allowance_" + i;
+
+    const allowance = document.createElement("input");
+    allowance.type = "number";
+    allowance.inputMode = "numeric";
+    allowance.min = "0";
+    allowance.max = "99";
+    allowance.id = "allowance_" + i;
+    allowance.value = state.players[i].allowance ? String(state.players[i].allowance) : "";
+    allowance.disabled = !getCourse().hasHcp;
+    allowance.addEventListener("input", () => {
+      state.players[i].allowance = Math.max(0, toIntOrZero(allowance.value));
+      saveState(false);
+      buildTable();
+      renderSummary();
+      renderHandicapPreview();
+    });
+
+    allowanceWrap.appendChild(allowanceLabel);
+    allowanceWrap.appendChild(allowance);
+
+    wrap.appendChild(badge);
+    wrap.appendChild(fieldWrap);
+    wrap.appendChild(allowanceWrap);
+    box.appendChild(wrap);
+  }
+
+  renderHandicapPreview();
+}
+
+function buildCourseButtons() {
+  const box = document.getElementById("courseButtons");
+  box.innerHTML = "";
+
+  Object.values(courses).forEach(c => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "choice-btn" + (state.courseId === c.id ? " active" : "");
+    btn.dataset.courseId = c.id;
+    btn.innerHTML = escapeHtml(c.shortName) + "<span class='small'>" + (c.hasHcp ? "PAR/HCP hinterlegt" : "ohne Lochdaten") + "</span>";
+    btn.addEventListener("click", () => {
+      changeCourse(c.id);
+    });
+    box.appendChild(btn);
+  });
+}
+
+function renderHandicapPreview() {
+  const box = document.getElementById("handicapPreview");
+  if (!box) return;
+
+  box.innerHTML = "";
+
+  const course = getCourse();
+  const holes = getCourseHoles();
+
+  for (let i = 0; i < state.playerCount; i++) {
+    const player = state.players[i];
+    const div = document.createElement("div");
+    div.className = "hcp-player";
+
+    const head = document.createElement("div");
+    head.className = "hcp-player-head";
+    const title = document.createElement("strong");
+    title.textContent = player.name;
+    const info = document.createElement("span");
+    info.textContent = course.hasHcp ? (player.allowance + " Vorgabe") : "direkt setzen";
+    head.appendChild(title);
+    head.appendChild(info);
+    div.appendChild(head);
+
+    const grid = document.createElement("div");
+    grid.className = "hcp-grid";
+
+    for (const h of holes) {
+      const auto = automaticStrokeForHole(player.allowance, h);
+      const override = getOverride(i, h);
+      const effective = getStrokeForPlayerHole(i, h);
+
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "hcp-btn";
+
+      if (override !== null) {
+        btn.classList.add(override > 0 ? "override-on" : "override-off");
+      } else if (auto > 0) {
+        btn.classList.add("auto");
+      }
+
+      let hcpText = "";
+      if (course.hasHcp && h.hcp !== null && h.hcp !== undefined) {
+        hcpText = "HCP " + h.hcp;
+      } else {
+        hcpText = "ohne HCP";
+      }
+
+      btn.innerHTML = "L" + h.hole + ": " + effective + "<span class='small'>" + hcpText + "</span>";
+      btn.title = "Loch " + h.hole + ": Vorgabe " + effective;
+
+      btn.addEventListener("click", () => cycleOverride(i, h));
+      grid.appendChild(btn);
+    }
+
+    div.appendChild(grid);
+
+    const legend = document.createElement("div");
+    legend.className = "hcp-legend";
+    legend.innerHTML =
+      "<span class='legend-pill green'>grün = Vorgabe aktiv</span>" +
+      "<span class='legend-pill red'>rot = Vorgabe ausgeschaltet</span>" +
+      "<span class='legend-pill'>weiß = keine Vorgabe</span>";
+    div.appendChild(legend);
+
+    box.appendChild(div);
+  }
+}
+
+function cycleOverride(playerIndex, hole) {
+  const key = String(hole.hole);
+  if (!state.handicapOverrides[key]) {
+    state.handicapOverrides[key] = Array(state.playerCount).fill(null);
+  }
+
+  const currentOverride = getOverride(playerIndex, hole);
+  const auto = automaticStrokeForHole(state.players[playerIndex].allowance, hole);
+
+  if (currentOverride === null) {
+    state.handicapOverrides[key][playerIndex] = auto > 0 ? 0 : 1;
+  } else {
+    state.handicapOverrides[key][playerIndex] = null;
+  }
+
+  saveState(false);
+  renderHandicapPreview();
+  buildTable();
+  renderMobileCards();
+  renderSummary();
+}
+
+function buildTable() {
+  const table = document.getElementById("scoreTable");
+  const calc = calculateRound();
+  const course = getCourse();
+  table.innerHTML = "";
+
+  const thead = document.createElement("thead");
+  const headRow = document.createElement("tr");
+
+  const thHole = document.createElement("th");
+  thHole.textContent = "Loch";
+  headRow.appendChild(thHole);
+
+  for (let i = 0; i < state.playerCount; i++) {
+    const th = document.createElement("th");
+    th.textContent = state.players[i].name || ("Spieler " + (i + 1));
+    headRow.appendChild(th);
+  }
+
+  thead.appendChild(headRow);
+  table.appendChild(thead);
+
+  const tbody = document.createElement("tbody");
+  for (const h of getCourseHoles()) {
+    const key = String(h.hole);
+    const data = state.holes[key];
+    const result = calc.holeResults[key];
+
+    const tr = document.createElement("tr");
+
+    const tdHole = document.createElement("td");
+    tdHole.className = "hole-meta";
+    let meta = "Loch " + h.hole;
+    let details = [];
+    if (course.hasPar && h.par !== null && h.par !== undefined) details.push("PAR " + h.par);
+    if (course.hasHcp && h.hcp !== null && h.hcp !== undefined) details.push("HCP " + h.hcp);
+    tdHole.innerHTML = meta + (details.length ? "<div class='hole-small'>" + details.join(" · ") + "</div>" : "");
+    tr.appendChild(tdHole);
+
+    for (let i = 0; i < state.playerCount; i++) {
+      const td = document.createElement("td");
+      const scorebox = document.createElement("div");
+      scorebox.className = "scorebox";
+
+      const grossWrap = document.createElement("div");
+      const grossLab = document.createElement("div");
+      grossLab.className = "mini-label";
+      grossLab.textContent = "Brutto";
+      const grossInput = document.createElement("input");
+      grossInput.type = "number";
+      grossInput.inputMode = "numeric";
+      grossInput.min = "1";
+      grossInput.max = "20";
+      grossInput.dataset.hole = key;
+      grossInput.dataset.player = String(i);
+      grossInput.value = data.gross[i] === null ? "" : String(data.gross[i]);
+      grossInput.addEventListener("input", onScoreInput);
+      grossWrap.appendChild(grossLab);
+      grossWrap.appendChild(grossInput);
+
+      scorebox.appendChild(grossWrap);
+
+      const points = document.createElement("div");
+      points.className = "points-cell";
+
+      const strokeText = result.strokes[i] > 0 ? "<span class='stroke-note'>Vorgabe " + result.strokes[i] + "</span>" : "";
+
+      if (result.complete) {
+        points.innerHTML = formatNum(result.points[i]) + " P." +
+          "<div class='points-detail'>" + data.gross[i] + " → " + result.netto[i] + "<br>" + strokeText + "</div>";
+      } else if (data.gross[i] !== null) {
+        points.innerHTML = "–" +
+          "<div class='points-detail'>" + data.gross[i] + " → " + result.netto[i] + "<br>" + strokeText + "</div>";
+      } else {
+        points.innerHTML = "–" + (strokeText ? "<div class='points-detail'>" + strokeText + "</div>" : "");
+      }
+
+      td.appendChild(scorebox);
+      td.appendChild(points);
+      tr.appendChild(td);
+    }
+
+    tbody.appendChild(tr);
+  }
+
+  table.appendChild(tbody);
+}
+
+
+function renderMobileCards() {
+  const box = document.getElementById("mobileCards");
+  if (!box) return;
+
+  const calc = calculateRound();
+  const course = getCourse();
+  box.innerHTML = "";
+
+  for (const h of getCourseHoles()) {
+    const key = String(h.hole);
+    const data = state.holes[key];
+    const result = calc.holeResults[key];
+
+    const card = document.createElement("div");
+    card.className = "hole-card";
+
+    const head = document.createElement("div");
+    head.className = "hole-card-head";
+
+    const title = document.createElement("div");
+    title.textContent = "Loch " + h.hole;
+
+    const meta = document.createElement("div");
+    meta.className = "hole-card-meta";
+    const details = [];
+    if (course.hasPar && h.par !== null && h.par !== undefined) details.push("PAR " + h.par);
+    if (course.hasHcp && h.hcp !== null && h.hcp !== undefined) details.push("HCP " + h.hcp);
+    meta.textContent = details.join(" · ");
+
+    head.appendChild(title);
+    head.appendChild(meta);
+    card.appendChild(head);
+
+    const body = document.createElement("div");
+    body.className = "hole-card-body";
+
+    for (let i = 0; i < state.playerCount; i++) {
+      const row = document.createElement("div");
+      row.className = "mobile-player-row";
+
+      const name = document.createElement("div");
+      name.className = "mobile-player-name";
+      name.textContent = state.players[i].name || ("Spieler " + (i + 1));
+
+      const inputWrap = document.createElement("div");
+      inputWrap.className = "mobile-score-input";
+
+      const inp = document.createElement("input");
+      inp.type = "number";
+      inp.inputMode = "numeric";
+      inp.min = "1";
+      inp.max = "20";
+      inp.dataset.hole = key;
+      inp.dataset.player = String(i);
+      inp.value = data.gross[i] === null ? "" : String(data.gross[i]);
+      inp.addEventListener("input", onScoreInput);
+
+      inputWrap.appendChild(inp);
+
+      const points = document.createElement("div");
+      points.className = "mobile-player-points";
+
+      const strokeText = result.strokes[i] > 0 ? " · V" + result.strokes[i] : "";
+
+      if (result.complete) {
+        points.innerHTML = formatNum(result.points[i]) + " P." +
+          "<div class='mobile-player-detail'>" + data.gross[i] + "→" + result.netto[i] + strokeText + "</div>";
+      } else if (data.gross[i] !== null) {
+        points.innerHTML = "–" +
+          "<div class='mobile-player-detail'>" + data.gross[i] + "→" + result.netto[i] + strokeText + "</div>";
+      } else {
+        points.innerHTML = "–" + (strokeText ? "<div class='mobile-player-detail'>" + strokeText.substring(3) + "</div>" : "");
+      }
+
+      row.appendChild(name);
+      row.appendChild(inputWrap);
+      row.appendChild(points);
+      body.appendChild(row);
+    }
+
+    card.appendChild(body);
+    box.appendChild(card);
+  }
+}
+
+function renderSummary() {
+  const calc = calculateRound();
+  const course = getCourse();
+  const box = document.getElementById("summaryBox");
+  box.innerHTML = "";
+
+  calc.sortedTotals.forEach((p, rankIdx) => {
+    const item = document.createElement("div");
+    item.className = "summary-item";
+
+    const rank = document.createElement("div");
+    rank.className = "rank";
+    rank.textContent = String(rankIdx + 1);
+
+    const name = document.createElement("div");
+    name.className = "summary-name";
+    name.textContent = p.name + " · " + formatNum(p.points) + " P.";
+
+    const sub = document.createElement("div");
+    sub.className = "summary-sub";
+    const parText = course.hasPar ? (" · " + formatPar(p.parDelta) + " PAR") : "";
+    sub.textContent = "Schläge " + p.gross + parText + " · " + p.holesPlayed + " Löcher";
+
+    item.appendChild(rank);
+    item.appendChild(name);
+    item.appendChild(sub);
+    box.appendChild(item);
+  });
+
+  const v = document.getElementById("validationBox");
+  v.innerHTML = "";
+
+  const pills = [
+    ["Golfplatz: " + course.shortName, ""],
+    ["Löcher: " + calc.playedHoles, ""],
+    ["Punkte: " + formatNum(calc.totalGiven) + " / " + formatNum(calc.totalExpected), Math.abs(calc.totalGiven - calc.totalExpected) < 0.0001 ? "ok" : "bad"],
+    ["Fehler: " + calc.invalidHoles, calc.invalidHoles === 0 ? "ok" : "bad"]
+  ];
+
+  for (const [txt, cls] of pills) {
+    const span = document.createElement("span");
+    span.className = "mini-pill " + cls;
+    span.textContent = txt;
+    v.appendChild(span);
+  }
+}
+
+function formatPar(delta) {
+  if (delta > 0) return "+" + delta;
+  if (delta < 0) return String(delta);
+  return "±0";
+}
+
+function onScoreInput(e) {
+  const hole = e.target.dataset.hole;
+  const player = Number(e.target.dataset.player);
+  const value = e.target.value;
+
+  if (!state.holes[hole]) {
+    state.holes[hole] = { gross: Array(state.playerCount).fill(null) };
+  }
+
+  state.holes[hole].gross[player] = toNullableInt(value);
+
+  saveState(false);
+  buildTable();
+  renderMobileCards();
+  renderSummary();
+}
+
+function readSetupInputs() {
+  const newCount = Number(document.getElementById("playerCount").value) === 3 ? 3 : 4;
+  const newPlayers = [];
+
+  for (let i = 0; i < newCount; i++) {
+    const inp = document.getElementById("playerName_" + i);
+    const allowance = document.getElementById("allowance_" + i);
+    newPlayers.push({
+      name: (inp && inp.value.trim()) ? inp.value.trim() : ("Spieler " + (i + 1)),
+      allowance: allowance ? Math.max(0, toIntOrZero(allowance.value)) : 0
+    });
+  }
+
+  return {
+    playerCount: newCount,
+    players: newPlayers
+  };
+}
+
+function applySetup() {
+  const setup = readSetupInputs();
+
+  state.playerCount = setup.playerCount;
+  state.players = setup.players;
+  state = normalizeState(state);
+
+  saveState(true);
+  buildSetup();
+  buildTable();
+  renderMobileCards();
+  renderSummary();
+
+  const details = document.getElementById("setupDetails");
+  if (details && window.innerWidth <= 700) details.open = false;
+}
+
+function onPlayerCountChange() {
+  const setup = readSetupInputs();
+  state.playerCount = setup.playerCount;
+  state.players = setup.players;
+  state = normalizeState(state);
+
+  buildSetup();
+  buildTable();
+  renderMobileCards();
+  renderSummary();
+  saveState(false);
+}
+
+function changeCourse(courseId) {
+  if (!courses[courseId]) return;
+
+  const oldHoles = state.holes || {};
+  const oldOverrides = state.handicapOverrides || {};
+  state.courseId = courseId;
+  state = normalizeState(state);
+
+  // Scores und Overrides nach Lochnummer übernehmen, soweit möglich.
+  for (const h of getCourseHoles()) {
+    const key = String(h.hole);
+    if (oldHoles[key] && Array.isArray(oldHoles[key].gross)) {
+      state.holes[key].gross = oldHoles[key].gross.slice(0, state.playerCount);
+      while (state.holes[key].gross.length < state.playerCount) state.holes[key].gross.push(null);
+    }
+    if (oldOverrides[key] && Array.isArray(oldOverrides[key])) {
+      state.handicapOverrides[key] = oldOverrides[key].slice(0, state.playerCount);
+      while (state.handicapOverrides[key].length < state.playerCount) state.handicapOverrides[key].push(null);
+    }
+  }
+
+  saveState(false);
+  buildSetup();
+  buildTable();
+  renderMobileCards();
+  renderSummary();
+}
+
+function clearScores() {
+  if (!confirm("Alle Brutto-Schläge löschen? Vorgaben bleiben erhalten.")) return;
+  for (const h of getCourseHoles()) {
+    const key = String(h.hole);
+    state.holes[key].gross = Array(state.playerCount).fill(null);
+  }
+  saveState(true);
+  buildTable();
+  renderMobileCards();
+  renderSummary();
+}
+
+function resetRound() {
+  if (!confirm("Neue Runde starten und alle aktuellen Daten löschen?")) return;
+  state = buildEmptyState(cloneDefault());
+  state = normalizeState(state);
+  saveState(true);
+  buildSetup();
+  buildTable();
+  renderMobileCards();
+  renderSummary();
+
+  const details = document.getElementById("setupDetails");
+  if (details) details.open = true;
+}
+
+function exportData() {
+  const box = document.getElementById("exportBox");
+  box.value = JSON.stringify(state, null, 2);
+  box.focus();
+  box.select();
+  showToast("Export erzeugt");
+}
+
+function importData() {
+  const box = document.getElementById("exportBox");
+  try {
+    const imported = JSON.parse(box.value);
+    state = normalizeState(imported);
+    saveState(true);
+    buildSetup();
+    buildTable();
+    renderSummary();
+    showToast("Import übernommen");
+  } catch (e) {
+    alert("Import nicht lesbar. Bitte vollständigen JSON-Export einfügen.");
+  }
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+let toastTimer = null;
+function showToast(msg) {
+  const toast = document.getElementById("toast");
+  toast.textContent = msg;
+  toast.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove("show"), 1800);
+}
+
+function init() {
+  state = normalizeState(state);
+
+  document.getElementById("saveBtn").addEventListener("click", () => saveState(true));
+  document.getElementById("resetBtn").addEventListener("click", resetRound);
+  document.getElementById("applySetupBtn").addEventListener("click", applySetup);
+  document.getElementById("clearScoresBtn").addEventListener("click", clearScores);
+  document.getElementById("exportBtn").addEventListener("click", exportData);
+  document.getElementById("importBtn").addEventListener("click", importData);
+  document.getElementById("playerCount").addEventListener("change", onPlayerCountChange);
+
+  const details = document.getElementById("setupDetails");
+  if (details) details.open = window.innerWidth > 700;
+
+  buildSetup();
+  buildTable();
+  renderMobileCards();
+  renderSummary();
+  saveState(false);
+}
+
+init();
+</script>
+</body>
+</html>
