@@ -522,6 +522,16 @@
       margin-bottom: 8px;
     }
 
+.floating-summary-btn {
+  position: fixed;
+  right: 14px;
+  bottom: calc(14px + env(safe-area-inset-bottom));
+  z-index: 40;
+  border-radius: 999px;
+  padding: 12px 16px;
+  box-shadow: var(--shadow);
+}
+
     .toast {
       position: fixed;
       left: 12px;
@@ -896,6 +906,8 @@
     <div id="mobileCards" class="mobile-cards"></div>
   </section>
 </main>
+
+<button class="floating-summary-btn" id="summaryJumpBtn" type="button">🏆 Stand</button>
 
 <div class="toast" id="toast"></div>
 
@@ -1722,6 +1734,14 @@ function applySetup() {
   state = normalizeState(state);
 
   saveState(true);
+
+document.getElementById("summaryJumpBtn").addEventListener("click", () => {
+  document.querySelector(".summary-card").scrollIntoView({
+    behavior: "smooth",
+    block: "start"
+  });
+});
+
   buildSetup();
   buildTable();
   renderMobileCards();
