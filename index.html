@@ -970,6 +970,9 @@ const defaultState = {
 
 let state = loadState();
 
+let lastScoreScrollY = 0;
+let jumpMode = "stand";
+
 function getCourse() {
   return courses[state.courseId] || courses.velte;
 }
@@ -1735,12 +1738,6 @@ function applySetup() {
 
   saveState(true);
 
-document.getElementById("summaryJumpBtn").addEventListener("click", () => {
-  document.querySelector(".summary-card").scrollIntoView({
-    behavior: "smooth",
-    block: "start"
-  });
-});
 
   buildSetup();
   buildTable();
@@ -1881,9 +1878,53 @@ function setBuildInfo() {
   el.textContent = "Build: " + text;
 }
 
+function scrollToSummary() {
+  const summary = document.querySelector(".summary-card");
+  if (!summary) return;
+
+  lastScoreScrollY = window.pageYOffset;
+  jumpMode = "tabelle";
+  updateJumpButton();
+
+  const header = document.querySelector("header");
+  const headerHeight = header ? header.offsetHeight : 0;
+
+  const y = summary.getBoundingClientRect().top + window.pageYOffset - headerHeight - 8;
+
+  window.scrollTo({
+    top: Math.max(0, y),
+    behavior: "smooth"
+  });
+}
+
+function scrollBackToTable() {
+  jumpMode = "stand";
+  updateJumpButton();
+
+  window.scrollTo({
+    top: lastScoreScrollY,
+    behavior: "smooth"
+  });
+}
+
+function updateJumpButton() {
+  const btn = document.getElementById("summaryJumpBtn");
+  if (!btn) return;
+
+  btn.textContent = jumpMode === "stand" ? "🏆 Stand" : "⛳ Tabelle";
+}
+
+function toggleSummaryJump() {
+  if (jumpMode === "stand") {
+    scrollToSummary();
+  } else {
+    scrollBackToTable();
+  }
+}
+
 function init() {
   state = normalizeState(state);
-
+  document.getElementById("summaryJumpBtn").addEventListener("click", toggleSummaryJump);
   document.getElementById("saveBtn").addEventListener("click", () => saveState(true));
   document.getElementById("resetBtn").addEventListener("click", resetRound);
   document.getElementById("applySetupBtn").addEventListener("click", applySetup);
