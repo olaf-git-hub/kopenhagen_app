@@ -899,6 +899,10 @@
     <div class="body">
       <p class="mobile-hint">Tipp: Auf dem Handy die Tabelle seitlich wischen. Der Setup-Bereich ist oben einklappbar.</p>
       <p class="help">Eingabe nur Brutto-Schläge. Punkte und Netto werden automatisch nach Kopenhagen berechnet.</p>
+      <div class="actions">
+  <button class="secondary" type="button" id="voiceBtn">🎙️ Score sprechen</button>
+</div>
+<div id="voiceStatus" class="help" style="margin-top:8px"></div>
     </div>
     <div class="table-wrap">
       <table id="scoreTable"></table>
@@ -972,6 +976,39 @@ let state = loadState();
 
 let lastScoreScrollY = 0;
 let jumpMode = "stand";
+
+let speechRecognition = null;
+let speechIsRunning = false;
+
+const speechNumberWords = {
+  "null": 0,
+  "eins": 1,
+  "ein": 1,
+  "eine": 1,
+  "einen": 1,
+  "zwei": 2,
+  "drei": 3,
+  "vier": 4,
+  "fünf": 5,
+  "fuenf": 5,
+  "sechs": 6,
+  "sieben": 7,
+  "acht": 8,
+  "neun": 9,
+  "zehn": 10,
+  "elf": 11,
+  "zwölf": 12,
+  "zwoelf": 12,
+  "dreizehn": 13,
+  "vierzehn": 14,
+  "fünfzehn": 15,
+  "fuenfzehn": 15,
+  "sechzehn": 16,
+  "siebzehn": 17,
+  "achtzehn": 18,
+  "neunzehn": 19,
+  "zwanzig": 20
+};
 
 function getCourse() {
   return courses[state.courseId] || courses.velte;
@@ -1938,6 +1975,239 @@ function toggleSummaryJump() {
   }
 }
 
+
+function getSpeechApi() {
+  return window.SpeechRecognition || window.webkitSpeechRecognition || null;
+}
+
+function initSpeechInput() {
+  const btn = document.getElementById("voiceBtn");
+  const status = document.getElementById("voiceStatus");
+
+  if (!btn) return;
+
+  const SpeechApi = getSpeechApi();
+
+  if (!SpeechApi) {
+    btn.disabled = true;
+    btn.textContent = "🎙️ Sprache nicht verfügbar";
+    if (status) {
+      status.textContent = "Spracherkennung wird von diesem Browser nicht unterstützt.";
+    }
+    return;
+  }
+
+  speechRecognition = new SpeechApi();
+  speechRecognition.lang = "de-DE";
+  speechRecognition.interimResults = false;
+  speechRecognition.continuous = false;
+  speechRecognition.maxAlternatives = 1;
+
+  speechRecognition.onstart = function() {
+    speechIsRunning = true;
+    btn.textContent = "🎙️ Höre zu...";
+    if (status) {
+      status.textContent = "Bitte Score sprechen, z. B.: Loch 3 Thomas 5 Dirk 6 Frank 4 Olaf 7";
+    }
+  };
+
+  speechRecognition.onend = function() {
+    speechIsRunning = false;
+    btn.textContent = "🎙️ Score sprechen";
+  };
+
+  speechRecognition.onerror = function(e) {
+    speechIsRunning = false;
+    btn.textContent = "🎙️ Score sprechen";
+    if (status) {
+      status.textContent = "Spracherkennung abgebrochen oder fehlgeschlagen: " + e.error;
+    }
+  };
+
+  speechRecognition.onresult = function(event) {
+    const text = event.results[0][0].transcript;
+    processVoiceScore(text);
+  };
+
+  btn.addEventListener("click", function() {
+  if (!speechRecognition) return;
+
+  if (speechIsRunning) {
+    speechRecognition.stop();
+    return;
+  }
+
+  try {
+    speechRecognition.start();
+  } catch (e) {
+    if (status) {
+      status.textContent = "Spracherkennung konnte nicht gestartet werden: " + e.message;
+    }
+  }
+});
+}
+
+function normalizeSpeechText(text) {
+  return String(text || "")
+    .toLowerCase()
+    .replaceAll("ä", "ae")
+    .replaceAll("ö", "oe")
+    .replaceAll("ü", "ue")
+    .replaceAll("ß", "ss")
+    .replace(/[^a-z0-9 ]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function speechTokenToNumber(token) {
+  if (/^\d+$/.test(token)) return Number(token);
+  if (speechNumberWords[token] !== undefined) return speechNumberWords[token];
+  return null;
+}
+
+function getNextIncompleteHoleNumber() {
+  for (const h of getCourseHoles()) {
+    const key = String(h.hole);
+    const data = state.holes[key];
+    if (!data || !Array.isArray(data.gross)) return h.hole;
+
+    for (let i = 0; i < state.playerCount; i++) {
+      if (data.gross[i] === null || data.gross[i] === undefined || data.gross[i] === "") {
+        return h.hole;
+      }
+    }
+  }
+
+  return 18;
+}
+
+function findSpokenHole(tokens) {
+  for (let i = 0; i < tokens.length; i++) {
+    if (tokens[i] === "loch" || tokens[i] === "bahn") {
+      if (i + 1 < tokens.length) {
+        const n = speechTokenToNumber(tokens[i + 1]);
+        if (n >= 1 && n <= 18) return n;
+      }
+    }
+  }
+
+  return null;
+}
+
+function findNumberAfterPlayer(tokens, playerName) {
+  const nameTokens = normalizeSpeechText(playerName).split(" ").filter(Boolean);
+  if (nameTokens.length === 0) return null;
+
+  for (let i = 0; i <= tokens.length - nameTokens.length; i++) {
+    let matches = true;
+
+    for (let j = 0; j < nameTokens.length; j++) {
+      if (tokens[i + j] !== nameTokens[j]) {
+        matches = false;
+        break;
+      }
+    }
+
+    if (!matches) continue;
+
+    const start = i + nameTokens.length;
+    const end = Math.min(tokens.length, start + 5);
+
+    for (let k = start; k < end; k++) {
+      const n = speechTokenToNumber(tokens[k]);
+      if (n !== null && n >= 1 && n <= 20) return n;
+    }
+  }
+
+  return null;
+}
+
+function extractScoreNumbers(tokens) {
+  const numbers = [];
+
+  for (let i = 0; i < tokens.length; i++) {
+    if ((tokens[i] === "loch" || tokens[i] === "bahn") && i + 1 < tokens.length) {
+      i++;
+      continue;
+    }
+
+    const n = speechTokenToNumber(tokens[i]);
+    if (n !== null && n >= 1 && n <= 20) {
+      numbers.push(n);
+    }
+  }
+
+  return numbers;
+}
+
+function processVoiceScore(rawText) {
+  const status = document.getElementById("voiceStatus");
+  const text = normalizeSpeechText(rawText);
+  const tokens = text.split(" ").filter(Boolean);
+
+  if (tokens.length === 0) {
+    if (status) status.textContent = "Nichts erkannt.";
+    return;
+  }
+
+  const spokenHole = findSpokenHole(tokens);
+  const holeNumber = spokenHole || getNextIncompleteHoleNumber();
+  const holeKey = String(holeNumber);
+
+  if (!state.holes[holeKey]) {
+    state.holes[holeKey] = { gross: Array(state.playerCount).fill(null) };
+  }
+
+  let newScores = Array(state.playerCount).fill(null);
+  let namedHits = 0;
+
+  for (let i = 0; i < state.playerCount; i++) {
+    const n = findNumberAfterPlayer(tokens, state.players[i].name);
+    if (n !== null) {
+      newScores[i] = n;
+      namedHits++;
+    }
+  }
+
+  if (namedHits === 0) {
+    const numbers = extractScoreNumbers(tokens);
+
+    if (numbers.length < state.playerCount) {
+      if (status) {
+        status.textContent = "Erkannt: „" + rawText + "“. Es wurden zu wenige Scores erkannt.";
+      }
+      return;
+    }
+
+    for (let i = 0; i < state.playerCount; i++) {
+      newScores[i] = numbers[i];
+    }
+  }
+
+  for (let i = 0; i < state.playerCount; i++) {
+    if (newScores[i] !== null) {
+      state.holes[holeKey].gross[i] = newScores[i];
+    }
+  }
+
+  saveState(false);
+  buildTable();
+  renderMobileCards();
+  renderSummary();
+
+  const recognized = [];
+  for (let i = 0; i < state.playerCount; i++) {
+    recognized.push(state.players[i].name + " " + state.holes[holeKey].gross[i]);
+  }
+
+  if (status) {
+    status.textContent = "Übernommen für Loch " + holeNumber + ": " + recognized.join(", ");
+  }
+
+  showToast("Score per Sprache übernommen");
+}
+
+
 function init() {
   state = normalizeState(state);
   document.getElementById("summaryJumpBtn").addEventListener("click", toggleSummaryJump);
@@ -1956,6 +2226,7 @@ function init() {
   buildTable();
   renderMobileCards();
   renderSummary();
+  initSpeechInput();
   saveState(false);
 }
 
