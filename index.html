@@ -2023,7 +2023,6 @@ function initSpeechInput() {
     speechIsRunning = false;
     btn.textContent = "🎙️ Score sprechen";
   };
-
   speechRecognition.onerror = function(e) {
     speechIsRunning = false;
     btn.textContent = "🎙️ Score sprechen";
@@ -2033,11 +2032,18 @@ function initSpeechInput() {
   };
 
   speechRecognition.onresult = function(event) {
-    const text = event.results[0][0].transcript;
-    processVoiceScore(text);
-  };
 
-  btn.addEventListener("click", function() {
+  speechRecognition.stop();
+
+  const text = event.results[0][0].transcript;
+  processVoiceScore(text);
+};
+
+  btn.addEventListener("click", function(e) {
+
+  e.preventDefault();
+  e.stopPropagation();
+
   if (!speechRecognition) return;
 
   if (speechIsRunning) {
