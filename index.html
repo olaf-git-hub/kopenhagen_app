@@ -973,6 +973,7 @@ let state = loadState();
 
 let lastScoreScrollY = 0;
 let jumpMode = "stand";
+let lastRankingSignature = "";
 
 let speechRecognition = null;
 let speechIsRunning = false;
@@ -1768,8 +1769,55 @@ function formatPar(delta) {
   return "±0";
 }
 
+function getRankingSignature() {
+  const calc = calculateRound();
+  return calc.sortedTotals.map(p => p.index).join("-");
+}
+
+function playRankingChangeSound() {
+  const AudioContext = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContext) return;
+
+  const ctx = new AudioContext();
+  const notes = [523.25, 659.25, 783.99];
+
+  notes.forEach((freq, idx) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = "triangle";
+    osc.frequency.value = freq;
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    const start = ctx.currentTime + idx * 0.12;
+    const end = start + 0.18;
+
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(0.18, start + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, end);
+
+    osc.start(start);
+    osc.stop(end);
+  });
+
+  setTimeout(() => ctx.close(), 700);
+}
+
+function checkRankingChangeAndPlaySound(oldSignature) {
+  const newSignature = getRankingSignature();
+
+  if (oldSignature && newSignature !== oldSignature) {
+    playRankingChangeSound();
+  }
+
+  lastRankingSignature = newSignature;
+}
+
 function onScoreInput(e) {
   const hole = e.target.dataset.hole;
+  const oldRankingSignature = getRankingSignature();
   const player = Number(e.target.dataset.player);
   const value = e.target.value;
 
@@ -1783,6 +1831,8 @@ function onScoreInput(e) {
   buildTable();
   renderMobileCards();
   renderSummary();
+
+  checkRankingChangeAndPlaySound(oldRankingSignature);
 }
 
 function readSetupInputs() {
@@ -2115,7 +2165,6 @@ function findSpokenHole(tokens) {
   const holeWords = [
     "loch",
     "noch",
-    "Noch",
     "lok",
     "lock",
     "lochh",
@@ -2210,12 +2259,15 @@ function extractScoreNumbers(tokens) {
 }
 
 function processVoiceScore(rawText) {
+
   const status = document.getElementById("voiceStatus");
   const text = normalizeSpeechText(rawText);
   const tokens = text.split(" ").filter(Boolean);
 
   if (tokens.length === 0) {
-    if (status) status.textContent = "Nichts erkannt.";
+    if (status) {
+      status.textContent = "Nichts erkannt.";
+    }
     return;
   }
 
@@ -2224,14 +2276,23 @@ function processVoiceScore(rawText) {
   const holeKey = String(holeNumber);
 
   if (!state.holes[holeKey]) {
-    state.holes[holeKey] = { gross: Array(state.playerCount).fill(null) };
+    state.holes[holeKey] = {
+      gross: Array(state.playerCount).fill(null)
+    };
   }
+
+  const oldRankingSignature = getRankingSignature();
 
   let newScores = Array(state.playerCount).fill(null);
   let namedHits = 0;
 
   for (let i = 0; i < state.playerCount; i++) {
-    const n = findNumberAfterPlayer(tokens, state.players[i].name);
+
+    const n = findNumberAfterPlayer(
+      tokens,
+      state.players[i].name
+    );
+
     if (n !== null) {
       newScores[i] = n;
       namedHits++;
@@ -2239,12 +2300,16 @@ function processVoiceScore(rawText) {
   }
 
   if (namedHits === 0) {
+
     const numbers = extractScoreNumbers(tokens);
 
     if (numbers.length < state.playerCount) {
+
       if (status) {
-        status.textContent = "Erkannt: „" + rawText + "“. Es wurden zu wenige Scores erkannt.";
+        status.textContent =
+          "Erkannt: „" + rawText + "“. Es wurden zu wenige Scores erkannt.";
       }
+
       return;
     }
 
@@ -2254,23 +2319,36 @@ function processVoiceScore(rawText) {
   }
 
   for (let i = 0; i < state.playerCount; i++) {
+
     if (newScores[i] !== null) {
       state.holes[holeKey].gross[i] = newScores[i];
     }
   }
 
   saveState(false);
+
   buildTable();
   renderMobileCards();
   renderSummary();
 
+  checkRankingChangeAndPlaySound(oldRankingSignature);
+
   const recognized = [];
+
   for (let i = 0; i < state.playerCount; i++) {
-    recognized.push(state.players[i].name + " " + state.holes[holeKey].gross[i]);
+    recognized.push(
+      state.players[i].name +
+      " " +
+      state.holes[holeKey].gross[i]
+    );
   }
 
   if (status) {
-    status.textContent = "Übernommen für Loch " + holeNumber + ": " + recognized.join(", ");
+    status.textContent =
+      "Übernommen für Loch " +
+      holeNumber +
+      ": " +
+      recognized.join(", ");
   }
 
   showToast("Score per Sprache übernommen");
