@@ -861,6 +861,12 @@
 
         <div class="players" id="playersBox"></div>
 
+        <label style="display:flex; gap:8px; align-items:center; margin-top:10px;">
+        <input type="checkbox" id="soundOnRankingChange">
+        Sound bei Führungswechsel
+        </label>
+
+
         <div class="actions">
           <button type="button" id="applySetupBtn">Runde übernehmen</button>
           <button class="secondary" type="button" id="clearScoresBtn">Scores löschen</button>
@@ -959,6 +965,7 @@ const defaultState = {
   version: 5,
   courseId: "velte",
   playerCount: 4,
+  soundOnRankingChange: true,
   players: [
     { name: "Thomas", allowance: 0 },
     { name: "Dirk", allowance: 0 },
@@ -1106,6 +1113,7 @@ function normalizeState(s) {
     version: 5,
     courseId,
     playerCount,
+    soundOnRankingChange: s.soundOnRankingChange !== false,
     players,
     handicapOverrides: overrides,
     holes
@@ -1347,6 +1355,17 @@ function buildSetup() {
 
   const box = document.getElementById("playersBox");
   box.innerHTML = "";
+
+  const soundCheck = document.getElementById("soundOnRankingChange");
+
+  if (soundCheck) {
+    soundCheck.checked = state.soundOnRankingChange !== false;
+
+    soundCheck.onchange = function() {
+      state.soundOnRankingChange = soundCheck.checked;
+      saveState(false);
+    };
+  }
 
   for (let i = 0; i < state.playerCount; i++) {
     const wrap = document.createElement("div");
@@ -1824,9 +1843,13 @@ function playRankingChangeSound() {
 function checkRankingChangeAndPlaySound(oldSignature) {
   const newSignature = getRankingSignature();
 
-  if (oldSignature && newSignature !== oldSignature) {
-    playRankingChangeSound();
-  }
+  if (
+  state.soundOnRankingChange !== false &&
+  oldSignature &&
+  newSignature !== oldSignature
+) {
+  playRankingChangeSound();
+}
 
   lastRankingSignature = newSignature;
 }
