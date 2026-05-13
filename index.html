@@ -1366,6 +1366,15 @@ function buildSetup() {
     inp.value = state.players[i].name || ("Spieler " + (i + 1));
     inp.autocomplete = "off";
 
+    inp.addEventListener("input", () => {
+    state.players[i].name = inp.value.trim() || ("Spieler " + (i + 1));
+    saveState(false);
+    buildTable();
+    renderMobileCards();
+    renderSummary();
+    renderHandicapPreview();
+});
+
     fieldWrap.appendChild(label);
     fieldWrap.appendChild(inp);
 
