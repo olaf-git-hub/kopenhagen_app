@@ -1597,9 +1597,9 @@ function buildTable() {
         ? "<div class='points-detail'>" + data.gross[i] + " → " + result.netto[i] + "</div>"
         : "";
 
-      const strokeText = hasStroke
-        ? "<div class='points-detail'><span class='stroke-note'>Vorgabe " + result.strokes[i] + "</span></div>"
-        : "";
+     const strokeText = hasStroke
+      ? "<div class='points-detail'><span class='stroke-note'>V" + result.strokes[i] + "</span></div>"
+      : "";
 
       if (result.complete) {
         points.innerHTML = formatNum(result.points[i]) + " P." + scoreDetail + strokeText;
@@ -1686,16 +1686,22 @@ function renderMobileCards() {
 
      const hasStroke = result.strokes[i] > 0;
 
-    const scoreDetail = hasStroke
-      ? "<div class='mobile-player-detail'>" + data.gross[i] + "→" + result.netto[i] + " · V" + result.strokes[i] + "</div>"
+     const strokeText = hasStroke
+      ? "V" + result.strokes[i]
       : "";
+
+     const scoreDetail = hasStroke && data.gross[i] !== null
+      ? "<div class='mobile-player-detail'>" + data.gross[i] + "→" + result.netto[i] + " · " + strokeText + "</div>"
+      : (strokeText
+          ? "<div class='mobile-player-detail'>" + strokeText + "</div>"
+          : "");
 
     if (result.complete) {
       points.innerHTML = formatNum(result.points[i]) + " P." + scoreDetail;
     } else if (data.gross[i] !== null) {
       points.innerHTML = "–" + scoreDetail;
     } else {
-      points.innerHTML = "–";
+      points.innerHTML = "–" + scoreDetail;
     }
 
       row.appendChild(name);
