@@ -986,44 +986,142 @@ let speechRecognition = null;
 let speechIsRunning = false;
 
 const speechNumberWords = {
+
   "null": 0,
+  "zero": 0,
+
   "eins": 1,
   "ein": 1,
   "eine": 1,
   "einen": 1,
+  "one": 1,
+
   "zwei": 2,
+  "two": 2,
+  "to": 2,
+  "too": 2,
+
   "drei": 3,
+  "three": 3,
+
   "vier": 4,
+  "for": 4,
+  "four": 4,
+
   "fünf": 5,
   "fuenf": 5,
+  "five": 5,
+
   "sechs": 6,
+  "six": 6,
+
   "sieben": 7,
+  "seven": 7,
+
   "acht": 8,
+  "eight": 8,
+  "ate": 8,
+
   "neun": 9,
+  "nine": 9,
+
   "zehn": 10,
+  "ten": 10,
+
   "elf": 11,
+  "eleven": 11,
+
   "zwölf": 12,
   "zwoelf": 12,
+  "twelve": 12,
+
   "dreizehn": 13,
+  "thirteen": 13,
+
   "vierzehn": 14,
+  "fourteen": 14,
+
   "fünfzehn": 15,
   "fuenfzehn": 15,
+  "fifteen": 15,
+
   "sechzehn": 16,
+  "sixteen": 16,
+
   "siebzehn": 17,
+  "seventeen": 17,
+
   "achtzehn": 18,
+  "eighteen": 18,
+
   "neunzehn": 19,
-  "zwanzig": 20
+  "nineteen": 19,
+
+  "zwanzig": 20,
+  "twenty": 20
 };
 
 const speechPlayerAliases = {
-  "olaf": ["olaf", "olaff", "ola", "oder"],
-  "frank": ["frank", "franck", "franz"],
-  "dirk": ["dirk", "dierk", "dir", "derk"],
-  "thomas": ["thomas", "tomas", "tommes", "tom"],
-  "astrid": ["astrid", "astrit", "astri"],
-  "helge": ["helge", "helga", "hellge", "helde"],
-  "caroline": ["caroline", "karoline", "carolin", "karolin", "caro", "karo"],
-  "alexander": ["alexander", "alex", "aleksander", "aleks", "alexandra"]
+
+  "olaf": [
+    "olaf",
+    "olaff",
+    "olafs",
+    "ola",
+    "oder"
+  ],
+
+  "frank": [
+    "frank",
+    "franck",
+    "frangk",
+    "frengk"
+  ],
+
+  "dirk": [
+    "dirk",
+    "dierk",
+    "derk",
+    "dirkh"
+  ],
+
+  "thomas": [
+    "thomas",
+    "tomas",
+    "thommas",
+    "tommes",
+    "tom"
+  ],
+
+  "astrid": [
+    "astrid",
+    "astrit",
+    "astri",
+    "astrid port"
+  ],
+
+  "helge": [
+    "helge",
+    "hellge",
+    "helgee"
+  ],
+
+  "caroline": [
+    "caroline",
+    "karoline",
+    "carolin",
+    "karolin",
+    "caro",
+    "karo"
+  ],
+
+  "alexander": [
+    "alexander",
+    "aleksander",
+    "alex",
+    "aleks",
+    "alexx"
+  ]
 };
 
 function getCourse() {
@@ -2258,7 +2356,14 @@ function findNumberAfterPlayer(tokens, playerName) {
       let matches = true;
 
       for (let j = 0; j < nameTokens.length; j++) {
-        if (tokens[i + j] !== nameTokens[j]) {
+        const token = tokens[i + j];
+        const aliasToken = nameTokens[j];
+
+        if (
+          token !== aliasToken &&
+          !token.startsWith(aliasToken) &&
+          !aliasToken.startsWith(token)
+        ) {
           matches = false;
           break;
         }
