@@ -1978,7 +1978,7 @@ function getScoreNameForDelta(delta) {
   if (delta === -1) return "Birdie";
   if (delta === 0) return "Par";
   if (delta === 1) return "Bogey";
-  return "Doppelbogey+";
+  return "Bogey+";
 }
 
 function renderSummary() {
@@ -2123,7 +2123,7 @@ function renderPlayerDetail() {
     html += "<span class='mini-pill'>Birdies: " + stats.birdie + "</span>";
     html += "<span class='mini-pill'>Pars: " + stats.par + "</span>";
     html += "<span class='mini-pill'>Bogeys: " + stats.bogey + "</span>";
-    html += "<span class='mini-pill'>Doppelbogey+: " + stats.doublebogey + "</span>";
+    html += "<span class='mini-pill'>Bogey+: " + stats.doublebogey + "</span>";
     html += "</div>";
   }
 
