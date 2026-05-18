@@ -817,6 +817,37 @@
 
    
     }
+
+  input.score-under2 {
+    background: #ffe7a3 !important;
+    color: #5d3b00 !important;
+    border-color: #d99a00 !important;
+  }
+
+  input.score-birdie {
+    background: #f8d7da !important;
+    color: #8b0000 !important;
+    border-color: #c0392b !important;
+  }
+
+  input.score-par {
+    background: #eef6eb !important;
+    color: #172016 !important;
+    border-color: #7aa874 !important;
+  }
+
+  input.score-bogey {
+    background: #dbeafe !important;
+    color: #003b7a !important;
+    border-color: #3b82f6 !important;
+  }
+
+  input.score-doublebogey {
+    background: #d8d4f2 !important;
+    color: #26145f !important;
+    border-color: #6d5bd0 !important;
+  }
+
   </style>
 </head>
 <body>
@@ -1639,6 +1670,45 @@ function cycleOverride(playerIndex, hole) {
   renderSummary();
 }
 
+function getScoreClassForGross(hole, gross) {
+
+  const course = getCourse();
+
+  if (!course.hasPar) {
+    return "";
+  }
+
+  if (
+    hole.par === null ||
+    hole.par === undefined ||
+    gross === null ||
+    gross === undefined ||
+    gross === ""
+  ) {
+    return "";
+  }
+
+  const delta = Number(gross) - Number(hole.par);
+
+  if (delta <= -2) {
+    return "score-under2";
+  }
+
+  if (delta === -1) {
+    return "score-birdie";
+  }
+
+  if (delta === 0) {
+    return "score-par";
+  }
+
+  if (delta === 1) {
+    return "score-bogey";
+  }
+
+  return "score-doublebogey";
+}
+
 function buildTable() {
   const table = document.getElementById("scoreTable");
   const calc = calculateRound();
@@ -1700,6 +1770,11 @@ function buildTable() {
       grossInput.dataset.hole = key;
       grossInput.dataset.player = String(i);
       grossInput.value = data.gross[i] === null ? "" : String(data.gross[i]);
+      const scoreClass = getScoreClassForGross(h, data.gross[i]);
+
+      if (scoreClass) {
+        grossInput.classList.add(scoreClass);
+      }
       grossInput.addEventListener("input", onScoreInput);
 
       grossWrap.appendChild(grossLab);
@@ -1795,6 +1870,12 @@ function renderMobileCards() {
       inp.dataset.hole = key;
       inp.dataset.player = String(i);
       inp.value = data.gross[i] === null ? "" : String(data.gross[i]);
+      const scoreClass = getScoreClassForGross(h, data.gross[i]);
+
+      if (scoreClass) {
+        inp.classList.add(scoreClass);
+      }
+      
       inp.addEventListener("input", onScoreInput);
 
       inputWrap.appendChild(inp);
