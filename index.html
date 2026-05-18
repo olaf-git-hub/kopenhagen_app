@@ -890,6 +890,20 @@
     cursor: pointer;
   }
 
+  .summary-name {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .summary-toggle {
+    font-size: 18px;
+    font-weight: 900;
+    color: var(--accent-dark);
+    flex-shrink: 0;
+  }
+
   </style>
 </head>
 <body>
@@ -1985,18 +1999,29 @@ function renderSummary() {
     name.className = "summary-name";
     const isOpen = selectedPlayerDetailIndex === p.index;
 
-    name.textContent =
-    p.name +
+  const isOpen = selectedPlayerDetailIndex === p.index;
+
+  name.innerHTML =
+    "<span>" +
+    escapeHtml(p.name) +
     " · " +
     formatNum(p.points) +
-    " P. " +
-    (isOpen ? "▾" : "▸");
-      name.classList.add("clickable-player");
-      name.addEventListener("click", () => {
-        selectedPlayerDetailIndex =
-          selectedPlayerDetailIndex === p.index ? null : p.index;
-        renderPlayerDetail();
-      });
+    " Punkte</span>" +
+    "<span class='summary-toggle'>" +
+    (isOpen ? "▾" : "▸") +
+    "</span>";
+
+  name.classList.add("clickable-player");
+
+  name.addEventListener("click", () => {
+
+    selectedPlayerDetailIndex =
+      selectedPlayerDetailIndex === p.index
+        ? null
+        : p.index;
+
+    renderSummary();
+  });
 
     const sub = document.createElement("div");
     sub.className = "summary-sub";
