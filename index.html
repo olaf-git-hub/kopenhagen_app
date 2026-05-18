@@ -1999,28 +1999,26 @@ function renderSummary() {
     name.className = "summary-name";
     const isOpen = selectedPlayerDetailIndex === p.index;
 
-  const isOpen = selectedPlayerDetailIndex === p.index;
+    name.innerHTML =
+      "<span>" +
+      escapeHtml(p.name) +
+      " · " +
+      formatNum(p.points) +
+      " Punkte</span>" +
+      "<span class='summary-toggle'>" +
+      (isOpen ? "▾" : "▸") +
+      "</span>";
 
-  name.innerHTML =
-    "<span>" +
-    escapeHtml(p.name) +
-    " · " +
-    formatNum(p.points) +
-    " Punkte</span>" +
-    "<span class='summary-toggle'>" +
-    (isOpen ? "▾" : "▸") +
-    "</span>";
+    name.classList.add("clickable-player");
 
-  name.classList.add("clickable-player");
+    name.addEventListener("click", () => {
 
-  name.addEventListener("click", () => {
+      selectedPlayerDetailIndex =
+        selectedPlayerDetailIndex === p.index
+          ? null
+          : p.index;
 
-    selectedPlayerDetailIndex =
-      selectedPlayerDetailIndex === p.index
-        ? null
-        : p.index;
-
-    renderSummary();
+      renderSummary();
   });
 
     const sub = document.createElement("div");
