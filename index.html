@@ -848,6 +848,48 @@
     border-color: #6d5bd0 !important;
   }
 
+  .player-detail {
+    margin: 0 14px 14px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: #fbfdf9;
+    overflow: hidden;
+  }
+
+  .player-detail-head {
+    padding: 10px 12px;
+    font-weight: 950;
+    background: var(--soft);
+    color: var(--accent-dark);
+  }
+
+  .player-detail-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 10px 12px;
+  }
+
+  .player-detail-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 0;
+  }
+
+  .player-detail-table th,
+  .player-detail-table td {
+    position: static;
+    border: 1px solid var(--line);
+    padding: 7px;
+    text-align: center;
+    background: #fff;
+    font-size: 13px;
+  }
+
+  .clickable-player {
+    cursor: pointer;
+  }
+
   </style>
 </head>
 <body>
@@ -930,6 +972,7 @@
   <section class="card summary-card">
     <h2>Gesamtstand</h2>
     <div id="summaryBox" class="summary-list"></div>
+    <div id="playerDetailBox"></div>
     <div id="validationBox" class="validation-mini"></div>
   </section>
 
@@ -1015,6 +1058,8 @@ let lastRankingSignature = "";
 
 let speechRecognition = null;
 let speechIsRunning = false;
+
+let selectedPlayerDetailIndex = null;
 
 const speechNumberWords = {
 
@@ -1875,7 +1920,7 @@ function renderMobileCards() {
       if (scoreClass) {
         inp.classList.add(scoreClass);
       }
-      
+
       inp.addEventListener("input", onScoreInput);
 
       inputWrap.appendChild(inp);
@@ -1914,6 +1959,14 @@ function renderMobileCards() {
   }
 }
 
+function getScoreNameForDelta(delta) {
+  if (delta <= -2) return "Eagle+";
+  if (delta === -1) return "Birdie";
+  if (delta === 0) return "Par";
+  if (delta === 1) return "Bogey";
+  return "Doppelbogey+";
+}
+
 function renderSummary() {
   const calc = calculateRound();
   const course = getCourse();
@@ -1931,6 +1984,12 @@ function renderSummary() {
     const name = document.createElement("div");
     name.className = "summary-name";
     name.textContent = p.name + " · " + formatNum(p.points) + " P.";
+    name.classList.add("clickable-player");
+    name.addEventListener("click", () => {
+      selectedPlayerDetailIndex =
+        selectedPlayerDetailIndex === p.index ? null : p.index;
+      renderPlayerDetail();
+    });
 
     const sub = document.createElement("div");
     sub.className = "summary-sub";
@@ -1959,6 +2018,116 @@ function renderSummary() {
     span.textContent = txt;
     v.appendChild(span);
   }
+
+  renderPlayerDetail();
+}
+
+function renderPlayerDetail() {
+  const box = document.getElementById("playerDetailBox");
+  if (!box) return;
+
+  box.innerHTML = "";
+
+  if (selectedPlayerDetailIndex === null) return;
+
+  const playerIndex = selectedPlayerDetailIndex;
+  const player = state.players[playerIndex];
+  const course = getCourse();
+  const calc = calculateRound();
+
+  if (!player) return;
+
+  let html = "";
+
+  const stats = {
+    eagle: 0,
+    birdie: 0,
+    par: 0,
+    bogey: 0,
+    doublebogey: 0
+  };
+
+  const rows = [];
+
+  for (const h of getCourseHoles()) {
+    const key = String(h.hole);
+    const data = state.holes[key];
+    if (!data || data.gross[playerIndex] === null) continue;
+
+    const gross = data.gross[playerIndex];
+    const result = calc.holeResults[key];
+    const strokes = result.strokes[playerIndex];
+    const netto = result.netto[playerIndex];
+    const points = result.complete ? result.points[playerIndex] : null;
+
+    let scoreName = "";
+
+    if (course.hasPar && h.par !== null && h.par !== undefined) {
+      const delta = Number(gross) - Number(h.par);
+      scoreName = getScoreNameForDelta(delta);
+
+      if (delta <= -2) stats.eagle++;
+      else if (delta === -1) stats.birdie++;
+      else if (delta === 0) stats.par++;
+      else if (delta === 1) stats.bogey++;
+      else stats.doublebogey++;
+    }
+
+    rows.push({
+      hole: h.hole,
+      par: h.par,
+      gross,
+      strokes,
+      netto,
+      points,
+      scoreName
+    });
+  }
+
+  html += "<div class='player-detail'>";
+  html += "<div class='player-detail-head'>" + escapeHtml(player.name || ("Spieler " + (playerIndex + 1))) + "</div>";
+
+  if (course.hasPar) {
+    html += "<div class='player-detail-stats'>";
+    html += "<span class='mini-pill'>Eagle+: " + stats.eagle + "</span>";
+    html += "<span class='mini-pill'>Birdies: " + stats.birdie + "</span>";
+    html += "<span class='mini-pill'>Pars: " + stats.par + "</span>";
+    html += "<span class='mini-pill'>Bogeys: " + stats.bogey + "</span>";
+    html += "<span class='mini-pill'>Doppelbogey+: " + stats.doublebogey + "</span>";
+    html += "</div>";
+  }
+
+  html += "<table class='player-detail-table'>";
+  html += "<thead><tr><th>Loch</th>";
+
+  if (course.hasPar) html += "<th>PAR</th>";
+
+  html += "<th>Score</th><th>V</th><th>Netto</th><th>Punkte</th>";
+
+  if (course.hasPar) html += "<th>Wertung</th>";
+
+  html += "</tr></thead><tbody>";
+
+  for (const r of rows) {
+    html += "<tr>";
+    html += "<td>" + r.hole + "</td>";
+
+    if (course.hasPar) html += "<td>" + r.par + "</td>";
+
+    html += "<td>" + r.gross + "</td>";
+    html += "<td>" + r.strokes + "</td>";
+    html += "<td>" + r.netto + "</td>";
+    html += "<td>" + (r.points === null ? "–" : formatNum(r.points)) + "</td>";
+
+    if (course.hasPar) html += "<td>" + r.scoreName + "</td>";
+
+    html += "</tr>";
+  }
+
+  html += "</tbody></table>";
+  html += "</div>";
+
+  box.innerHTML = html;
 }
 
 function formatPar(delta) {
