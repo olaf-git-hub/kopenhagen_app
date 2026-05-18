@@ -1983,13 +1983,20 @@ function renderSummary() {
 
     const name = document.createElement("div");
     name.className = "summary-name";
-    name.textContent = p.name + " · " + formatNum(p.points) + " P.";
-    name.classList.add("clickable-player");
-    name.addEventListener("click", () => {
-      selectedPlayerDetailIndex =
-        selectedPlayerDetailIndex === p.index ? null : p.index;
-      renderPlayerDetail();
-    });
+    const isOpen = selectedPlayerDetailIndex === p.index;
+
+    name.textContent =
+    p.name +
+    " · " +
+    formatNum(p.points) +
+    " P. " +
+    (isOpen ? "▾" : "▸");
+      name.classList.add("clickable-player");
+      name.addEventListener("click", () => {
+        selectedPlayerDetailIndex =
+          selectedPlayerDetailIndex === p.index ? null : p.index;
+        renderPlayerDetail();
+      });
 
     const sub = document.createElement("div");
     sub.className = "summary-sub";
