@@ -740,8 +740,13 @@
         justify-content: space-between;
       }
 
-     .topbar .actions > button {
-        flex: 1;
+      .topbar .actions > button,
+      .topbar .actions > .menu-wrap {
+      flex: 1;
+      }
+
+      .menu-wrap > button {
+        width: 100%;
       }
 
       h1 { font-size: 18px; }
@@ -2010,6 +2015,49 @@ function getScoreNameForDelta(delta) {
   return "Bogey+";
 }
 
+function getPlayerParStats(playerIndex) {
+  const stats = {
+    eagle: 0,
+    birdie: 0,
+    par: 0,
+    bogey: 0,
+    doublebogey: 0
+  };
+
+  const course = getCourse();
+
+  if (!course.hasPar) {
+    return stats;
+  }
+
+  for (const h of getCourseHoles()) {
+    const key = String(h.hole);
+    const data = state.holes[key];
+
+    if (!data) continue;
+
+    const gross = data.gross[playerIndex];
+
+    if (gross === null || gross === undefined || gross === "") {
+      continue;
+    }
+
+    if (h.par === null || h.par === undefined) {
+      continue;
+    }
+
+    const delta = Number(gross) - Number(h.par);
+
+    if (delta <= -2) stats.eagle++;
+    else if (delta === -1) stats.birdie++;
+    else if (delta === 0) stats.par++;
+    else if (delta === 1) stats.bogey++;
+    else stats.doublebogey++;
+  }
+
+  return stats;
+}
+
 function renderSummary() {
   const calc = calculateRound();
   const course = getCourse();
@@ -2427,7 +2475,120 @@ function createRoundCsv() {
   const calc = calculateRound();
   const course = getCourse();
 
-  let csv = "Loch;Spieler;Brutto;Vorgabe;Netto;Punkte";
+  const now = new Date();
+  const dateText = now.toLocaleDateString("de-DE");
+  const timeText = now.toLocaleTimeString("de-DE", {
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+
+  let csv = "";
+
+  csv += "KOPENHAGEN GOLFRUNDE\n";
+  csv += "Datum;" + csvEscape(dateText) + "\n";
+  csv += "Uhrzeit;" + csvEscape(timeText) + "\n";
+  csv += "Golfplatz;" + csvEscape(course.name) + "\n";
+  csv += "Spieleranzahl;" + state.playerCount + "\n";
+  csv += "\n";
+
+  csv += "GESAMTWERTUNG\n";
+  csv += "Platz;Spieler;Punkte;Brutto-Schläge";
+
+  if (course.hasPar) {
+    csv += ";+/- PAR";
+  }
+
+  csv += ";Gespielte Löcher\n";
+
+  calc.sortedTotals.forEach((p, idx) => {
+    let line = [
+      idx + 1,
+      p.name,
+      formatNum(p.points),
+      p.gross
+    ];
+
+    if (course.hasPar) {
+      line.push(formatPar(p.parDelta));
+    }
+
+    line.push(p.holesPlayed);
+
+    csv += line.map(csvEscape).join(";") + "\n";
+  });
+
+  csv += "\n";
+
+  if (course.hasPar) {
+    csv += "SPIELERSTATISTIK\n";
+    csv += "Spieler;Eagle+;Birdies;Pars;Bogeys;Bogey+\n";
+
+    for (let i = 0; i < state.playerCount; i++) {
+      const stats = getPlayerParStats(i);
+
+      const line = [
+        state.players[i].name,
+        stats.eagle,
+        stats.birdie,
+        stats.par,
+        stats.bogey,
+        stats.doublebogey
+      ];
+
+      csv += line.map(csvEscape).join(";") + "\n";
+    }
+
+    csv += "\n";
+  }
+
+  csv += "LOCHÜBERSICHT\n";
+
+  let header = ["Loch"];
+
+  if (course.hasPar) {
+    header.push("PAR");
+  }
+
+  for (let i = 0; i < state.playerCount; i++) {
+    header.push(state.players[i].name + " Brutto");
+    header.push(state.players[i].name + " Punkte");
+  }
+
+  csv += header.map(csvEscape).join(";") + "\n";
+
+  for (const h of getCourseHoles()) {
+    const key = String(h.hole);
+    const data = state.holes[key];
+    const result = calc.holeResults[key];
+
+    if (!data) continue;
+
+    const hasAnyScore = data.gross
+      .slice(0, state.playerCount)
+      .some(v => v !== null && v !== undefined && v !== "");
+
+    if (!hasAnyScore) continue;
+
+    const line = [h.hole];
+
+    if (course.hasPar) {
+      line.push(h.par);
+    }
+
+    for (let i = 0; i < state.playerCount; i++) {
+      const gross = data.gross[i];
+
+      line.push(gross === null ? "" : gross);
+      line.push(result.complete ? formatNum(result.points[i]) : "");
+    }
+
+    csv += line.map(csvEscape).join(";") + "\n";
+  }
+
+  csv += "\n";
+
+  csv += "ROHDATEN\n";
+  csv += "Loch;Spieler;Brutto;Vorgabe;Netto;Punkte";
 
   if (course.hasPar) {
     csv += ";PAR;+/- PAR;Wertung";
