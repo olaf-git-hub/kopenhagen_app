@@ -2476,8 +2476,10 @@ function createRoundCsv() {
   const course = getCourse();
 
   const now = new Date();
-  const dateText = now.toLocaleDateString("de-DE");
-  const timeText = now.toLocaleTimeString("de-DE", {
+  const dateTimeText = now.toLocaleString("de-DE", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
     hour: "2-digit",
     minute: "2-digit"
   });
@@ -2485,8 +2487,7 @@ function createRoundCsv() {
   let csv = "";
 
   csv += "KOPENHAGEN GOLFRUNDE\n";
-  csv += "Datum;" + csvEscape(dateText) + "\n";
-  csv += "Uhrzeit;" + csvEscape(timeText) + "\n";
+  csv += "Datum;" + csvEscape(dateTimeText) + "\n";
   csv += "Golfplatz;" + csvEscape(course.name) + "\n";
   csv += "Spieleranzahl;" + state.playerCount + "\n";
   csv += "\n";
@@ -2501,7 +2502,7 @@ function createRoundCsv() {
   csv += ";Gespielte Löcher\n";
 
   calc.sortedTotals.forEach((p, idx) => {
-    let line = [
+    const line = [
       idx + 1,
       p.name,
       formatNum(p.points),
@@ -2543,7 +2544,7 @@ function createRoundCsv() {
 
   csv += "LOCHÜBERSICHT\n";
 
-  let header = ["Loch"];
+  const header = ["Loch"];
 
   if (course.hasPar) {
     header.push("PAR");
@@ -2583,56 +2584,6 @@ function createRoundCsv() {
     }
 
     csv += line.map(csvEscape).join(";") + "\n";
-  }
-
-  csv += "\n";
-
-  csv += "ROHDATEN\n";
-  csv += "Loch;Spieler;Brutto;Vorgabe;Netto;Punkte";
-
-  if (course.hasPar) {
-    csv += ";PAR;+/- PAR;Wertung";
-  }
-
-  csv += "\n";
-
-  for (const h of getCourseHoles()) {
-    const key = String(h.hole);
-    const data = state.holes[key];
-    const result = calc.holeResults[key];
-
-    if (!data) continue;
-
-    for (let i = 0; i < state.playerCount; i++) {
-      const gross = data.gross[i];
-
-      if (gross === null || gross === undefined || gross === "") {
-        continue;
-      }
-
-      const strokes = result.strokes[i];
-      const netto = result.netto[i];
-      const points = result.complete ? formatNum(result.points[i]) : "";
-
-      const line = [
-        h.hole,
-        state.players[i].name,
-        gross,
-        strokes,
-        netto,
-        points
-      ];
-
-      if (course.hasPar && h.par !== null && h.par !== undefined) {
-        const delta = Number(gross) - Number(h.par);
-
-        line.push(h.par);
-        line.push(delta > 0 ? "+" + delta : String(delta));
-        line.push(getScoreNameForDelta(delta));
-      }
-
-      csv += line.map(csvEscape).join(";") + "\n";
-    }
   }
 
   return csv;
@@ -2686,7 +2637,7 @@ function shareRound() {
 
 async function exportRound() {
 
-  const csv = createRoundCsv();
+  const csv = "\uFEFF" + createRoundCsv();
   const json = JSON.stringify(state, null, 2);
 
   const csvFile = new File(
