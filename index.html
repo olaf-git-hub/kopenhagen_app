@@ -740,7 +740,7 @@
         justify-content: space-between;
       }
 
-      .topbar .actions button {
+     .topbar .actions > button {
         flex: 1;
       }
 
@@ -904,6 +904,41 @@
     flex-shrink: 0;
   }
 
+  .menu-wrap {
+  position: relative;
+}
+
+.share-menu {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 80;
+  min-width: 190px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  padding: 6px;
+}
+
+.share-menu.show {
+  display: grid;
+  gap: 6px;
+}
+
+.share-menu button {
+  width: 100%;
+  border-radius: 10px;
+  text-align: left;
+  background: #fff;
+  color: var(--accent-dark);
+}
+
+.share-menu button:hover {
+  background: var(--soft);
+}
+
   </style>
 </head>
 <body>
@@ -916,7 +951,13 @@
     </div>
     <div class="actions">
     <button class="secondary small" id="voiceBtn" type="button">🎙️</button>
-    <button class="secondary small" id="saveBtn" type="button">Speichern</button>
+    <div class="menu-wrap">
+    <button class="secondary small" id="shareMenuBtn" type="button">Teilen ▾</button>
+    <div class="share-menu" id="shareMenu">
+      <button type="button" id="shareRoundBtn">🔗 Runde teilen</button>
+      <button type="button" id="exportRoundBtn">📤 Runde exportieren</button>
+    </div>
+  </div>
     <button class="danger small" id="resetBtn" type="button">Neue Runde</button>
   </div>
   </div>
@@ -966,17 +1007,6 @@
             oder zusätzliche Vorgabe einschalten. Noch einmal tippen setzt auf Automatik zurück.
           </p>
           <div id="handicapPreview" class="handicap-preview"></div>
-        </details>
-
-        <details class="inner">
-          <summary>Daten sichern / wiederherstellen</summary>
-          <p class="help" style="margin-top:8px">
-            Runde per Link teilen oder als CSV/JSON-Dateien exportieren.
-          </p>
-          <div class="actions">
-          <button class="secondary small" type="button" id="exportBtn">🔗 Runde teilen</button>
-          <button class="secondary small" type="button" id="importBtn">📤 Runde exportieren</button>
-        </div>
         </details>
       </div>
     </details>
@@ -2474,7 +2504,7 @@ function downloadFile(content, filename, type) {
 }
 
 
-function exportData() {
+function shareRound() {
   const link = createShareLink();
 
   if (navigator.share) {
@@ -2493,7 +2523,7 @@ function exportData() {
 }
 
 
-async function importData() {
+async function exportRound() {
 
   const csv = createRoundCsv();
   const json = JSON.stringify(state, null, 2);
@@ -2935,17 +2965,57 @@ function processVoiceScore(rawText) {
   showToast("Score per Sprache übernommen");
 }
 
+function toggleShareMenu(e) {
+  e.stopPropagation();
+
+  const menu = document.getElementById("shareMenu");
+  if (!menu) return;
+
+  menu.classList.toggle("show");
+}
+
+function closeShareMenu() {
+  const menu = document.getElementById("shareMenu");
+  if (!menu) return;
+
+  menu.classList.remove("show");
+}
+
+function closeShareMenuOnOutsideClick(e) {
+  const menu = document.getElementById("shareMenu");
+  const btn = document.getElementById("shareMenuBtn");
+
+  if (!menu || !btn) return;
+
+  if (
+    menu.contains(e.target) ||
+    btn.contains(e.target)
+  ) {
+    return;
+  }
+
+  menu.classList.remove("show");
+}
+
 
 function init() {
   state = normalizeState(state);
   loadStateFromUrl();
   document.getElementById("summaryJumpBtn").addEventListener("click", toggleSummaryJump);
-  document.getElementById("saveBtn").addEventListener("click", () => saveState(true));
   document.getElementById("resetBtn").addEventListener("click", resetRound);
   document.getElementById("applySetupBtn").addEventListener("click", applySetup);
   document.getElementById("clearScoresBtn").addEventListener("click", clearScores);
-  document.getElementById("exportBtn").addEventListener("click", exportData);
-  document.getElementById("importBtn").addEventListener("click", importData);
+  document.getElementById("shareMenuBtn").addEventListener("click", toggleShareMenu);
+  document.getElementById("shareRoundBtn").addEventListener("click", () => {
+  closeShareMenu();
+  shareRound();
+});
+  document.getElementById("exportRoundBtn").addEventListener("click", () => {
+  closeShareMenu();
+  exportRound();
+});
+
+document.addEventListener("click", closeShareMenuOnOutsideClick);
   document.getElementById("playerCount").addEventListener("change", onPlayerCountChange);
 
   const details = document.getElementById("setupDetails");
