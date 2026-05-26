@@ -934,11 +934,23 @@ input.score-triplebogey {
   }
 
   .player-detail-stats {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
     gap: 6px;
     padding: 10px 12px;
   }
+
+.player-detail-stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.player-detail-stats .mini-pill {
+  font-size: 12px;
+  text-align: center;
+  white-space: nowrap;
+  padding: 5px 6px;
+}
 
   .player-detail-table {
     width: 100%;
@@ -2248,13 +2260,20 @@ function renderPlayerDetail() {
 
   if (course.hasPar) {
     html += "<div class='player-detail-stats'>";
+
+    html += "<div class='player-detail-stats-row'>";
     html += "<span class='mini-pill'>Eagle+: " + stats.eagle + "</span>";
     html += "<span class='mini-pill'>Birdies: " + stats.birdie + "</span>";
     html += "<span class='mini-pill'>Pars: " + stats.par + "</span>";
+    html += "</div>";
+
+    html += "<div class='player-detail-stats-row'>";
     html += "<span class='mini-pill'>Bogeys: " + stats.bogey + "</span>";
     html += "<span class='mini-pill'>2-Bogeys: " + stats.doublebogey + "</span>";
     html += "<span class='mini-pill'>3-Bogeys+: " + stats.triplebogey + "</span>";
     html += "</div>";
+
+html += "</div>";
   }
 
   html += "<table class='player-detail-table'>";
