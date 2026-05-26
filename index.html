@@ -823,20 +823,19 @@
    
     }
 
- input.score-eagle,
+input.score-eagle,
 input.score-birdie,
 input.score-par,
 input.score-bogey,
 input.score-doublebogey,
 input.score-triplebogey {
-  color: #111 !important;
-  border: 2px solid #555 !important;
-  border-radius: 0 !important;
-  box-shadow:
-    inset 0 0 0 2px white,
-    inset 0 0 0 4px #555,
-    inset 0 0 0 6px white,
-    inset 0 0 0 8px #555;
+  width: 46px !important;
+  height: 42px;
+  margin: 0 auto;
+  padding: 6px !important;
+  text-align: center;
+  font-weight: 950;
+  background: #fff !important;
 }
 
 input.score-eagle {
@@ -856,13 +855,14 @@ input.score-birdie {
 input.score-par {
   background: #eef6eb !important;
   color: #172016 !important;
-  border-color: #7aa874 !important;
+  border: 2px solid #7aa874 !important;
   border-radius: 10px !important;
 }
 
-.score-symbol.score-bogey {
-  color: #111;
-  border: 2px solid currentColor;
+input.score-bogey {
+  color: #111 !important;
+  border: 2px solid #555 !important;
+  border-radius: 0 !important;
 }
 
 input.score-doublebogey {
@@ -876,14 +876,15 @@ input.score-doublebogey {
 
 input.score-triplebogey {
   color: #111 !important;
-  border: 1.5px solid #111 !important;
+  border: 2px solid #555 !important;
   border-radius: 0 !important;
   box-shadow:
     inset 0 0 0 2px white,
-    inset 0 0 0 3.5px #111,
-    inset 0 0 0 5.5px white,
-    inset 0 0 0 7px #111;
+    inset 0 0 0 4px #555,
+    inset 0 0 0 6px white,
+    inset 0 0 0 8px #555;
 }
+
 .score-symbol {
   display: inline-flex;
   width: 30px;
@@ -912,7 +913,7 @@ input.score-triplebogey {
 
 .score-symbol.score-bogey {
   color: #111;
-  border: 3px solid currentColor;
+  border: 2px solid currentColor;
 }
 
 .score-symbol.score-doublebogey {
