@@ -1045,8 +1045,8 @@ input.score-triplebogey {
 .menu-dropdown {
   position: absolute;
   top: calc(100% + 6px);
-  right: -12px;
-  min-width: 240px;
+  right: 0;
+  min-width: 220px;
   background: #fff;
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -3362,9 +3362,8 @@ function speakText(text) {
 
   const utter = new SpeechSynthesisUtterance(text);
   utter.lang = "de-DE";
-  utter.rate = 1.15;
-  utter.pitch = 1.05;
-  utter.volume = 1;
+  utter.rate = 1;
+  utter.pitch = 1;
 
   window.speechSynthesis.speak(utter);
 }
@@ -3434,75 +3433,35 @@ function speakCurrentStand() {
 function speakChances() {
   const calc = calculateRound();
   const ranking = calc.sortedTotals;
-
-  const remaining =
-    getCourseHoles().length - calc.playedHoles;
-
-  const maxPerHole =
-    state.playerCount === 3 ? 2 : 3;
+  const remaining = getCourseHoles().length - calc.playedHoles;
+  const maxPerHole = state.playerCount === 3 ? 2 : 3;
 
   let text =
-    "Noch " +
+    "Es sind noch " +
     remaining +
     " Löcher zu spielen. ";
 
-  for (let i = 0; i < ranking.length; i++) {
-    const p = ranking[i];
+  for (const p of ranking) {
+    const maxPossible = p.points + remaining * maxPerHole;
+    let bestPlace = ranking.length;
 
-    const leader = ranking[0];
-
-    if (i === 0) {
-      const second = ranking[1];
-
-      const lead =
-        p.points - second.points;
-
-      text +=
-        p.name +
-        " führt aktuell mit " +
-        formatNum(lead) +
-        " Punkten Vorsprung vor " +
-        second.name +
-        ". ";
-
-      continue;
+    for (let i = 0; i < ranking.length; i++) {
+      if (maxPossible >= ranking[i].points) {
+        bestPlace = i + 1;
+        break;
+      }
     }
 
-    const deficit =
-      leader.points - p.points;
-
-    const maxPossible =
-      remaining * maxPerHole;
-
-    if (deficit > maxPossible) {
-      text +=
-        p.name +
-        " kann Platz 1 rechnerisch nicht mehr erreichen. ";
-    } else {
-      text +=
-        p.name +
-        " liegt " +
-        formatNum(deficit) +
-        " Punkte hinter der Führung und hat noch Chancen auf Platz 1. ";
-    }
-
-    if (i > 0) {
-      const ahead = ranking[i - 1];
-
-      const gap =
-        ahead.points - p.points;
-
-      text +=
-        "Der Rückstand auf " +
-        ahead.name +
-        " beträgt " +
-        formatNum(gap) +
-        " Punkte. ";
-    }
+    text +=
+      (p.name || ("Spieler " + (p.index + 1))) +
+      " kann rechnerisch noch Platz " +
+      bestPlace +
+      " erreichen. ";
   }
 
   speakText(text);
 }
+
 function toggleVoiceMenu(e) {
   e.stopPropagation();
 
