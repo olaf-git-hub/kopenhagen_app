@@ -1133,6 +1133,7 @@ input.score-triplebogey {
 <button class="floating-summary-btn" id="summaryJumpBtn" type="button">🏆 Stand</button>
 
 <div class="toast" id="toast"></div>
+<datalist id="knownPlayerNames"></datalist>
 
 <script>
 "use strict";
@@ -1203,6 +1204,19 @@ let speechRecognition = null;
 let speechIsRunning = false;
 
 let selectedPlayerDetailIndex = null;
+
+const knownPlayerNames = [
+  "Olaf",
+  "Astrid",
+  "Dirk",
+  "Frank",
+  "Helge",
+  "Thomas",
+  "Caroline",
+  "Andreas",
+  "Alex",
+  "Friedhelm"
+];
 
 const speechNumberWords = {
 
@@ -1654,6 +1668,19 @@ function calculateRound() {
   };
 }
 
+function buildKnownPlayerNamesList() {
+  const list = document.getElementById("knownPlayerNames");
+  if (!list) return;
+
+  list.innerHTML = "";
+
+  for (const name of knownPlayerNames) {
+    const option = document.createElement("option");
+    option.value = name;
+    list.appendChild(option);
+  }
+}
+
 function buildSetup() {
   buildCourseButtons();
 
@@ -1701,7 +1728,15 @@ function buildSetup() {
     inp.type = "text";
     inp.id = "playerName_" + i;
     inp.value = state.players[i].name || ("Spieler " + (i + 1));
+    inp.placeholder = "Spieler " + (i + 1);
+    inp.setAttribute("list", "knownPlayerNames");
     inp.autocomplete = "off";
+
+inp.addEventListener("focus", () => {
+  if (inp.value === "Spieler " + (i + 1)) {
+    inp.value = "";
+  }
+});
 
     inp.addEventListener("input", () => {
     state.players[i].name = inp.value.trim() || ("Spieler " + (i + 1));
@@ -3295,6 +3330,7 @@ function closeShareMenuOnOutsideClick(e) {
 }
 
 
+
 function init() {
   state = normalizeState(state);
   loadStateFromUrl();
@@ -3318,6 +3354,7 @@ document.addEventListener("click", closeShareMenuOnOutsideClick);
   const details = document.getElementById("setupDetails");
   if (details) details.open = window.innerWidth > 700;
 
+  buildKnownPlayerNamesList();
   buildSetup();
   buildTable();
   renderMobileCards();
