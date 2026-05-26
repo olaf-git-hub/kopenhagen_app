@@ -823,35 +823,100 @@
    
     }
 
-  input.score-under2 {
-    background: #ffe7a3 !important;
-    color: #5d3b00 !important;
-    border-color: #d99a00 !important;
-  }
+ input.score-eagle,
+input.score-birdie,
+input.score-par,
+input.score-bogey,
+input.score-doublebogey,
+input.score-triplebogey {
+  width: 46px !important;
+  height: 42px;
+  margin: 0 auto;
+  padding: 6px !important;
+  text-align: center;
+  font-weight: 950;
+  background: #fff !important;
+}
 
-  input.score-birdie {
-    background: #f8d7da !important;
-    color: #8b0000 !important;
-    border-color: #c0392b !important;
-  }
+input.score-eagle {
+  background: #ffe7a3 !important;
+  color: #5d3b00 !important;
+  border: 4px double #d99a00 !important;
+  border-radius: 999px !important;
+}
 
-  input.score-par {
-    background: #eef6eb !important;
-    color: #172016 !important;
-    border-color: #7aa874 !important;
-  }
+input.score-birdie {
+  background: #f8d7da !important;
+  color: #8b0000 !important;
+  border: 3px solid #c0392b !important;
+  border-radius: 999px !important;
+}
 
-  input.score-bogey {
-    background: #dbeafe !important;
-    color: #003b7a !important;
-    border-color: #3b82f6 !important;
-  }
+input.score-par {
+  background: #eef6eb !important;
+  color: #172016 !important;
+  border-color: #7aa874 !important;
+  border-radius: 10px !important;
+}
 
-  input.score-doublebogey {
-    background: #d8d4f2 !important;
-    color: #26145f !important;
-    border-color: #6d5bd0 !important;
-  }
+input.score-bogey {
+  color: #111 !important;
+  border: 3px solid #777 !important;
+  border-radius: 0 !important;
+}
+
+input.score-doublebogey {
+  color: #111 !important;
+  border: 4px double #555 !important;
+  border-radius: 0 !important;
+}
+
+input.score-triplebogey {
+  color: #111 !important;
+  border: 5px double #111 !important;
+  border-radius: 0 !important;
+}
+
+.score-symbol {
+  display: inline-flex;
+  width: 30px;
+  height: 30px;
+  align-items: center;
+  justify-content: center;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.score-symbol.score-eagle {
+  color: #8b0000;
+  border: 4px double currentColor;
+  border-radius: 999px;
+}
+
+.score-symbol.score-birdie {
+  color: #8b0000;
+  border: 3px solid currentColor;
+  border-radius: 999px;
+}
+
+.score-symbol.score-par {
+  color: var(--good);
+}
+
+.score-symbol.score-bogey {
+  color: #111;
+  border: 3px solid currentColor;
+}
+
+.score-symbol.score-doublebogey {
+  color: #111;
+  border: 4px double currentColor;
+}
+
+.score-symbol.score-triplebogey {
+  color: #111;
+  border: 5px double currentColor;
+}
 
   .player-detail {
     margin: 0 14px 14px;
@@ -1763,13 +1828,19 @@ function cycleOverride(playerIndex, hole) {
   renderSummary();
 }
 
-function getScoreClassForGross(hole, gross) {
+function getScoreClassForDelta(delta) {
+  if (delta <= -2) return "score-eagle";
+  if (delta === -1) return "score-birdie";
+  if (delta === 0) return "score-par";
+  if (delta === 1) return "score-bogey";
+  if (delta === 2) return "score-doublebogey";
+  return "score-triplebogey";
+}
 
+function getScoreClassForGross(hole, gross) {
   const course = getCourse();
 
-  if (!course.hasPar) {
-    return "";
-  }
+  if (!course.hasPar) return "";
 
   if (
     hole.par === null ||
@@ -1782,24 +1853,7 @@ function getScoreClassForGross(hole, gross) {
   }
 
   const delta = Number(gross) - Number(hole.par);
-
-  if (delta <= -2) {
-    return "score-under2";
-  }
-
-  if (delta === -1) {
-    return "score-birdie";
-  }
-
-  if (delta === 0) {
-    return "score-par";
-  }
-
-  if (delta === 1) {
-    return "score-bogey";
-  }
-
-  return "score-doublebogey";
+  return getScoreClassForDelta(delta);
 }
 
 function buildTable() {
@@ -2012,7 +2066,8 @@ function getScoreNameForDelta(delta) {
   if (delta === -1) return "Birdie";
   if (delta === 0) return "Par";
   if (delta === 1) return "Bogey";
-  return "Bogey+";
+  if (delta === 2) return "2-Bogey";
+  return "3-Bogey+";
 }
 
 function getPlayerParStats(playerIndex) {
@@ -2021,30 +2076,21 @@ function getPlayerParStats(playerIndex) {
     birdie: 0,
     par: 0,
     bogey: 0,
-    doublebogey: 0
+    doublebogey: 0,
+    triplebogey: 0
   };
 
   const course = getCourse();
-
-  if (!course.hasPar) {
-    return stats;
-  }
+  if (!course.hasPar) return stats;
 
   for (const h of getCourseHoles()) {
     const key = String(h.hole);
     const data = state.holes[key];
-
     if (!data) continue;
 
     const gross = data.gross[playerIndex];
-
-    if (gross === null || gross === undefined || gross === "") {
-      continue;
-    }
-
-    if (h.par === null || h.par === undefined) {
-      continue;
-    }
+    if (gross === null || gross === undefined || gross === "") continue;
+    if (h.par === null || h.par === undefined) continue;
 
     const delta = Number(gross) - Number(h.par);
 
@@ -2052,7 +2098,8 @@ function getPlayerParStats(playerIndex) {
     else if (delta === -1) stats.birdie++;
     else if (delta === 0) stats.par++;
     else if (delta === 1) stats.bogey++;
-    else stats.doublebogey++;
+    else if (delta === 2) stats.doublebogey++;
+    else stats.triplebogey++;
   }
 
   return stats;
@@ -2151,7 +2198,8 @@ function renderPlayerDetail() {
     birdie: 0,
     par: 0,
     bogey: 0,
-    doublebogey: 0
+    doublebogey: 0,
+    triplebogey: 0
   };
 
   const rows = [];
@@ -2168,16 +2216,19 @@ function renderPlayerDetail() {
     const points = result.complete ? result.points[playerIndex] : null;
 
     let scoreName = "";
+    let scoreClass = "";
 
     if (course.hasPar && h.par !== null && h.par !== undefined) {
       const delta = Number(gross) - Number(h.par);
       scoreName = getScoreNameForDelta(delta);
+      scoreClass = getScoreClassForDelta(delta);
 
       if (delta <= -2) stats.eagle++;
       else if (delta === -1) stats.birdie++;
       else if (delta === 0) stats.par++;
       else if (delta === 1) stats.bogey++;
-      else stats.doublebogey++;
+      else if (delta === 2) stats.doublebogey++;
+      else stats.triplebogey++;
     }
 
     rows.push({
@@ -2187,7 +2238,8 @@ function renderPlayerDetail() {
       strokes,
       netto,
       points,
-      scoreName
+      scoreName,
+      scoreClass
     });
   }
 
@@ -2200,7 +2252,8 @@ function renderPlayerDetail() {
     html += "<span class='mini-pill'>Birdies: " + stats.birdie + "</span>";
     html += "<span class='mini-pill'>Pars: " + stats.par + "</span>";
     html += "<span class='mini-pill'>Bogeys: " + stats.bogey + "</span>";
-    html += "<span class='mini-pill'>Bogey+: " + stats.doublebogey + "</span>";
+    html += "<span class='mini-pill'>2-Bogeys: " + stats.doublebogey + "</span>";
+    html += "<span class='mini-pill'>3-Bogeys+: " + stats.triplebogey + "</span>";
     html += "</div>";
   }
 
@@ -2221,7 +2274,7 @@ function renderPlayerDetail() {
 
     if (course.hasPar) html += "<td>" + r.par + "</td>";
 
-    html += "<td>" + r.gross + "</td>";
+    html += "<td><span class='score-symbol " + r.scoreClass + "'>" + r.gross + "</span></td>";
     html += "<td>" + r.strokes + "</td>";
     html += "<td>" + r.netto + "</td>";
     html += "<td>" + (r.points === null ? "–" : formatNum(r.points)) + "</td>";
@@ -2616,7 +2669,7 @@ function createRoundCsv() {
 
   if (course.hasPar) {
     csv += "SPIELERSTATISTIK\n";
-    csv += "Spieler;Eagle+;Birdies;Pars;Bogeys;Bogey+\n";
+    csv += "Spieler;Eagle+;Birdies;Pars;Bogeys;2-Bogeys;3-Bogey+\n";
 
     for (let i = 0; i < state.playerCount; i++) {
       const stats = getPlayerParStats(i);
@@ -2627,7 +2680,8 @@ function createRoundCsv() {
         stats.birdie,
         stats.par,
         stats.bogey,
-        stats.doublebogey
+        stats.doublebogey,
+        stats.triplebogey
       ];
 
       csv += line.map(csvEscape).join(";") + "\n";
