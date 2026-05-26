@@ -1038,43 +1038,6 @@ input.score-triplebogey {
   background: var(--soft);
 }
 
-.menu-wrap {
-  position: relative;
-}
-
-.menu-dropdown {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  min-width: 220px;
-  background: #fff;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  box-shadow: var(--shadow);
-  padding: 6px;
-  display: none;
-  z-index: 200;
-}
-
-.menu-dropdown.open {
-  display: block;
-}
-
-.menu-dropdown button {
-  width: 100%;
-  border: 0;
-  background: transparent;
-  padding: 10px 12px;
-  border-radius: 10px;
-  text-align: left;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-.menu-dropdown button:hover {
-  background: var(--soft);
-}
-
   </style>
 </head>
 <body>
@@ -1086,25 +1049,7 @@ input.score-triplebogey {
       <div id="voiceStatus" class="subtitle"></div>
     </div>
     <div class="actions">
-    <div class="menu-wrap">
-  <button id="voiceMenuBtn" class="secondary small" type="button">
-    🔊 Sprache ▾
-  </button>
-
-  <div class="menu-dropdown" id="voiceMenu">
-    <button type="button" id="speakStandBtn">
-      📣 Stand vorlesen
-    </button>
-
-    <button type="button" id="speakChanceBtn">
-      🧮 Chancen vorlesen
-    </button>
-
-    <button type="button" id="speechBtn">
-      🎙️ Score sprechen
-    </button>
-  </div>
-</div>
+    <button class="secondary small" id="voiceBtn" type="button">🎙️</button>
     <div class="menu-wrap">
     <button class="secondary small" id="shareMenuBtn" type="button">Teilen ▾</button>
     <div class="share-menu" id="shareMenu">
@@ -1258,7 +1203,6 @@ let speechRecognition = null;
 let speechIsRunning = false;
 
 let selectedPlayerDetailIndex = null;
-let lastSpokenRanking = null;
 
 const speechNumberWords = {
 
@@ -3011,7 +2955,7 @@ function getSpeechApi() {
 }
 
 function initSpeechInput() {
-  const btn = document.getElementById("speechBtn");
+  const btn = document.getElementById("voiceBtn");
   const status = document.getElementById("voiceStatus");
 
   if (!btn) return;
@@ -3350,131 +3294,6 @@ function closeShareMenuOnOutsideClick(e) {
   menu.classList.remove("show");
 }
 
-function speakText(text) {
-  if (!("speechSynthesis" in window)) {
-    showToast("Sprachausgabe nicht unterstützt");
-    return;
-  }
-
-  window.speechSynthesis.cancel();
-
-  const utter = new SpeechSynthesisUtterance(text);
-  utter.lang = "de-DE";
-  utter.rate = 1;
-  utter.pitch = 1;
-
-  window.speechSynthesis.speak(utter);
-}
-
-function speakCurrentStand() {
-  const calc = calculateRound();
-  const ranking = calc.sortedTotals;
-  const playedHoles = calc.playedHoles;
-
-  let text = "";
-
-  if (lastSpokenRanking) {
-    const changes = [];
-
-    for (let i = 0; i < ranking.length; i++) {
-      const current = ranking[i];
-
-      const oldPos =
-        lastSpokenRanking.findIndex(x => x.index === current.index) + 1;
-
-      const newPos = i + 1;
-
-      if (oldPos > 0 && oldPos !== newPos) {
-        changes.push(
-          current.name +
-          " ist von Platz " +
-          oldPos +
-          " auf Platz " +
-          newPos +
-          " gewechselt"
-        );
-      }
-    }
-
-    if (changes.length === 0) {
-      text += "Nach Loch " + playedHoles + " keine Änderung im Gesamtstand. ";
-    } else {
-      text += "Nach Loch " + playedHoles + " gab es folgende Änderung. ";
-      text += changes.join(". ") + ". ";
-    }
-  } else {
-    text += "Aktueller Spielstand nach " + playedHoles + " gespielten Löchern. ";
-  }
-
-  text += "Neuer Spielstand. ";
-
-  for (let i = 0; i < ranking.length; i++) {
-    const p = ranking[i];
-
-    text +=
-      "Platz " +
-      (i + 1) +
-      ": " +
-      (p.name || ("Spieler " + (p.index + 1))) +
-      " mit " +
-      formatNum(p.points) +
-      " Punkten. ";
-  }
-
-  lastSpokenRanking = ranking.map(p => ({
-    index: p.index
-  }));
-
-  speakText(text);
-}
-
-function speakChances() {
-  const calc = calculateRound();
-  const ranking = calc.sortedTotals;
-  const remaining = getCourseHoles().length - calc.playedHoles;
-  const maxPerHole = state.playerCount === 3 ? 2 : 3;
-
-  let text =
-    "Es sind noch " +
-    remaining +
-    " Löcher zu spielen. ";
-
-  for (const p of ranking) {
-    const maxPossible = p.points + remaining * maxPerHole;
-    let bestPlace = ranking.length;
-
-    for (let i = 0; i < ranking.length; i++) {
-      if (maxPossible >= ranking[i].points) {
-        bestPlace = i + 1;
-        break;
-      }
-    }
-
-    text +=
-      (p.name || ("Spieler " + (p.index + 1))) +
-      " kann rechnerisch noch Platz " +
-      bestPlace +
-      " erreichen. ";
-  }
-
-  speakText(text);
-}
-
-function toggleVoiceMenu(e) {
-  e.stopPropagation();
-
-  const menu = document.getElementById("voiceMenu");
-  if (!menu) return;
-
-  menu.classList.toggle("open");
-}
-
-function closeVoiceMenu() {
-  const menu = document.getElementById("voiceMenu");
-  if (!menu) return;
-
-  menu.classList.remove("open");
-}
 
 function init() {
   state = normalizeState(state);
@@ -3484,16 +3303,6 @@ function init() {
   document.getElementById("applySetupBtn").addEventListener("click", applySetup);
   document.getElementById("clearScoresBtn").addEventListener("click", clearScores);
   document.getElementById("shareMenuBtn").addEventListener("click", toggleShareMenu);
-  document.getElementById("voiceMenuBtn").addEventListener("click", toggleVoiceMenu);
-  document.getElementById("speakStandBtn").addEventListener("click", () => {
-    closeVoiceMenu();
-    speakCurrentStand();
-  });
-
-document.getElementById("speakChanceBtn").addEventListener("click", () => {
-  closeVoiceMenu();
-  speakChances();
-});
   document.getElementById("shareRoundBtn").addEventListener("click", () => {
   closeShareMenu();
   shareRound();
@@ -3504,7 +3313,6 @@ document.getElementById("speakChanceBtn").addEventListener("click", () => {
 });
 
 document.addEventListener("click", closeShareMenuOnOutsideClick);
-document.addEventListener("click", closeVoiceMenu);
   document.getElementById("playerCount").addEventListener("change", onPlayerCountChange);
 
   const details = document.getElementById("setupDetails");
