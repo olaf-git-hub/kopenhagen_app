@@ -2435,7 +2435,46 @@ function resetRound() {
 }
 
 function createShareLink() {
-  const json = JSON.stringify(state);
+  const shareState = {
+    c: state.courseId,
+    n: state.playerCount,
+    p: state.players.slice(0, state.playerCount).map(p => [
+      p.name,
+      p.allowance
+    ]),
+    h: {},
+    o: {}
+  };
+
+  for (const holeKey in state.holes) {
+    const gross = state.holes[holeKey].gross;
+
+    if (!Array.isArray(gross)) continue;
+
+    const hasScore = gross
+      .slice(0, state.playerCount)
+      .some(v => v !== null && v !== undefined && v !== "");
+
+    if (hasScore) {
+      shareState.h[holeKey] = gross.slice(0, state.playerCount);
+    }
+  }
+
+  for (const holeKey in state.handicapOverrides) {
+    const overrides = state.handicapOverrides[holeKey];
+
+    if (!Array.isArray(overrides)) continue;
+
+    const hasOverride = overrides
+      .slice(0, state.playerCount)
+      .some(v => v !== null && v !== undefined && v !== "");
+
+    if (hasOverride) {
+      shareState.o[holeKey] = overrides.slice(0, state.playerCount);
+    }
+  }
+
+  const json = JSON.stringify(shareState);
 
   const encoded = encodeURIComponent(
     btoa(unescape(encodeURIComponent(json)))
@@ -2443,19 +2482,73 @@ function createShareLink() {
 
   return window.location.origin +
     window.location.pathname +
-    "?data=" +
+    "#s=" +
     encoded;
 }
-
 function loadStateFromUrl() {
-  const params = new URLSearchParams(window.location.search);
-  const data = params.get("data");
+  const hash = window.location.hash || "";
 
-  if (!data) return;
+  if (!hash.startsWith("#s=")) return;
+
+  const data = hash.substring(3);
 
   try {
-    const json = decodeURIComponent(escape(atob(decodeURIComponent(data))));
-    const imported = JSON.parse(json);
+    const json = decodeURIComponent(
+      escape(atob(decodeURIComponent(data)))
+    );
+
+    const shared = JSON.parse(json);
+
+    const imported = cloneDefault();
+
+    imported.courseId = courses[shared.c] ? shared.c : "velte";
+    imported.playerCount = Number(shared.n) === 3 ? 3 : 4;
+
+    imported.players = [];
+
+    if (Array.isArray(shared.p)) {
+      for (let i = 0; i < imported.playerCount; i++) {
+        const p = shared.p[i] || [];
+        imported.players.push({
+          name: p[0] || ("Spieler " + (i + 1)),
+          allowance: Math.max(0, toIntOrZero(p[1]))
+        });
+      }
+    }
+
+    imported.holes = {};
+    imported.handicapOverrides = {};
+
+    const courseHoles = courses[imported.courseId].holes;
+
+    for (const h of courseHoles) {
+      const key = String(h.hole);
+
+      imported.holes[key] = {
+        gross: Array(imported.playerCount).fill(null)
+      };
+
+      imported.handicapOverrides[key] =
+        Array(imported.playerCount).fill(null);
+
+      if (shared.h && Array.isArray(shared.h[key])) {
+        imported.holes[key].gross =
+          shared.h[key]
+            .slice(0, imported.playerCount)
+            .map(toNullableInt);
+      }
+
+      if (shared.o && Array.isArray(shared.o[key])) {
+        imported.handicapOverrides[key] =
+          shared.o[key]
+            .slice(0, imported.playerCount)
+            .map(v => {
+              if (v === null || v === undefined || v === "") return null;
+              return Math.max(0, toIntOrZero(v));
+            });
+      }
+    }
+
     state = normalizeState(imported);
     saveState(false);
 
@@ -2466,6 +2559,7 @@ function loadStateFromUrl() {
     );
 
     showToast("Geteilte Runde geladen");
+
   } catch (e) {
     console.error("Share-Link konnte nicht geladen werden", e);
   }
