@@ -1215,7 +1215,8 @@ const knownPlayerNames = [
   "Caroline",
   "Andreas",
   "Alex",
-  "Friedhelm"
+  "Friedhelm",
+  "Louis"
 ];
 
 const speechNumberWords = {
@@ -2131,8 +2132,8 @@ function getScoreNameForDelta(delta) {
   if (delta === -1) return "Birdie";
   if (delta === 0) return "Par";
   if (delta === 1) return "Bogey";
-  if (delta === 2) return "2-Bogey";
-  return "3-Bogey+";
+  if (delta === 2) return "D-Bogey";
+  return "T-Bogey+";
 }
 
 function getPlayerParStats(playerIndex) {
@@ -2322,8 +2323,8 @@ function renderPlayerDetail() {
 
     html += "<div class='player-detail-stats-row'>";
     html += "<span class='mini-pill'>Bogeys: " + stats.bogey + "</span>";
-    html += "<span class='mini-pill'>2-Bogeys: " + stats.doublebogey + "</span>";
-    html += "<span class='mini-pill'>3-Bogeys+: " + stats.triplebogey + "</span>";
+    html += "<span class='mini-pill'>D-Bogeys: " + stats.doublebogey + "</span>";
+    html += "<span class='mini-pill'>T-Bogeys+: " + stats.triplebogey + "</span>";
     html += "</div>";
 
     html += "</div>";
@@ -2741,7 +2742,7 @@ function createRoundCsv() {
 
   if (course.hasPar) {
     csv += "SPIELERSTATISTIK\n";
-    csv += "Spieler;Eagle+;Birdies;Pars;Bogeys;2-Bogeys;3-Bogey+\n";
+    csv += "Spieler;Eagle+;Birdies;Pars;Bogeys;D-Bogeys;T-Bogey+\n";
 
     for (let i = 0; i < state.playerCount; i++) {
       const stats = getPlayerParStats(i);
