@@ -1038,6 +1038,30 @@ input.score-triplebogey {
   background: var(--soft);
 }
 
+.summary-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  min-width: 70px;
+  flex-shrink: 0;
+}
+
+.rank-move {
+  min-width: 30px;
+  text-align: right;
+  font-size: 16px;
+  font-weight: 950;
+}
+
+.rank-move.up {
+  color: var(--good);
+}
+
+.rank-move.down {
+  color: var(--bad);
+}
+
   </style>
 </head>
 <body>
@@ -1205,6 +1229,8 @@ let speechIsRunning = false;
 
 let selectedPlayerDetailIndex = null;
 
+let lastRankMoveByPlayer = {};
+
 const knownPlayerNames = [
   "Olaf",
   "Astrid",
@@ -1357,6 +1383,8 @@ const speechPlayerAliases = {
     "alexx"
   ]
 };
+
+
 
 function getCourse() {
   return courses[state.courseId] || courses.velte;
@@ -2189,14 +2217,29 @@ function renderSummary() {
     name.className = "summary-name";
     const isOpen = selectedPlayerDetailIndex === p.index;
 
+    const moveValue = lastRankMoveByPlayer[p.index] || 0;
+
+    let moveHtml = "";
+
+    if (moveValue > 0) {
+      moveHtml = "<span class='rank-move up'>▲" + moveValue + "</span>";
+    } else if (moveValue < 0) {
+      moveHtml = "<span class='rank-move down'>▼" + Math.abs(moveValue) + "</span>";
+    } else {
+      moveHtml = "<span class='rank-move'></span>";
+    }
+
     name.innerHTML =
       "<span>" +
       escapeHtml(p.name) +
       " · " +
       formatNum(p.points) +
       " Punkte</span>" +
+      "<span class='summary-actions'>" +
+      moveHtml +
       "<span class='summary-toggle'>" +
-      (isOpen ? "▾" : "▸") +
+      (isOpen ? "⊖" : "⊕") +
+      "</span>" +
       "</span>";
 
     name.classList.add("clickable-player");
@@ -2374,6 +2417,36 @@ function getRankingSignature() {
   return calc.sortedTotals.map(p => p.index).join("-");
 }
 
+function getRankingPositions() {
+  const calc = calculateRound();
+  const positions = {};
+
+  calc.sortedTotals.forEach((p, idx) => {
+    positions[p.index] = idx + 1;
+  });
+
+  return positions;
+}
+
+function updateRankMoves(oldPositions) {
+  const calc = calculateRound();
+
+  lastRankMoveByPlayer = {};
+
+  if (calc.playedHoles < 2) return;
+
+  const newPositions = getRankingPositions();
+
+  for (const playerIndex in newPositions) {
+    const oldPos = oldPositions[playerIndex];
+    const newPos = newPositions[playerIndex];
+
+    if (!oldPos || oldPos === newPos) continue;
+
+    lastRankMoveByPlayer[playerIndex] = oldPos - newPos;
+  }
+}
+
 function playRankingChangeSound() {
 
   const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -2438,6 +2511,7 @@ function checkRankingChangeAndPlaySound(oldSignature) {
 function onScoreInput(e) {
   const hole = e.target.dataset.hole;
   const oldRankingSignature = getRankingSignature();
+  const oldRankingPositions = getRankingPositions();
   const player = Number(e.target.dataset.player);
   const value = e.target.value;
 
@@ -2450,8 +2524,9 @@ function onScoreInput(e) {
   saveState(false);
   buildTable();
   renderMobileCards();
+  updateRankMoves(oldRankingPositions);
   renderSummary();
-
+  
   checkRankingChangeAndPlaySound(oldRankingSignature);
 }
 
