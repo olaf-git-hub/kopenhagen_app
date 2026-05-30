@@ -1155,15 +1155,6 @@ input.score-triplebogey {
   color: var(--muted);
 }
 
-.race-finish-line {
-  position: absolute;
-  top: 32px;
-  bottom: 12px;
-  right: 18px;
-  border-right: 3px dashed #222;
-  opacity: .45;
-}
-
 
 
 .race-runner {
@@ -1178,7 +1169,7 @@ input.score-triplebogey {
 }
 
 .race-snail {
-  font-size: 46px;
+  font-size: 42px;
   line-height: 1;
   display: inline-block;
 }
@@ -1390,21 +1381,22 @@ const courses = {
     hasPar: true,
     hasHcp: true,
     holes: [
-      { hole: 1, par: 5, length: 528, hcp: 5 },
-      { hole: 2, par: 4, length: 353, hcp: 7 },
+      { hole: 1, par: 5, length: 528, hcp: 3 },
+      { hole: 2, par: 4, length: 353, hcp: 9 },
       { hole: 3, par: 3, length: 163, hcp: 15 },
       { hole: 4, par: 4, length: 345, hcp: 11 },
       { hole: 5, par: 3, length: 135, hcp: 17 },
-      { hole: 6, par: 5, length: 472, hcp: 1 },
+      { hole: 6, par: 5, length: 472, hcp: 5 },
       { hole: 7, par: 4, length: 317, hcp: 13 },
-      { hole: 8, par: 5, length: 485, hcp: 9 },
-      { hole: 9, par: 4, length: 377, hcp: 3 },
+      { hole: 8, par: 5, length: 485, hcp: 7 },
+      { hole: 9, par: 4, length: 377, hcp: 1 },
+
       { hole: 10, par: 4, length: 346, hcp: 10 },
       { hole: 11, par: 4, length: 372, hcp: 6 },
-      { hole: 12, par: 3, length: 169, hcp: 14 },
+      { hole: 12, par: 3, length: 169, hcp: 16 },
       { hole: 13, par: 5, length: 493, hcp: 2 },
       { hole: 14, par: 4, length: 324, hcp: 12 },
-      { hole: 15, par: 3, length: 175, hcp: 16 },
+      { hole: 15, par: 3, length: 175, hcp: 14 },
       { hole: 16, par: 5, length: 486, hcp: 8 },
       { hole: 17, par: 3, length: 138, hcp: 18 },
       { hole: 18, par: 4, length: 377, hcp: 4 }
@@ -3732,7 +3724,7 @@ function openRaceReplay() {
   const history = getRaceHistory();
 
   if (history.length === 0) {
-    showToast("Noch keine vollständigen Löcher für Schneckenrennen");
+    showToast("Noch keine vollständigen Löcher für Replay");
     return;
   }
 
@@ -3763,10 +3755,7 @@ function openRaceReplay() {
   scale.innerHTML = "<span>0</span><span>10</span><span>20</span><span>30</span><span>40</span>";
   track.appendChild(scale);
 
-  const finish = document.createElement("div");
-  finish.className = "race-finish-line";
-  track.appendChild(finish);
-
+  
   for (let i = 0; i < state.playerCount; i++) {
     const top = getRaceTopForPlayer(i);
 
