@@ -1145,20 +1145,34 @@ input.score-triplebogey {
   position: absolute;
   transform: translate(-50%, -50%);
   transition: left .8s ease, top .8s ease;
-  font-size: 26px;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.race-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  display: inline-block;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 5px rgba(0,0,0,.25);
 }
 
 .race-runner-name {
   display: inline-block;
-  margin-left: 4px;
   font-size: 12px;
   font-weight: 950;
   color: var(--accent-dark);
-  background: rgba(255,255,255,.88);
+  background: rgba(255,255,255,.90);
   border: 1px solid var(--line);
   border-radius: 999px;
   padding: 2px 6px;
+}
+
+#raceTimeline {
+  flex: 2;
 }
 
 .race-controls {
@@ -1285,8 +1299,9 @@ input.score-triplebogey {
   </div>
 
   <div class="race-controls">
-    <button type="button" id="startRaceBtn">▶ Start</button>
-    <button class="secondary" type="button" id="resetRaceBtn">↺ Zurück</button>
+  <button type="button" id="startRaceBtn">▶ Start</button>
+  <input type="range" id="raceTimeline" min="0" max="0" value="0">
+  <button class="secondary" type="button" id="resetRaceBtn">↺ Zurück</button>
   </div>
 </div>
 <datalist id="knownPlayerNames"></datalist>
@@ -1363,8 +1378,15 @@ let selectedPlayerDetailIndex = null;
 
 let lastRankMoveByPlayer = {};
 
-const RACE_REPLAY_SECONDS = 20;
+const RACE_REPLAY_SECONDS = 30;
 let raceTimer = null;
+
+const racePlayerColors = [
+  "#d32f2f",
+  "#1976d2",
+  "#2e7d32",
+  "#7b1fa2"
+];
 
 const knownPlayerNames = [
   "Olaf",
@@ -3609,6 +3631,26 @@ function getRaceHistory() {
   return history;
 }
 
+function getRaceMedal(rank) {
+  if (rank === 1) return "🥇";
+  if (rank === 2) return "🥈";
+  if (rank === 3) return "🥉";
+  return "4";
+}
+
+function getRaceRunnerHtml(playerIndex, name, points) {
+  const color = racePlayerColors[playerIndex] || "#555";
+
+  return (
+    "<span class='race-dot' style='background:" +
+    color +
+    "'></span><span class='race-runner-name'>" +
+    escapeHtml(name) +
+    (points === null ? "" : " · " + formatNum(points)) +
+    "</span>"
+  );
+}
+
 function openRaceReplay() {
   closeLoch19Menu();
 
@@ -3646,10 +3688,11 @@ function openRaceReplay() {
     const runner = document.createElement("div");
     runner.className = "race-runner";
     runner.id = "raceRunner_" + i;
-    runner.innerHTML =
-      "🐎<span class='race-runner-name'>" +
-      escapeHtml(state.players[i].name || ("Spieler " + (i + 1))) +
-      "</span>";
+    runner.innerHTML = getRaceRunnerHtml(
+    i,
+    state.players[i].name || ("Spieler " + (i + 1)),
+    null
+  );
 
     runner.style.left = "2%";
     runner.style.top = getRaceTop(i + 1) + "%";
@@ -3659,6 +3702,12 @@ function openRaceReplay() {
 
   overlay.classList.add("show");
   showRaceStep(history, 0);
+  const timeline = document.getElementById("raceTimeline");
+  if (timeline) {
+    timeline.min = "0";
+    timeline.max = String(history.length - 1);
+    timeline.value = "0";
+  }
 }
 
 function getRaceTop(rank) {
@@ -3673,25 +3722,22 @@ function showRaceStep(history, stepIndex) {
   const progress = step.hole / 18;
   const left = 4 + progress * 92;
 
-  const lastRank = state.playerCount;
-
   for (const p of step.ranking) {
     const runner = document.getElementById("raceRunner_" + p.index);
     if (!runner) continue;
 
-    const icon = p.rank === lastRank ? "🫏" : "🐎";
-
-    runner.innerHTML =
-      icon +
-      "<span class='race-runner-name'>" +
-      escapeHtml(p.name) +
-      " · " +
-      formatNum(p.points) +
-      "</span>";
+    runner.innerHTML = getRaceRunnerHtml(
+      p.index,
+      getRaceMedal(p.rank) + " " + p.name,
+      p.points
+    );
 
     runner.style.left = left + "%";
     runner.style.top = getRaceTop(p.rank) + "%";
   }
+
+  const timeline = document.getElementById("raceTimeline");
+  if (timeline) timeline.value = String(stepIndex);
 }
 
 function startRaceReplay() {
@@ -3732,6 +3778,19 @@ function showNotYetBuilt(name) {
   showToast(name + " bauen wir als Nächstes");
 }
 
+function onRaceTimelineInput() {
+  const history = getRaceHistory();
+  const timeline = document.getElementById("raceTimeline");
+
+  if (!timeline || history.length === 0) return;
+
+  clearInterval(raceTimer);
+
+  const step = Number(timeline.value);
+  showRaceStep(history, step);
+}
+
+
 function init() {
   state = normalizeState(state);
   loadStateFromUrl();
@@ -3755,6 +3814,7 @@ function init() {
   document.getElementById("raceReplayBtn").addEventListener("click", openRaceReplay);
   document.getElementById("startRaceBtn").addEventListener("click", startRaceReplay);
   document.getElementById("resetRaceBtn").addEventListener("click", openRaceReplay);
+  document.getElementById("raceTimeline").addEventListener("input", onRaceTimelineInput);
   document.getElementById("closeRaceBtn").addEventListener("click", closeRaceReplay);
 
   document.getElementById("rankingChartBtn").addEventListener("click", () => {
