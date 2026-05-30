@@ -1141,14 +1141,57 @@ input.score-triplebogey {
   border-top: 1px dashed rgba(0,0,0,.12);
 }
 
+.race-lane-label {
+  position: absolute;
+  left: 10px;
+  transform: translateY(-50%);
+  font-size: 12px;
+  font-weight: 950;
+  color: var(--accent-dark);
+  background: rgba(255,255,255,.9);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 3px 7px;
+}
+
+.race-scale-labels {
+  position: absolute;
+  left: 70px;
+  right: 18px;
+  top: 10px;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  font-size: 11px;
+  font-weight: 950;
+  color: var(--muted);
+}
+
+.race-finish-line {
+  position: absolute;
+  top: 32px;
+  bottom: 12px;
+  right: 18px;
+  border-right: 3px dashed #222;
+  opacity: .45;
+}
+
+
+
 .race-runner {
   position: absolute;
+  overflow: visible;
   transform: translate(-50%, -50%);
   transition: left .8s ease, top .8s ease;
   white-space: nowrap;
   display: inline-flex;
   align-items: center;
   gap: 6px;
+}
+
+.race-snail {
+  font-size: 46px;
+  line-height: 1;
+  display: inline-block;
 }
 
 .race-dot {
@@ -1161,14 +1204,24 @@ input.score-triplebogey {
 }
 
 .race-runner-name {
-  display: inline-block;
-  font-size: 12px;
+  position: absolute;
+  top: -12px;
+  left: 32px;
+
+  font-size: 11px;
   font-weight: 950;
+
   color: var(--accent-dark);
-  background: rgba(255,255,255,.90);
+
+  background: rgba(255,255,255,.95);
   border: 1px solid var(--line);
   border-radius: 999px;
-  padding: 2px 6px;
+
+  padding: 2px 7px;
+
+  white-space: nowrap;
+
+  box-shadow: 0 1px 4px rgba(0,0,0,.15);
 }
 
 #raceTimeline {
@@ -1183,6 +1236,32 @@ input.score-triplebogey {
 
 .race-controls button {
   flex: 1;
+}
+
+.race-hole-counter {
+  width: 58px;
+  height: 58px;
+  border-radius: 999px;
+  background: #1976d2;
+  color: #fff;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-weight: 950;
+  font-size: 15px;
+  line-height: 1.05;
+  text-align: center;
+  box-shadow: 0 4px 14px rgba(0,0,0,.22);
+  flex-shrink: 0;
+}
+
+.analysis-content {
+  display: none;
+  flex: 1;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: #fff;
+  overflow: auto;
 }
 
 
@@ -1285,18 +1364,21 @@ input.score-triplebogey {
 <div class="loch19-menu" id="loch19Menu">
   <button type="button" id="rankingChartBtn">📈 Ranking-Verlauf</button>
   <button type="button" id="highlightsBtn">🏆 Highlights</button>
-  <button type="button" id="raceReplayBtn">🏇 Race Replay</button>
+  <button type="button" id="raceReplayBtn">🐌 Race Replay</button>
 </div>
 
 <div class="race-overlay" id="raceOverlay">
   <div class="race-head">
-    <strong>🏇 Kopenhagen Race Replay</strong>
-    <button class="secondary small" type="button" id="closeRaceBtn">Schließen</button>
-  </div>
+  <strong>🐌 Kopenhagen Schneckenrennen</strong>
+  <div class="race-hole-counter" id="raceHoleCounter">Loch<br>1</div>
+  <button class="secondary small" type="button" id="closeRaceBtn">Schließen</button>
+</div>
 
   <div class="race-track" id="raceTrack">
     <div class="race-hole-labels" id="raceHoleLabels"></div>
   </div>
+
+  <div class="analysis-content" id="analysisContent"></div>
 
   <div class="race-controls">
   <button type="button" id="startRaceBtn">▶ Start</button>
@@ -3635,18 +3717,19 @@ function getRaceMedal(rank) {
   if (rank === 1) return "🥇";
   if (rank === 2) return "🥈";
   if (rank === 3) return "🥉";
-  return "4";
+  return String(rank);
 }
 
 function getRaceRunnerHtml(playerIndex, name, points) {
   const color = racePlayerColors[playerIndex] || "#555";
 
   return (
+    "<span class='race-snail'>🐌</span>" +
     "<span class='race-dot' style='background:" +
     color +
     "'></span><span class='race-runner-name'>" +
     escapeHtml(name) +
-    (points === null ? "" : " · " + formatNum(points)) +
+    (points === null ? "" : " (" + formatNum(points) + ")") +
     "</span>"
   );
 }
@@ -3657,85 +3740,123 @@ function openRaceReplay() {
   const history = getRaceHistory();
 
   if (history.length === 0) {
-    showToast("Noch keine vollständigen Löcher für Race Replay");
+    showToast("Noch keine vollständigen Löcher für Schneckenrennen");
     return;
   }
 
   const overlay = document.getElementById("raceOverlay");
   const track = document.getElementById("raceTrack");
   const labels = document.getElementById("raceHoleLabels");
+  const analysis = document.getElementById("analysisContent");
+  const controls = document.querySelector(".race-controls");
+  const counter = document.getElementById("raceHoleCounter");
 
   if (!overlay || !track || !labels) return;
 
   clearInterval(raceTimer);
-  track.querySelectorAll(".race-runner, .race-lane").forEach(el => el.remove());
 
-  labels.innerHTML = "";
-  for (let i = 1; i <= 18; i++) {
-    const span = document.createElement("span");
-    span.textContent = i;
-    labels.appendChild(span);
+  if (analysis) {
+    analysis.style.display = "none";
+    analysis.innerHTML = "";
   }
 
-  for (let i = 1; i <= state.playerCount; i++) {
-    const lane = document.createElement("div");
-    lane.className = "race-lane";
-    lane.style.top = getRaceTop(i) + "%";
-    track.appendChild(lane);
-  }
+  track.style.display = "block";
+  track.innerHTML = "<div class='race-hole-labels' id='raceHoleLabels'></div>";
+
+  if (controls) controls.style.display = "flex";
+  if (counter) counter.style.display = "flex";
+
+  const scale = document.createElement("div");
+  scale.className = "race-scale-labels";
+  scale.innerHTML = "<span>0</span><span>10</span><span>20</span><span>30</span><span>40</span>";
+  track.appendChild(scale);
+
+  const finish = document.createElement("div");
+  finish.className = "race-finish-line";
+  track.appendChild(finish);
 
   for (let i = 0; i < state.playerCount; i++) {
+    const top = getRaceTopForPlayer(i);
+
+    const lane = document.createElement("div");
+    lane.className = "race-lane";
+    lane.style.top = top + "%";
+    lane.style.left = "70px";
+    lane.style.right = "18px";
+    track.appendChild(lane);
+
+    const laneLabel = document.createElement("div");
+    laneLabel.className = "race-lane-label";
+    laneLabel.style.top = top + "%";
+    laneLabel.textContent = state.players[i].name || ("Spieler " + (i + 1));
+    track.appendChild(laneLabel);
+
     const runner = document.createElement("div");
     runner.className = "race-runner";
     runner.id = "raceRunner_" + i;
     runner.innerHTML = getRaceRunnerHtml(
-    i,
-    state.players[i].name || ("Spieler " + (i + 1)),
-    null
-  );
+      i,
+      state.players[i].name || ("Spieler " + (i + 1)),
+      0
+    );
 
-    runner.style.left = "2%";
-    runner.style.top = getRaceTop(i + 1) + "%";
+    runner.style.left = "70px";
+    runner.style.top = top + "%";
 
     track.appendChild(runner);
   }
 
   overlay.classList.add("show");
+
   const head = overlay.querySelector(".race-head strong");
-  if (head) head.textContent = "🏁 Kopenhagen Race Replay";
-  showRaceStep(history, 0);
+  if (head) head.textContent = "🐌 Kopenhagen Schneckenrennen";
+
   const timeline = document.getElementById("raceTimeline");
   if (timeline) {
     timeline.min = "0";
     timeline.max = String(history.length - 1);
     timeline.value = "0";
   }
+
+  showRaceStep(history, 0);
 }
 
-function getRaceTop(rank) {
+function getRaceTopForPlayer(playerIndex) {
   const count = state.playerCount;
-  return 18 + ((rank - 1) * (70 / Math.max(1, count - 1)));
+  return 24 + (playerIndex * (62 / Math.max(1, count - 1)));
 }
 
 function showRaceStep(history, stepIndex) {
   const step = history[stepIndex];
   if (!step) return;
 
-  const progress = step.hole / 18;
-  const left = 4 + progress * 92;
+  const counter = document.getElementById("raceHoleCounter");
+  if (counter) {
+    counter.style.display = "flex";
+    counter.innerHTML = "Loch<br>" + step.hole;
+  }
 
+  const byPlayer = {};
   for (const p of step.ranking) {
-    const runner = document.getElementById("raceRunner_" + p.index);
-    if (!runner) continue;
+    byPlayer[p.index] = p;
+  }
+
+  for (let i = 0; i < state.playerCount; i++) {
+    const p = byPlayer[i];
+    const runner = document.getElementById("raceRunner_" + i);
+    if (!runner || !p) continue;
+
+    const points = Math.max(0, Math.min(40, p.points));
+    const left = 70 + (points / 40) * (window.innerWidth - 100);
 
     runner.innerHTML = getRaceRunnerHtml(
-      p.index,
-      getRaceMedal(p.rank) + " " + p.name,
+      i,
+      p.name,
       p.points
     );
 
-    runner.style.left = left + "%";
-    runner.style.top = getRaceTop(p.rank) + "%";
+    runner.style.left = left + "px";
+    runner.style.top = getRaceTopForPlayer(i) + "%";
   }
 
   const timeline = document.getElementById("raceTimeline");
@@ -3781,12 +3902,18 @@ function openAnalysisOverlay(title, html) {
 
   const overlay = document.getElementById("raceOverlay");
   const track = document.getElementById("raceTrack");
+  const analysis = document.getElementById("analysisContent");
+  const controls = document.querySelector(".race-controls");
+  const counter = document.getElementById("raceHoleCounter");
 
-  if (!overlay || !track) return;
+  if (!overlay || !track || !analysis) return;
 
-  track.innerHTML =
-    "<div class='race-hole-labels' id='raceHoleLabels'></div>" +
-    html;
+  track.style.display = "none";
+  analysis.style.display = "block";
+  analysis.innerHTML = html;
+
+  if (controls) controls.style.display = "none";
+  if (counter) counter.style.display = "none";
 
   overlay.classList.add("show");
 
