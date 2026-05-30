@@ -2494,15 +2494,17 @@ function playRankingChangeSound() {
 }
 
 function checkRankingChangeAndPlaySound(oldSignature) {
+  const calc = calculateRound();
   const newSignature = getRankingSignature();
 
   if (
-  state.soundOnRankingChange !== false &&
-  oldSignature &&
-  newSignature !== oldSignature
-) {
-  playRankingChangeSound();
-}
+    calc.playedHoles >= 2 &&
+    state.soundOnRankingChange !== false &&
+    oldSignature &&
+    newSignature !== oldSignature
+  ) {
+    playRankingChangeSound();
+  }
 
   lastRankingSignature = newSignature;
 }
