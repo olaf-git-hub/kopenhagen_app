@@ -1073,7 +1073,7 @@ input.score-triplebogey {
       <div id="voiceStatus" class="subtitle"></div>
     </div>
     <div class="actions">
-    <button class="secondary small" id="voiceBtn" type="button">🎙️</button>
+    <button class="secondary small" id="voiceBtn" type="button">🎤 Score</button>
     <div class="menu-wrap">
     <button class="secondary small" id="shareMenuBtn" type="button">Teilen ▾</button>
     <div class="share-menu" id="shareMenu">
@@ -3090,7 +3090,7 @@ function initSpeechInput() {
 
   speechRecognition.onstart = function() {
     speechIsRunning = true;
-    btn.textContent = "🎙️ Höre zu...";
+    btn.textContent = "🎤 Höre...";
     if (status) {
       status.textContent = "Bitte Score sprechen, z. B.: Loch 3 Thomas 5 Dirk 6 Frank 4 Olaf 7";
     }
@@ -3098,7 +3098,7 @@ function initSpeechInput() {
 
   speechRecognition.onend = function() {
     speechIsRunning = false;
-    btn.textContent = "🎙️ Score sprechen";
+    btn.textContent = "🎤 Score";
   };
   speechRecognition.onerror = function(e) {
     speechIsRunning = false;
@@ -3301,6 +3301,7 @@ function processVoiceScore(rawText) {
   }
 
   const oldRankingSignature = getRankingSignature();
+  const oldRankingPositions = getRankingPositions();
 
   let newScores = Array(state.playerCount).fill(null);
   let namedHits = 0;
@@ -3348,6 +3349,7 @@ function processVoiceScore(rawText) {
 
   buildTable();
   renderMobileCards();
+  updateRankMoves(oldRankingPositions);
   renderSummary();
 
   checkRankingChangeAndPlaySound(oldRankingSignature);
