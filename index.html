@@ -1141,18 +1141,7 @@ input.score-triplebogey {
   border-top: 1px dashed rgba(0,0,0,.12);
 }
 
-.race-lane-label {
-  position: absolute;
-  left: 10px;
-  transform: translateY(-50%);
-  font-size: 12px;
-  font-weight: 950;
-  color: var(--accent-dark);
-  background: rgba(255,255,255,.9);
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  padding: 3px 7px;
-}
+
 
 .race-scale-labels {
   position: absolute;
@@ -1364,12 +1353,12 @@ input.score-triplebogey {
 <div class="loch19-menu" id="loch19Menu">
   <button type="button" id="rankingChartBtn">📈 Ranking-Verlauf</button>
   <button type="button" id="highlightsBtn">🏆 Highlights</button>
-  <button type="button" id="raceReplayBtn">🐌 Race Replay</button>
+  <button type="button" id="raceReplayBtn">🐌 Replay</button>
 </div>
 
 <div class="race-overlay" id="raceOverlay">
   <div class="race-head">
-  <strong>🐌 Kopenhagen Schneckenrennen</strong>
+  <strong>🐌 Kopenhagen Replay</strong>
   <div class="race-hole-counter" id="raceHoleCounter">Loch<br>1</div>
   <button class="secondary small" type="button" id="closeRaceBtn">Schließen</button>
 </div>
@@ -2227,7 +2216,9 @@ function buildTable() {
     let details = [];
 
     if (course.hasPar && h.par !== null && h.par !== undefined) details.push("PAR " + h.par);
+    if (h.length !== null && h.length !== undefined) details.push(h.length + " m");
     if (course.hasHcp && h.hcp !== null && h.hcp !== undefined) details.push("HCP " + h.hcp);
+   
 
     tdHole.innerHTML = meta + (details.length ? "<div class='hole-small'>" + details.join(" · ") + "</div>" : "");
     tr.appendChild(tdHole);
@@ -2321,6 +2312,7 @@ function renderMobileCards() {
     meta.className = "hole-card-meta";
     const details = [];
     if (course.hasPar && h.par !== null && h.par !== undefined) details.push("PAR " + h.par);
+    if (h.length !== null && h.length !== undefined) details.push(h.length + " m");
     if (course.hasHcp && h.hcp !== null && h.hcp !== undefined) details.push("HCP " + h.hcp);
     meta.textContent = details.join(" · ");
 
@@ -3785,11 +3777,7 @@ function openRaceReplay() {
     lane.style.right = "18px";
     track.appendChild(lane);
 
-    const laneLabel = document.createElement("div");
-    laneLabel.className = "race-lane-label";
-    laneLabel.style.top = top + "%";
-    laneLabel.textContent = state.players[i].name || ("Spieler " + (i + 1));
-    track.appendChild(laneLabel);
+   
 
     const runner = document.createElement("div");
     runner.className = "race-runner";
@@ -3867,7 +3855,7 @@ function startRaceReplay() {
   const history = getRaceHistory();
 
   if (history.length === 0) {
-    showToast("Noch keine vollständigen Löcher für Race Replay");
+    showToast("Noch keine vollständigen Löcher für Replay");
     return;
   }
 
