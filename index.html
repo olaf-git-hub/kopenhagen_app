@@ -1061,6 +1061,118 @@ input.score-triplebogey {
   color: var(--bad);
 }
 
+.loch19-btn {
+  cursor: pointer;
+  color: var(--accent-dark);
+}
+
+.loch19-menu {
+  display: none;
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: calc(70px + env(safe-area-inset-bottom));
+  z-index: 90;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  padding: 8px;
+}
+
+.loch19-menu.show {
+  display: grid;
+  gap: 8px;
+}
+
+.loch19-menu button {
+  width: 100%;
+  border-radius: 12px;
+  text-align: left;
+  background: #fff;
+  color: var(--accent-dark);
+}
+
+.race-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: #f5f7f2;
+  padding: calc(env(safe-area-inset-top) + 12px) 12px calc(env(safe-area-inset-bottom) + 12px);
+}
+
+.race-overlay.show {
+  display: flex;
+  flex-direction: column;
+}
+
+.race-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.race-track {
+  position: relative;
+  flex: 1;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: linear-gradient(90deg, #fff 0%, #eef6eb 100%);
+  overflow: hidden;
+}
+
+.race-hole-labels {
+  position: absolute;
+  inset: 8px 12px auto 12px;
+  display: grid;
+  grid-template-columns: repeat(18, 1fr);
+  font-size: 10px;
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.race-lane {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1px dashed rgba(0,0,0,.12);
+}
+
+.race-runner {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  transition: left .8s ease, top .8s ease;
+  font-size: 26px;
+  white-space: nowrap;
+}
+
+.race-runner-name {
+  display: inline-block;
+  margin-left: 4px;
+  font-size: 12px;
+  font-weight: 950;
+  color: var(--accent-dark);
+  background: rgba(255,255,255,.88);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 2px 6px;
+}
+
+.race-controls {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.race-controls button {
+  flex: 1;
+}
+
+
+
   </style>
 </head>
 <body>
@@ -1156,6 +1268,27 @@ input.score-triplebogey {
 <button class="floating-summary-btn" id="summaryJumpBtn" type="button">🏆 Stand</button>
 
 <div class="toast" id="toast"></div>
+<div class="loch19-menu" id="loch19Menu">
+  <button type="button" id="rankingChartBtn">📈 Ranking-Verlauf</button>
+  <button type="button" id="highlightsBtn">🏆 Highlights</button>
+  <button type="button" id="raceReplayBtn">🏇 Race Replay</button>
+</div>
+
+<div class="race-overlay" id="raceOverlay">
+  <div class="race-head">
+    <strong>🏇 Kopenhagen Race Replay</strong>
+    <button class="secondary small" type="button" id="closeRaceBtn">Schließen</button>
+  </div>
+
+  <div class="race-track" id="raceTrack">
+    <div class="race-hole-labels" id="raceHoleLabels"></div>
+  </div>
+
+  <div class="race-controls">
+    <button type="button" id="startRaceBtn">▶ Start</button>
+    <button class="secondary" type="button" id="resetRaceBtn">↺ Zurück</button>
+  </div>
+</div>
 <datalist id="knownPlayerNames"></datalist>
 
 <script>
@@ -1229,6 +1362,9 @@ let speechIsRunning = false;
 let selectedPlayerDetailIndex = null;
 
 let lastRankMoveByPlayer = {};
+
+const RACE_REPLAY_SECONDS = 20;
+let raceTimer = null;
 
 const knownPlayerNames = [
   "Olaf",
@@ -2271,7 +2407,6 @@ function renderSummary() {
     ["Golfplatz: " + course.shortName, ""],
     ["Löcher: " + calc.playedHoles, ""],
     ["Punkte: " + formatNum(calc.totalGiven) + " / " + formatNum(calc.totalExpected), Math.abs(calc.totalGiven - calc.totalExpected) < 0.0001 ? "ok" : "bad"],
-    ["Fehler: " + calc.invalidHoles, calc.invalidHoles === 0 ? "ok" : "bad"]
   ];
 
   for (const [txt, cls] of pills) {
@@ -2280,6 +2415,12 @@ function renderSummary() {
     span.textContent = txt;
     v.appendChild(span);
   }
+
+  const loch19 = document.createElement("span");
+  loch19.className = "mini-pill loch19-btn";
+  loch19.textContent = "⛳ Loch 19";
+  loch19.addEventListener("click", toggleLoch19Menu);
+  v.appendChild(loch19);
 
   renderPlayerDetail();
 }
@@ -3103,7 +3244,7 @@ function initSpeechInput() {
   };
   speechRecognition.onerror = function(e) {
     speechIsRunning = false;
-    btn.textContent = "🎙️ Score sprechen";
+    btn.textContent = "🎤 Score";
     if (status) {
       status.textContent = "Spracherkennung abgebrochen oder fehlgeschlagen: " + e.error;
     }
@@ -3408,7 +3549,188 @@ function closeShareMenuOnOutsideClick(e) {
   menu.classList.remove("show");
 }
 
+function toggleLoch19Menu(e) {
+  e.stopPropagation();
+  const menu = document.getElementById("loch19Menu");
+  if (!menu) return;
+  menu.classList.toggle("show");
+}
 
+function closeLoch19Menu() {
+  const menu = document.getElementById("loch19Menu");
+  if (!menu) return;
+  menu.classList.remove("show");
+}
+
+function getRaceHistory() {
+  const playerCount = state.playerCount;
+
+  const totals = state.players.slice(0, playerCount).map((p, index) => ({
+    index,
+    name: p.name || ("Spieler " + (index + 1)),
+    points: 0,
+    gross: 0
+  }));
+
+  const history = [];
+
+  for (const h of getCourseHoles()) {
+    const key = String(h.hole);
+    const data = state.holes[key];
+
+    if (!data || !Array.isArray(data.gross)) continue;
+
+    const result = calculateHole(h, data.gross, playerCount);
+    if (!result.complete) continue;
+
+    for (let i = 0; i < playerCount; i++) {
+      totals[i].points += result.points[i];
+      totals[i].gross += Number(data.gross[i]);
+    }
+
+    const ranking = totals.slice().sort((a, b) => {
+      if (b.points !== a.points) return b.points - a.points;
+      if (a.gross !== b.gross) return a.gross - b.gross;
+      return a.index - b.index;
+    });
+
+    history.push({
+      hole: h.hole,
+      ranking: ranking.map((p, rankIndex) => ({
+        index: p.index,
+        name: p.name,
+        points: p.points,
+        gross: p.gross,
+        rank: rankIndex + 1
+      }))
+    });
+  }
+
+  return history;
+}
+
+function openRaceReplay() {
+  closeLoch19Menu();
+
+  const history = getRaceHistory();
+
+  if (history.length === 0) {
+    showToast("Noch keine vollständigen Löcher für Race Replay");
+    return;
+  }
+
+  const overlay = document.getElementById("raceOverlay");
+  const track = document.getElementById("raceTrack");
+  const labels = document.getElementById("raceHoleLabels");
+
+  if (!overlay || !track || !labels) return;
+
+  clearInterval(raceTimer);
+  track.querySelectorAll(".race-runner, .race-lane").forEach(el => el.remove());
+
+  labels.innerHTML = "";
+  for (let i = 1; i <= 18; i++) {
+    const span = document.createElement("span");
+    span.textContent = i;
+    labels.appendChild(span);
+  }
+
+  for (let i = 1; i <= state.playerCount; i++) {
+    const lane = document.createElement("div");
+    lane.className = "race-lane";
+    lane.style.top = getRaceTop(i) + "%";
+    track.appendChild(lane);
+  }
+
+  for (let i = 0; i < state.playerCount; i++) {
+    const runner = document.createElement("div");
+    runner.className = "race-runner";
+    runner.id = "raceRunner_" + i;
+    runner.innerHTML =
+      "🐎<span class='race-runner-name'>" +
+      escapeHtml(state.players[i].name || ("Spieler " + (i + 1))) +
+      "</span>";
+
+    runner.style.left = "2%";
+    runner.style.top = getRaceTop(i + 1) + "%";
+
+    track.appendChild(runner);
+  }
+
+  overlay.classList.add("show");
+  showRaceStep(history, 0);
+}
+
+function getRaceTop(rank) {
+  const count = state.playerCount;
+  return 18 + ((rank - 1) * (70 / Math.max(1, count - 1)));
+}
+
+function showRaceStep(history, stepIndex) {
+  const step = history[stepIndex];
+  if (!step) return;
+
+  const progress = step.hole / 18;
+  const left = 4 + progress * 92;
+
+  const lastRank = state.playerCount;
+
+  for (const p of step.ranking) {
+    const runner = document.getElementById("raceRunner_" + p.index);
+    if (!runner) continue;
+
+    const icon = p.rank === lastRank ? "🫏" : "🐎";
+
+    runner.innerHTML =
+      icon +
+      "<span class='race-runner-name'>" +
+      escapeHtml(p.name) +
+      " · " +
+      formatNum(p.points) +
+      "</span>";
+
+    runner.style.left = left + "%";
+    runner.style.top = getRaceTop(p.rank) + "%";
+  }
+}
+
+function startRaceReplay() {
+  const history = getRaceHistory();
+
+  if (history.length === 0) {
+    showToast("Noch keine vollständigen Löcher für Race Replay");
+    return;
+  }
+
+  clearInterval(raceTimer);
+
+  let step = 0;
+  showRaceStep(history, step);
+
+  const delay = Math.max(500, (RACE_REPLAY_SECONDS * 1000) / history.length);
+
+  raceTimer = setInterval(() => {
+    step++;
+
+    if (step >= history.length) {
+      clearInterval(raceTimer);
+      return;
+    }
+
+    showRaceStep(history, step);
+  }, delay);
+}
+
+function closeRaceReplay() {
+  clearInterval(raceTimer);
+  const overlay = document.getElementById("raceOverlay");
+  if (overlay) overlay.classList.remove("show");
+}
+
+function showNotYetBuilt(name) {
+  closeLoch19Menu();
+  showToast(name + " bauen wir als Nächstes");
+}
 
 function init() {
   state = normalizeState(state);
@@ -3427,8 +3749,23 @@ function init() {
   exportRound();
 });
 
-document.addEventListener("click", closeShareMenuOnOutsideClick);
+  document.addEventListener("click", closeShareMenuOnOutsideClick);
   document.getElementById("playerCount").addEventListener("change", onPlayerCountChange);
+
+  document.getElementById("raceReplayBtn").addEventListener("click", openRaceReplay);
+  document.getElementById("startRaceBtn").addEventListener("click", startRaceReplay);
+  document.getElementById("resetRaceBtn").addEventListener("click", openRaceReplay);
+  document.getElementById("closeRaceBtn").addEventListener("click", closeRaceReplay);
+
+  document.getElementById("rankingChartBtn").addEventListener("click", () => {
+    showNotYetBuilt("Ranking-Verlauf");
+  });
+
+  document.getElementById("highlightsBtn").addEventListener("click", () => {
+    showNotYetBuilt("Highlights");
+  });
+
+  document.addEventListener("click", closeLoch19Menu);
 
   const details = document.getElementById("setupDetails");
   if (details) details.open = window.innerWidth > 700;
