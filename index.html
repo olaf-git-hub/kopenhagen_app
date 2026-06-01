@@ -1303,6 +1303,11 @@ input.score-triplebogey {
   cursor: pointer;
 }
 
+.under-par {
+  color: var(--bad);
+  font-weight: 950;
+}
+
   </style>
 </head>
 <body>
@@ -2545,20 +2550,19 @@ function openHoleStandPopup(holeNumber) {
   for (let i = 0; i < ranking.length; i++) {
     const p = ranking[i];
 
+    const toPar = p.gross - p.parTotal;
+    const toParText =
+      toPar > 0 ? "+" + toPar :
+      toPar < 0 ? String(toPar) :
+      "E";
+
+    const toParClass = toPar < 0 ? " class='under-par'" : "";
+
     const row = document.createElement("div");
     row.className = "hole-stand-row";
     row.innerHTML =
       "<span>" + (i + 1) + ". " + escapeHtml(p.name) + "</span>" +
-    const toPar = p.gross - p.parTotal;
-    const toParText =
-    toPar > 0 ? "+" + toPar :
-    toPar < 0 ? String(toPar) :
-    "E";
-
-    row.innerHTML =
-    "<span>" + (i + 1) + ". " + escapeHtml(p.name) + "</span>" +
-    "<span>" + formatNum(p.points) +
-    " P. · " + toParText + "</span>";
+      "<span>" + formatNum(p.points) + " Punkte · <span" + toParClass + ">" + toParText + "</span></span>";
 
     body.appendChild(row);
   }
