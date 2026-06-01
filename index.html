@@ -1142,21 +1142,6 @@ input.score-triplebogey {
 }
 
 
-
-.race-scale-labels {
-  position: absolute;
-  left: 70px;
-  right: 18px;
-  top: 10px;
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  font-size: 11px;
-  font-weight: 950;
-  color: var(--muted);
-}
-
-
-
 .race-runner {
   position: absolute;
   overflow: visible;
@@ -3979,11 +3964,6 @@ function openRaceReplay() {
 
   if (controls) controls.style.display = "flex";
   if (counter) counter.style.display = "flex";
-
-  const scale = document.createElement("div");
-  scale.className = "race-scale-labels";
-  scale.innerHTML = "<span>0</span><span>10</span><span>20</span><span>30</span><span>40</span>";
-  track.appendChild(scale);
 
   
   for (let i = 0; i < state.playerCount; i++) {
