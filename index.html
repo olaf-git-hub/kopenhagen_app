@@ -1244,7 +1244,64 @@ input.score-triplebogey {
   overflow: auto;
 }
 
+.hole-stand-popup {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 180;
+  background: rgba(0,0,0,.35);
+  padding: 18px;
+  align-items: center;
+  justify-content: center;
+}
 
+.hole-stand-popup.show {
+  display: flex;
+}
+
+.hole-stand-card {
+  width: min(420px, 100%);
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+
+.hole-stand-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+  padding: 12px 14px;
+  background: var(--soft);
+  color: var(--accent-dark);
+  font-weight: 950;
+}
+
+.hole-stand-body {
+  padding: 12px 14px;
+  display: grid;
+  gap: 8px;
+}
+
+.hole-stand-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 7px;
+  font-weight: 850;
+}
+
+.hole-stand-row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.clickable-hole {
+  cursor: pointer;
+}
 
   </style>
 </head>
@@ -1365,6 +1422,15 @@ input.score-triplebogey {
   <button type="button" id="startRaceBtn">▶ Start</button>
   <input type="range" id="raceTimeline" min="0" max="0" value="0">
   <button class="secondary" type="button" id="resetRaceBtn">↺ Zurück</button>
+  </div>
+</div>
+<div class="hole-stand-popup" id="holeStandPopup">
+  <div class="hole-stand-card">
+    <div class="hole-stand-head">
+      <span id="holeStandTitle">Stand nach Loch</span>
+      <button class="secondary small" type="button" id="closeHoleStandBtn">Schließen</button>
+    </div>
+    <div class="hole-stand-body" id="holeStandBody"></div>
   </div>
 </div>
 <datalist id="knownPlayerNames"></datalist>
@@ -2204,6 +2270,8 @@ function buildTable() {
 
     const tdHole = document.createElement("td");
     tdHole.className = "hole-meta";
+    tdHole.classList.add("clickable-hole");
+    tdHole.addEventListener("click", () => openHoleStandPopup(h.hole));
 
     let meta = "Loch " + h.hole;
     let details = [];
@@ -2297,6 +2365,8 @@ function renderMobileCards() {
 
     const head = document.createElement("div");
     head.className = "hole-card-head";
+    head.classList.add("clickable-hole");
+    head.addEventListener("click", () => openHoleStandPopup(h.hole));
 
     const title = document.createElement("div");
     title.textContent = "Loch " + h.hole;
@@ -2423,6 +2493,74 @@ function getPlayerParStats(playerIndex) {
   return stats;
 }
 
+function calculateRoundAfterHole(maxHoleNumber) {
+  const playerCount = state.playerCount;
+
+  const totals = state.players.slice(0, playerCount).map((player, index) => ({
+    index,
+    name: player.name || ("Spieler " + (index + 1)),
+    points: 0,
+    gross: 0,
+    holesPlayed: 0
+  }));
+
+  for (const h of getCourseHoles()) {
+    if (h.hole > maxHoleNumber) continue;
+
+    const key = String(h.hole);
+    const data = state.holes[key];
+    if (!data || !Array.isArray(data.gross)) continue;
+
+    const result = calculateHole(h, data.gross, playerCount);
+    if (!result.complete) continue;
+
+    for (let i = 0; i < playerCount; i++) {
+      totals[i].points += result.points[i];
+      totals[i].gross += Number(data.gross[i]);
+      totals[i].holesPlayed++;
+    }
+  }
+
+  return totals.sort((a, b) => {
+    if (b.points !== a.points) return b.points - a.points;
+    if (a.gross !== b.gross) return a.gross - b.gross;
+    return a.index - b.index;
+  });
+}
+
+function openHoleStandPopup(holeNumber) {
+  const popup = document.getElementById("holeStandPopup");
+  const title = document.getElementById("holeStandTitle");
+  const body = document.getElementById("holeStandBody");
+
+  if (!popup || !title || !body) return;
+
+  const ranking = calculateRoundAfterHole(holeNumber);
+
+  title.textContent = "Gesamtstand nach Loch " + holeNumber;
+  body.innerHTML = "";
+
+  for (let i = 0; i < ranking.length; i++) {
+    const p = ranking[i];
+
+    const row = document.createElement("div");
+    row.className = "hole-stand-row";
+    row.innerHTML =
+      "<span>" + (i + 1) + ". " + escapeHtml(p.name) + "</span>" +
+      "<span>" + formatNum(p.points) + " Punkte · " + p.gross + " Schläge</span>";
+
+    body.appendChild(row);
+  }
+
+  popup.classList.add("show");
+}
+
+function closeHoleStandPopup() {
+  const popup = document.getElementById("holeStandPopup");
+  if (popup) popup.classList.remove("show");
+}
+
+
 function renderSummary() {
   const calc = calculateRound();
   const course = getCourse();
@@ -2511,9 +2649,9 @@ function renderSummary() {
   v.appendChild(loch19);
 
   renderPointsCheck(calc);
-  }
+  renderPlayerDetail();
+}
 
-  const loch19 = document.createElement("span");
   loch19.className = "mini-pill loch19-btn";
   loch19.textContent = "⛳ Loch 19";
   loch19.addEventListener("click", toggleLoch19Menu);
@@ -4140,6 +4278,8 @@ function init() {
   document.getElementById("highlightsBtn").addEventListener("click", openHighlights);
 
   document.addEventListener("click", closeLoch19Menu);
+
+  document.getElementById("closeHoleStandBtn").addEventListener("click", closeHoleStandPopup);
 
   const details = document.getElementById("setupDetails");
   if (details) details.open = window.innerWidth > 700;
