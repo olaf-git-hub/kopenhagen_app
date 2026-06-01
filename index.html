@@ -2562,7 +2562,7 @@ function openHoleStandPopup(holeNumber) {
     row.className = "hole-stand-row";
     row.innerHTML =
       "<span>" + (i + 1) + ". " + escapeHtml(p.name) + "</span>" +
-      "<span>" + formatNum(p.points) + " Punkte · <span" + toParClass + ">" + toParText + "</span></span>";
+      "<span>" + formatNum(p.points) + " Punkte     <span" + toParClass + ">" + toParText + "</span></span>";
 
     body.appendChild(row);
   }
