@@ -3863,6 +3863,17 @@ function getRaceHistory() {
 
   const history = [];
 
+    history.push({
+    hole: 0,
+    ranking: totals.map((p, rankIndex) => ({
+      index: p.index,
+      name: p.name,
+      points: 0,
+      gross: 0,
+      rank: rankIndex + 1
+    }))
+  });
+
   for (const h of getCourseHoles()) {
     const key = String(h.hole);
     const data = state.holes[key];
@@ -4011,7 +4022,9 @@ function showRaceStep(history, stepIndex) {
   const counter = document.getElementById("raceHoleCounter");
   if (counter) {
     counter.style.display = "flex";
-    counter.innerHTML = "Loch<br>" + step.hole;
+    counter.innerHTML = step.hole === 0
+    ? "Start"
+    : "Loch<br>" + step.hole;
   }
 
   const byPlayer = {};
