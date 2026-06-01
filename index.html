@@ -1308,6 +1308,17 @@ input.score-triplebogey {
   font-weight: 950;
 }
 
+.race-speed-select {
+  width: auto;
+  min-width: 72px;
+  padding: 7px 8px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--accent-dark);
+  background: #fff;
+}
+
   </style>
 </head>
 <body>
@@ -1413,6 +1424,12 @@ input.score-triplebogey {
 <div class="race-overlay" id="raceOverlay">
   <div class="race-head">
   <strong>🐌 Kopenhagen Replay</strong>
+  <select id="raceSpeedSelect" class="race-speed-select">
+  <option value="10">10s</option>
+  <option value="20" selected>20s</option>
+  <option value="30">30s</option>
+</select>
+
   <div class="race-hole-counter" id="raceHoleCounter">Loch<br>1</div>
   <button class="secondary small" type="button" id="closeRaceBtn">Schließen</button>
 </div>
@@ -1513,7 +1530,7 @@ let selectedPlayerDetailIndex = null;
 
 let lastRankMoveByPlayer = {};
 
-const RACE_REPLAY_SECONDS = 30;
+let raceReplaySeconds = 20;
 let raceTimer = null;
 
 const racePlayerColors = [
@@ -4067,7 +4084,7 @@ function startRaceReplay() {
   let step = 0;
   showRaceStep(history, step);
 
-  const delay = Math.max(500, (RACE_REPLAY_SECONDS * 1000) / history.length);
+  const delay = Math.max(300, (raceReplaySeconds * 1000) / Math.max(1, history.length - 1));
 
   raceTimer = setInterval(() => {
     step++;
@@ -4301,6 +4318,10 @@ function init() {
   document.addEventListener("click", closeLoch19Menu);
 
   document.getElementById("closeHoleStandBtn").addEventListener("click", closeHoleStandPopup);
+
+  document.getElementById("raceSpeedSelect").addEventListener("change", function() {
+  raceReplaySeconds = Number(this.value) || 20;
+  });
 
   const details = document.getElementById("setupDetails");
   if (details) details.open = window.innerWidth > 700;
