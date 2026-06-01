@@ -1335,6 +1335,7 @@ input.score-triplebogey {
     <table id="scoreTable"></table>
   </div>
   <div id="mobileCards" class="mobile-cards"></div>
+  <div id="pointsCheckBox" class="validation-mini"></div>
 </section>
 </main>
 
@@ -2493,8 +2494,7 @@ function renderSummary() {
 
   const pills = [
     ["Golfplatz: " + course.shortName, ""],
-    ["Löcher: " + calc.playedHoles, ""],
-    ["Punkte: " + formatNum(calc.totalGiven) + " / " + formatNum(calc.totalExpected), Math.abs(calc.totalGiven - calc.totalExpected) < 0.0001 ? "ok" : "bad"],
+    ["Löcher: " + calc.playedHoles, ""]
   ];
 
   for (const [txt, cls] of pills) {
@@ -2510,7 +2510,62 @@ function renderSummary() {
   loch19.addEventListener("click", toggleLoch19Menu);
   v.appendChild(loch19);
 
+  renderPointsCheck(calc);
+  }
+
+  const loch19 = document.createElement("span");
+  loch19.className = "mini-pill loch19-btn";
+  loch19.textContent = "⛳ Loch 19";
+  loch19.addEventListener("click", toggleLoch19Menu);
+  v.appendChild(loch19);
+
   renderPlayerDetail();
+}
+
+function renderPointsCheck(calc) {
+  const box = document.getElementById("pointsCheckBox");
+  if (!box) return;
+
+  box.innerHTML = "";
+
+  const expectedSoFar = calc.playedHoles * expectedPoints(state.playerCount);
+  const isOk = Math.abs(calc.totalGiven - expectedSoFar) < 0.0001;
+
+  const span = document.createElement("span");
+
+  if (isOk) {
+    span.className = "mini-pill ok";
+
+    if (calc.playedHoles === 18) {
+      span.textContent =
+        "✅ Punkteprüfung erfolgreich: " +
+        formatNum(calc.totalGiven) +
+        " / " +
+        formatNum(expectedSoFar) +
+        " nach 18 Löchern";
+    } else {
+      span.textContent =
+        "✅ Punkteprüfung korrekt: " +
+        formatNum(calc.totalGiven) +
+        " / " +
+        formatNum(expectedSoFar) +
+        " nach " +
+        calc.playedHoles +
+        " Löchern";
+    }
+  } else {
+    span.className = "mini-pill bad";
+    span.textContent =
+      "⚠ Punkteprüfung Fehler: " +
+      formatNum(calc.totalGiven) +
+      " / " +
+      formatNum(expectedSoFar) +
+      " nach " +
+      calc.playedHoles +
+      " Löchern";
+  }
+
+  box.appendChild(span);
 }
 
 function renderPlayerDetail() {
