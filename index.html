@@ -2501,6 +2501,7 @@ function calculateRoundAfterHole(maxHoleNumber) {
     name: player.name || ("Spieler " + (index + 1)),
     points: 0,
     gross: 0,
+    parTotal: 0,
     holesPlayed: 0
   }));
 
@@ -2517,6 +2518,7 @@ function calculateRoundAfterHole(maxHoleNumber) {
     for (let i = 0; i < playerCount; i++) {
       totals[i].points += result.points[i];
       totals[i].gross += Number(data.gross[i]);
+      totals[i].parTotal += Number(h.par || 0);
       totals[i].holesPlayed++;
     }
   }
@@ -2547,7 +2549,16 @@ function openHoleStandPopup(holeNumber) {
     row.className = "hole-stand-row";
     row.innerHTML =
       "<span>" + (i + 1) + ". " + escapeHtml(p.name) + "</span>" +
-      "<span>" + formatNum(p.points) + " Punkte · " + p.gross + " Schläge</span>";
+    const toPar = p.gross - p.parTotal;
+    const toParText =
+    toPar > 0 ? "+" + toPar :
+    toPar < 0 ? String(toPar) :
+    "E";
+
+    row.innerHTML =
+    "<span>" + (i + 1) + ". " + escapeHtml(p.name) + "</span>" +
+    "<span>" + formatNum(p.points) +
+    " P. · " + toParText + "</span>";
 
     body.appendChild(row);
   }
