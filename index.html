@@ -1305,6 +1305,56 @@ input.score-triplebogey {
   background: #fff;
 }
 
+.race-marker {
+  position: absolute;
+  top: 32px;
+  bottom: 12px;
+  pointer-events: none;
+}
+
+.race-marker-start {
+  left: 70px;
+  width: 3px;
+  background: #8bc34a;
+}
+
+.race-marker-half {
+  left: calc(50% + 35px);
+  width: 2px;
+  border-left: 2px dashed #8bc34a;
+  opacity: .65;
+}
+
+.race-marker-finish {
+  right: 18px;
+  width: 6px;
+  background: var(--accent);
+}
+
+.race-marker-label {
+  position: absolute;
+  top: 8px;
+  transform: translateX(-50%);
+  font-size: 11px;
+  font-weight: 950;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.race-marker-label-start {
+  left: 70px;
+}
+
+.race-marker-label-half {
+  left: calc(50% + 35px);
+}
+
+.race-marker-label-finish {
+  right: 18px;
+  transform: translateX(50%);
+}
+
+
   </style>
 </head>
 <body>
@@ -3964,6 +4014,33 @@ function openRaceReplay() {
 
   if (controls) controls.style.display = "flex";
   if (counter) counter.style.display = "flex";
+
+  const startLabel = document.createElement("div");
+startLabel.className = "race-marker-label race-marker-label-start";
+startLabel.textContent = "Start";
+track.appendChild(startLabel);
+
+const halfLabel = document.createElement("div");
+halfLabel.className = "race-marker-label race-marker-label-half";
+halfLabel.textContent = "Loch 9";
+track.appendChild(halfLabel);
+
+const finishLabel = document.createElement("div");
+finishLabel.className = "race-marker-label race-marker-label-finish";
+finishLabel.textContent = "🏁 Ziel";
+track.appendChild(finishLabel);
+
+const startMarker = document.createElement("div");
+startMarker.className = "race-marker race-marker-start";
+track.appendChild(startMarker);
+
+const halfMarker = document.createElement("div");
+halfMarker.className = "race-marker race-marker-half";
+track.appendChild(halfMarker);
+
+const finishMarker = document.createElement("div");
+finishMarker.className = "race-marker race-marker-finish";
+track.appendChild(finishMarker);
 
   
   for (let i = 0; i < state.playerCount; i++) {
