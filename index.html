@@ -1313,11 +1313,8 @@ input.score-triplebogey {
 }
 
 .race-marker-start {
-  left: 70px;
-  width: 3px;
-  background: #8bc34a;
+  left: 90px;
 }
-
 .race-marker-half {
   left: calc(50% + 35px);
   width: 2px;
@@ -1325,11 +1322,6 @@ input.score-triplebogey {
   opacity: .65;
 }
 
-.race-marker-finish {
-  right: 18px;
-  width: 6px;
-  background: var(--accent);
-}
 
 .race-marker-label {
   position: absolute;
@@ -1342,16 +1334,18 @@ input.score-triplebogey {
 }
 
 .race-marker-label-start {
-  left: 70px;
+  left: 90px;
 }
 
+.race-marker-finish {
+  right: 95px;
+}
 .race-marker-label-half {
   left: calc(50% + 35px);
 }
 
 .race-marker-label-finish {
-  right: 18px;
-  transform: translateX(50%);
+  right: 95px;
 }
 
 
@@ -4042,6 +4036,9 @@ const finishMarker = document.createElement("div");
 finishMarker.className = "race-marker race-marker-finish";
 track.appendChild(finishMarker);
 
+const RACE_START_X = 90;
+const RACE_FINISH_RIGHT = 18;
+
   
   for (let i = 0; i < state.playerCount; i++) {
     const top = getRaceTopForPlayer(i);
@@ -4049,8 +4046,8 @@ track.appendChild(finishMarker);
     const lane = document.createElement("div");
     lane.className = "race-lane";
     lane.style.top = top + "%";
-    lane.style.left = "70px";
-    lane.style.right = "18px";
+    lane.style.left = RACE_START_X + "px";
+    lane.style.right = RACE_FINISH_RIGHT + "px";
     track.appendChild(lane);
 
    
@@ -4064,7 +4061,7 @@ track.appendChild(finishMarker);
       0
     );
 
-    runner.style.left = "70px";
+    runner.style.left = RACE_START_X + "px";
     runner.style.top = top + "%";
 
     track.appendChild(runner);
@@ -4111,7 +4108,10 @@ function showRaceStep(history, stepIndex) {
     if (!runner || !p) continue;
 
     const points = Math.max(0, Math.min(40, p.points));
-    const left = 70 + (points / 40) * (window.innerWidth - 100);
+    const track = document.getElementById("raceTrack");
+    const trackWidth = track ? track.clientWidth : window.innerWidth;
+    const maxLeft = trackWidth - RACE_FINISH_RIGHT;
+    const left = RACE_START_X + (points / 40) * (maxLeft - RACE_START_X);
 
     runner.innerHTML = getRaceRunnerHtml(
       i,
