@@ -1364,8 +1364,8 @@ input.score-triplebogey {
 }
 
 .race-marker-label-finish {
-  right: var(--race-finish-right);
-  transform: translateX(50%);
+  right: calc(var(--race-finish-right) - 10px);
+  transform: translateX(0);
 }
 
 
@@ -1582,6 +1582,21 @@ let lastRankMoveByPlayer = {};
 
 let raceReplaySeconds = 20;
 let raceTimer = null;
+
+function getRaceStartX() {
+  return parseFloat(
+    getComputedStyle(document.documentElement)
+      .getPropertyValue("--race-start-x")
+  ) || 90;
+}
+
+function getRaceFinishRight() {
+  return parseFloat(
+    getComputedStyle(document.documentElement)
+      .getPropertyValue("--race-finish-right")
+  ) || 95;
+}
+
 
 const racePlayerColors = [
   "#d32f2f",
@@ -4056,8 +4071,6 @@ const finishMarker = document.createElement("div");
 finishMarker.className = "race-marker race-marker-finish";
 track.appendChild(finishMarker);
 
-const RACE_START_X = 90;
-const RACE_FINISH_RIGHT = 95;
 
   
   for (let i = 0; i < state.playerCount; i++) {
@@ -4066,8 +4079,8 @@ const RACE_FINISH_RIGHT = 95;
     const lane = document.createElement("div");
     lane.className = "race-lane";
     lane.style.top = top + "%";
-    lane.style.left = RACE_START_X + "px";
-    lane.style.right = RACE_FINISH_RIGHT + "px";
+    lane.style.left = getRaceStartX() + "px";
+    lane.style.right = getRaceFinishRight() + "px";
     track.appendChild(lane);
 
    
@@ -4081,7 +4094,7 @@ const RACE_FINISH_RIGHT = 95;
       0
     );
 
-    runner.style.left = RACE_START_X + "px";
+    runner.style.left = getRaceStartX() + "px";
     runner.style.top = top + "%";
 
     track.appendChild(runner);
@@ -4130,8 +4143,15 @@ function showRaceStep(history, stepIndex) {
     const points = Math.max(0, Math.min(40, p.points));
     const track = document.getElementById("raceTrack");
     const trackWidth = track ? track.clientWidth : window.innerWidth;
-    const maxLeft = trackWidth - RACE_FINISH_RIGHT;
-    const left = RACE_START_X + (points / 40) * (maxLeft - RACE_START_X);
+    const startX = getRaceStartX();
+    const finishRight = getRaceFinishRight();
+
+    const maxLeft = trackWidth - finishRight;
+
+    const left =
+      startX +
+      (points / 40) *
+      (maxLeft - startX);
 
     runner.innerHTML = getRaceRunnerHtml(
       i,
