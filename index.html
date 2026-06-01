@@ -22,8 +22,8 @@
       --radius: 16px;
       --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
       --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      --race-start-x: 90px;
-      --race-finish-right: 95px;
+      --race-start-x: 60px;
+      --race-finish-right: 60px;
     }
 
     * { box-sizing: border-box; }
@@ -4135,33 +4135,39 @@ function showRaceStep(history, stepIndex) {
     byPlayer[p.index] = p;
   }
 
-  for (let i = 0; i < state.playerCount; i++) {
-    const p = byPlayer[i];
-    const runner = document.getElementById("raceRunner_" + i);
-    if (!runner || !p) continue;
 
-    const points = Math.max(0, Math.min(40, p.points));
-    const track = document.getElementById("raceTrack");
-    const trackWidth = track ? track.clientWidth : window.innerWidth;
-    const startX = getRaceStartX();
-    const finishRight = getRaceFinishRight();
+  const winnerPoints = Math.max(
+    1,
+    ...history[history.length - 1].ranking.map(p => Number(p.points) || 0)
+  );
 
-    const maxLeft = trackWidth - finishRight;
+for (let i = 0; i < state.playerCount; i++) {
+  const p = byPlayer[i];
+  const runner = document.getElementById("raceRunner_" + i);
+  if (!runner || !p) continue;
 
-    const left =
-      startX +
-      (points / 40) *
-      (maxLeft - startX);
+  const points = Math.max(0, Number(p.points) || 0);
+  const track = document.getElementById("raceTrack");
+  const trackWidth = track ? track.clientWidth : window.innerWidth;
+  const startX = getRaceStartX();
+  const finishRight = getRaceFinishRight();
 
-    runner.innerHTML = getRaceRunnerHtml(
-      i,
-      p.name,
-      p.points
-    );
+  const maxLeft = trackWidth - finishRight;
 
-    runner.style.left = left + "px";
-    runner.style.top = getRaceTopForPlayer(i) + "%";
-  }
+  const left =
+    startX +
+    (points / winnerPoints) *
+    (maxLeft - startX);
+
+  runner.innerHTML = getRaceRunnerHtml(
+    i,
+    p.name,
+    p.points
+  );
+
+  runner.style.left = left + "px";
+  runner.style.top = getRaceTopForPlayer(i) + "%";
+}
 
   const timeline = document.getElementById("raceTimeline");
   if (timeline) timeline.value = String(stepIndex);
