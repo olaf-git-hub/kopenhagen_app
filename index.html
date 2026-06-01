@@ -22,6 +22,8 @@
       --radius: 16px;
       --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
       --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --race-start-x: 90px;
+      --race-finish-right: 95px;
     }
 
     * { box-sizing: border-box; }
@@ -1313,15 +1315,29 @@ input.score-triplebogey {
 }
 
 .race-marker-start {
-  left: 90px;
+  left: var(--race-start-x);
+  width: 3px;
+  background: #8bc34a;
 }
+
 .race-marker-half {
-  left: calc(50% + 35px);
+  left: calc(
+    var(--race-start-x) +
+    (
+      (100% - var(--race-start-x) - var(--race-finish-right))
+      / 2
+    )
+  );
   width: 2px;
   border-left: 2px dashed #8bc34a;
   opacity: .65;
 }
 
+.race-marker-finish {
+  right: var(--race-finish-right);
+  width: 6px;
+  background: var(--accent);
+}
 
 .race-marker-label {
   position: absolute;
@@ -1334,18 +1350,22 @@ input.score-triplebogey {
 }
 
 .race-marker-label-start {
-  left: 90px;
+  left: var(--race-start-x);
 }
 
-.race-marker-finish {
-  right: 95px;
-}
 .race-marker-label-half {
-  left: calc(50% + 35px);
+  left: calc(
+    var(--race-start-x) +
+    (
+      (100% - var(--race-start-x) - var(--race-finish-right))
+      / 2
+    )
+  );
 }
 
 .race-marker-label-finish {
-  right: 95px;
+  right: var(--race-finish-right);
+  transform: translateX(50%);
 }
 
 
@@ -4037,7 +4057,7 @@ finishMarker.className = "race-marker race-marker-finish";
 track.appendChild(finishMarker);
 
 const RACE_START_X = 90;
-const RACE_FINISH_RIGHT = 18;
+const RACE_FINISH_RIGHT = 95;
 
   
   for (let i = 0; i < state.playerCount; i++) {
