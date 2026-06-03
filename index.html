@@ -4028,6 +4028,7 @@ function openRaceReplay() {
   const analysis = document.getElementById("analysisContent");
   const controls = document.querySelector(".race-controls");
   const counter = document.getElementById("raceHoleCounter");
+  const speed = document.getElementById("raceSpeedSelect");
 
   if (!overlay || !track || !labels) return;
 
@@ -4043,6 +4044,7 @@ function openRaceReplay() {
 
   if (controls) controls.style.display = "flex";
   if (counter) counter.style.display = "flex";
+  if (speed) speed.style.display = "";
 
   const startLabel = document.createElement("div");
 startLabel.className = "race-marker-label race-marker-label-start";
@@ -4215,6 +4217,9 @@ function openAnalysisOverlay(title, html) {
   const analysis = document.getElementById("analysisContent");
   const controls = document.querySelector(".race-controls");
   const counter = document.getElementById("raceHoleCounter");
+  const speed = document.getElementById("raceSpeedSelect");
+
+
 
   if (!overlay || !track || !analysis) return;
 
@@ -4224,6 +4229,7 @@ function openAnalysisOverlay(title, html) {
 
   if (controls) controls.style.display = "none";
   if (counter) counter.style.display = "none";
+  if (speed) speed.style.display = "none";
 
   overlay.classList.add("show");
 
