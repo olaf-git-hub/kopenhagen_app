@@ -1082,6 +1082,30 @@ input.score-triplebogey {
   padding: 8px;
 }
 
+.loch19-menu-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 4px 8px 4px;
+  font-weight: 950;
+  color: var(--accent-dark);
+}
+
+.loch19-close-btn {
+  width: 34px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0;
+
+  border-radius: 999px;
+
+  background: #f3f3f3;
+  color: #666;
+
+  font-size: 18px;
+  font-weight: 950;
+}
+
 .loch19-menu.show {
   display: grid;
   gap: 8px;
@@ -1466,9 +1490,21 @@ input.score-triplebogey {
 
 <div class="toast" id="toast"></div>
 <div class="loch19-menu" id="loch19Menu">
+
+  <div class="loch19-menu-head">
+    <span>⛳ Loch 19</span>
+    <button
+      type="button"
+      id="closeLoch19Btn"
+      class="loch19-close-btn">
+      ✕
+    </button>
+  </div>
+
   <button type="button" id="rankingChartBtn">📈 Ranking-Verlauf</button>
   <button type="button" id="highlightsBtn">🏆 Highlights</button>
   <button type="button" id="raceReplayBtn">🐌 Replay</button>
+
 </div>
 
 <div class="race-overlay" id="raceOverlay">
@@ -4417,6 +4453,9 @@ function init() {
   document.getElementById("raceReplayBtn").addEventListener("click", openRaceReplay);
   document.getElementById("startRaceBtn").addEventListener("click", startRaceReplay);
   document.getElementById("resetRaceBtn").addEventListener("click", openRaceReplay);
+  document
+  .getElementById("closeLoch19Btn")
+  .addEventListener("click", closeLoch19Menu);
   document.getElementById("raceTimeline").addEventListener("input", onRaceTimelineInput);
   document.getElementById("closeRaceBtn").addEventListener("click", closeRaceReplay);
 
