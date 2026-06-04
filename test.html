@@ -1703,11 +1703,6 @@ tr.hole-confirmed td:first-child {
 
         <div class="season-suggest">
           <button type="button" id="suggestAllowanceBtn" class="secondary">🏆 Vorgaben aus Saison vorschlagen</button>
-          <div class="weight-control">
-            <label for="weightFactor">Gewichtung jüngster Runden: <strong id="weightVal">0,70</strong></label>
-            <input type="range" id="weightFactor" min="0.5" max="1" step="0.05" value="0.7">
-            <div class="help" style="margin:4px 0 0;">0,50 = stark formlastig · 1,00 = ganzer Schnitt</div>
-          </div>
         </div>
 
         <details class="inner" open>
@@ -1816,6 +1811,30 @@ tr.hole-confirmed td:first-child {
       <button class="secondary small" type="button" id="closePlayerProfileBtn">Schließen</button>
     </div>
     <div class="hole-stand-body" id="playerProfileBody"></div>
+  </div>
+</div>
+
+<div class="hole-stand-popup season-popup" id="suggestPopup">
+  <div class="hole-stand-card">
+    <div class="hole-stand-head">
+      <span>🏆 Vorgaben-Vorschlag</span>
+      <button class="loch19-close-btn" type="button" id="closeSuggestBtn">✕</button>
+    </div>
+    <div class="hole-stand-body">
+      <div class="help" style="margin:0 0 8px;">
+        Berechnung aus euren Saison-Runden: Form-gewichteter Brutto-Schnitt (jüngste Runden zählen mehr).
+        Bester Schnitt = 0 Vorgaben, alle anderen erhalten die Differenz zum Besten.
+      </div>
+      <div class="weight-control">
+        <label for="suggestWeight">Gewichtung jüngster Runden: <strong id="suggestWeightVal">0,70</strong></label>
+        <input type="range" id="suggestWeight" min="0.5" max="1" step="0.05" value="0.7">
+        <div class="help" style="margin:4px 0 0;">0,50 = stark formlastig · 1,00 = ganzer Schnitt</div>
+      </div>
+      <div id="suggestTable" style="margin-top:10px;"></div>
+      <div class="actions" style="margin-top:12px;">
+        <button type="button" id="applySuggestBtn">Übernehmen</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -5417,36 +5436,91 @@ function weightedGrossForName(season, name, factor) {
   return num / den;
 }
 
-function suggestAllowancesFromSeason() {
-  const course = getCourse();
-  const factor = loadWeightFactor();
-  const setup = readSetupInputs();
+// Vorschlag berechnen: pro Name Anzahl voller Runden, Form-Brutto und Vorgabe.
+function computeSuggestion(names, factor) {
+  const season = loadSeason();
+  const rows = names.map(name => {
+    let n = 0;
+    for (const r of season.rounds) {
+      if (r.complete && (r.results || []).some(x => x.name === name)) n++;
+    }
+    const wg = weightedGrossForName(season, name, factor);
+    return { name, n, wg, allow: null };
+  });
+  const vals = rows.filter(r => r.wg !== null).map(r => r.wg);
+  const best = vals.length ? Math.min.apply(null, vals) : null;
+  rows.forEach(r => {
+    if (r.wg !== null && best !== null) r.allow = Math.max(0, Math.round(r.wg - best));
+  });
+  return { rows, best };
+}
 
-  // Namen aus der Eingabe übernehmen (Vorgaben kommen gleich darunter).
+let suggestPlayers = [];
+
+function renderSuggestTable() {
+  const box = document.getElementById("suggestTable");
+  if (!box) return;
+  const slider = document.getElementById("suggestWeight");
+  const factor = slider ? (parseFloat(slider.value) || 0.7) : 0.7;
+  const { rows, best } = computeSuggestion(suggestPlayers, factor);
+
+  let h = "<div style='overflow-x:auto;'><table class='player-detail-table'>";
+  h += "<thead><tr><th>Spieler</th><th>Runden</th><th>Ø&nbsp;Brutto (Form)</th><th>Vorgabe</th></tr></thead><tbody>";
+  rows.forEach(r => {
+    const isBest = (r.wg !== null && best !== null && Math.abs(r.wg - best) < 1e-9);
+    h += "<tr" + (isBest ? " style='background:#e3f5e8;'" : "") + ">";
+    h += "<td style='text-align:left;'>" + escapeHtml(r.name) + "</td>";
+    h += "<td>" + (r.n || 0) + "</td>";
+    h += "<td>" + (r.wg === null ? "–" : formatNum(r.wg)) + "</td>";
+    h += "<td><strong>" + (r.allow === null ? "–" : r.allow) + "</strong></td>";
+    h += "</tr>";
+  });
+  h += "</tbody></table></div>";
+
+  const anyData = rows.some(r => r.wg !== null);
+  if (!anyData) {
+    h += "<div class='help' style='margin-top:8px;'>Für diese Spieler liegen noch keine Saison-Daten vor – kein Vorschlag möglich.</div>";
+  } else {
+    h += "<div class='help' style='margin-top:8px;'>Grün = bester Schnitt (0 Vorgaben). Strich = keine Saison-Daten (Vorgabe bleibt unverändert).</div>";
+  }
+  box.innerHTML = h;
+}
+
+function openSuggestModal() {
+  const setup = readSetupInputs();
+  suggestPlayers = setup.players.map(p => p.name);
+
+  const wf = loadWeightFactor();
+  const slider = document.getElementById("suggestWeight");
+  const val = document.getElementById("suggestWeightVal");
+  if (slider) slider.value = String(wf);
+  if (val) val.textContent = formatNum2(wf);
+
+  renderSuggestTable();
+  document.getElementById("suggestPopup").classList.add("show");
+}
+
+function closeSuggestModal() {
+  const popup = document.getElementById("suggestPopup");
+  if (popup) popup.classList.remove("show");
+}
+
+function applySuggestion() {
+  const slider = document.getElementById("suggestWeight");
+  const factor = slider ? (parseFloat(slider.value) || 0.7) : 0.7;
+
+  const setup = readSetupInputs();
   state.playerCount = setup.playerCount;
   state.players = setup.players.map(p => ({ name: p.name, allowance: p.allowance }));
 
-  const season = loadSeason();
-  const wg = setup.players.map(p => weightedGrossForName(season, p.name, factor));
-  const withData = wg.filter(v => v !== null);
-
-  if (withData.length === 0) {
-    showToast("Keine Saison-Daten für diese Spieler gefunden");
-    return;
-  }
-
-  const best = Math.min.apply(null, withData);
-  const lines = [];
+  const { rows } = computeSuggestion(state.players.map(p => p.name), factor);
   const missing = [];
-
-  for (let i = 0; i < setup.playerCount; i++) {
-    if (wg[i] === null) {
+  for (let i = 0; i < state.playerCount; i++) {
+    if (rows[i] && rows[i].allow !== null) {
+      state.players[i].allowance = rows[i].allow;
+    } else {
       missing.push(state.players[i].name);
-      continue;
     }
-    const allow = Math.max(0, Math.round(wg[i] - best));
-    state.players[i].allowance = allow;
-    lines.push(state.players[i].name + " " + allow);
   }
 
   state = normalizeState(state);
@@ -5455,10 +5529,10 @@ function suggestAllowancesFromSeason() {
   buildTable();
   renderMobileCards();
   renderSummary();
+  closeSuggestModal();
 
-  let msg = "Vorgaben-Vorschlag: " + lines.join(", ");
+  let msg = "Vorgaben übernommen";
   if (missing.length) msg += " · ohne Saison-Daten: " + missing.join(", ");
-  if (!course.hasHcp) msg += " (Hinweis: Platz ohne HCP)";
   showToast(msg);
 }
 
@@ -5494,20 +5568,24 @@ function init() {
   document.getElementById("addRoundToSeasonBtn").addEventListener("click", addCurrentRoundToSeason);
   document.getElementById("seasonTableBtn").addEventListener("click", openSeasonTable);
 
-  const weightSlider = document.getElementById("weightFactor");
-  const weightVal = document.getElementById("weightVal");
-  if (weightSlider) {
-    const wf = loadWeightFactor();
-    weightSlider.value = String(wf);
-    if (weightVal) weightVal.textContent = formatNum2(wf);
-    weightSlider.addEventListener("input", function() {
+  const suggestBtn = document.getElementById("suggestAllowanceBtn");
+  if (suggestBtn) suggestBtn.addEventListener("click", openSuggestModal);
+
+  const suggestWeight = document.getElementById("suggestWeight");
+  const suggestWeightVal = document.getElementById("suggestWeightVal");
+  if (suggestWeight) {
+    suggestWeight.addEventListener("input", function() {
       const v = parseFloat(this.value) || 0.7;
       saveWeightFactor(v);
-      if (weightVal) weightVal.textContent = formatNum2(v);
+      if (suggestWeightVal) suggestWeightVal.textContent = formatNum2(v);
+      renderSuggestTable();
     });
   }
-  const suggestBtn = document.getElementById("suggestAllowanceBtn");
-  if (suggestBtn) suggestBtn.addEventListener("click", suggestAllowancesFromSeason);
+  document.getElementById("closeSuggestBtn").addEventListener("click", closeSuggestModal);
+  document.getElementById("applySuggestBtn").addEventListener("click", applySuggestion);
+  document.getElementById("suggestPopup").addEventListener("click", function(e) {
+    if (e.target === this) closeSuggestModal();
+  });
   document.getElementById("rankingChartBtn").addEventListener("click", openRankingChart);
   document.getElementById("highlightsBtn").addEventListener("click", openHighlights);
 
