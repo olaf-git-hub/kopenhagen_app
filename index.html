@@ -5431,15 +5431,34 @@ function createSeasonCsv() {
   const season = loadSeason();
   const oom = computeOrderOfMerit(season);
 
+  // Wertungsgrenze wie in der Tabelle: offiziell gewertet ab einem Drittel
+  // der bisherigen Saison-Runden. Nicht gewertete bekommen keine Platznummer.
+  const total = season.rounds.length;
+  const threshold = Math.max(1, Math.ceil(total / 3));
+
+  const ranked = oom.filter(p => p.rounds >= threshold);
+  const unranked = oom.filter(p => p.rounds < threshold);
+  const oomRow = (p, platz) => [
+    platz,
+    p.name,
+    formatNum2(p.avgMerit),
+    (p.avgGross === null ? "" : formatNum(p.avgGross)),
+    p.wins,
+    p.rounds
+  ].map(csvEscape).join(";") + "\n";
+
   let csv = "KOPENHAGEN ORDER OF MERIT\n";
-  csv += "Platz;Spieler;Punkte;Runden;Siege;Schnitt Platz;Schnitt Brutto (18)\n";
-  oom.forEach((p, idx) => {
-    csv += [idx + 1, p.name, formatNum(p.merit), p.rounds, p.wins, formatNum(p.avgPos),
-            (p.avgGross === null ? "" : formatNum(p.avgGross))].map(csvEscape).join(";") + "\n";
-  });
+  // Spalten exakt wie die Bildschirm-Tabelle, sortiert nach Ø Punkten pro Runde.
+  csv += "Platz;Spieler;Ø Punkte;Ø Brutto (18);Siege;Runden\n";
+  ranked.forEach((p, idx) => { csv += oomRow(p, idx + 1); });
+
+  if (unranked.length) {
+    csv += "\nNoch nicht gewertet (weniger als " + threshold + " Runde(n))\n";
+    unranked.forEach(p => { csv += oomRow(p, ""); });
+  }
 
   csv += "\nRUNDEN\n";
-  csv += "Datum;Platz;Spieler;Loecher;Sieger\n";
+  csv += "Datum;Golfplatz;Spieler;Loecher;Sieger\n";
   season.rounds.forEach(r => {
     const winner = r.results && r.results[0] ? r.results[0].name : "";
     csv += [r.dateText, r.courseName, r.playerCount,
