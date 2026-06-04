@@ -1466,6 +1466,7 @@ input.score-triplebogey {
   margin-top: 6px;
   padding: 18px 10px 12px;
   border-top: 1px solid var(--line);
+  text-align: right;
 }
 
 .hole-confirm-btn {
@@ -1484,6 +1485,10 @@ input.score-triplebogey {
   background: #e3f5e8;
   color: var(--good);
   border: 1px solid #b6e0c2;
+  width: auto;
+  min-height: 30px;
+  padding: 4px 12px;
+  font-size: 12px;
 }
 
 .hole-card.hole-confirmed {
@@ -1612,6 +1617,18 @@ tr.hole-confirmed td:first-child {
 
 .profile-round-body {
   padding: 8px 10px;
+}
+
+/* Zeilen-Hervorhebung in Detailtabellen (über die weißen Zellen-Hintergründe legen) */
+.player-detail-table tr.hl-best td { background: #e3f5e8; }
+.player-detail-table tr.hl-self td { background: #eef6eb; }
+
+/* "i"-Symbol am Loch: zeigt, dass man für den Stand nach diesem Loch tippen kann */
+.hole-info {
+  font-size: 0.82em;
+  color: var(--accent-dark);
+  opacity: 0.65;
+  vertical-align: middle;
 }
 
 .profile-placements {
@@ -2935,7 +2952,7 @@ function buildTable() {
     const metaTop = document.createElement("div");
     metaTop.className = "clickable-hole";
     metaTop.innerHTML =
-      "Loch " + h.hole +
+      "Loch " + h.hole + " <span class='hole-info'>ⓘ</span>" +
       (data.confirmed ? " <span class='hole-state ok'>✓</span>" : "") +
       (details.length ? "<div class='hole-small'>" + details.join(" · ") + "</div>" : "");
     metaTop.addEventListener("click", () => openHoleStandPopup(h.hole));
@@ -2999,7 +3016,7 @@ function renderMobileCards() {
     head.addEventListener("click", () => openHoleStandPopup(h.hole));
 
     const title = document.createElement("div");
-    title.textContent = "Loch " + h.hole;
+    title.innerHTML = "Loch " + h.hole + " <span class='hole-info'>ⓘ</span>";
 
     const meta = document.createElement("div");
     meta.className = "hole-card-meta";
@@ -5396,7 +5413,7 @@ function renderRoundStandingsHtml(round, highlightName) {
   if (hasPar) h += "<th>+/-&nbsp;PAR</th>";
   h += "</tr></thead><tbody>";
   round.results.forEach((res, idx) => {
-    const hi = (highlightName && res.name === highlightName) ? " style='background:#eef6eb;'" : "";
+    const hi = (highlightName && res.name === highlightName) ? " class='hl-self'" : "";
     h += "<tr" + hi + ">";
     h += "<td>" + (idx + 1) + "</td>";
     h += "<td style='text-align:left;'>" + escapeHtml(res.name) + "</td>";
@@ -5681,7 +5698,7 @@ function renderSuggestTable() {
   h += "<thead><tr><th>Spieler</th><th>Runden</th><th>Ø&nbsp;Brutto (Form)</th><th>Vorgabe</th></tr></thead><tbody>";
   rows.forEach(r => {
     const isBest = (r.wg !== null && best !== null && Math.abs(r.wg - best) < 1e-9);
-    h += "<tr" + (isBest ? " style='background:#e3f5e8;'" : "") + ">";
+    h += "<tr" + (isBest ? " class='hl-best'" : "") + ">";
     h += "<td style='text-align:left;'>" + escapeHtml(r.name) + "</td>";
     h += "<td>" + (r.n || 0) + "</td>";
     h += "<td>" + (r.wg === null ? "–" : formatNum(r.wg)) + "</td>";
