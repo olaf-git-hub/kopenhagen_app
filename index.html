@@ -1154,7 +1154,11 @@ input.score-triplebogey {
   inset: 0;
   z-index: 200;
   background: #f5f7f2;
-  padding: calc(env(safe-area-inset-top) + 12px) 12px calc(env(safe-area-inset-bottom) + 12px);
+  padding:
+    calc(env(safe-area-inset-top) + 12px)
+    calc(env(safe-area-inset-right) + 12px)
+    calc(env(safe-area-inset-bottom) + 12px)
+    calc(env(safe-area-inset-left) + 12px);
 }
 
 .race-overlay.show {
@@ -1763,8 +1767,15 @@ tr.hole-confirmed td:first-child {
 
 /* Querformat / niedrige Höhe: oben kompakter, damit die Rennbahn größer wird */
 @media (orientation: landscape) and (max-height: 520px) {
+  :root {
+    --race-finish-right: 70px;
+  }
   .race-overlay {
-    padding: calc(env(safe-area-inset-top) + 6px) 10px calc(env(safe-area-inset-bottom) + 6px);
+    padding:
+      calc(env(safe-area-inset-top) + 6px)
+      calc(env(safe-area-inset-right) + 16px)
+      calc(env(safe-area-inset-bottom) + 6px)
+      calc(env(safe-area-inset-left) + 16px);
   }
   .race-head {
     margin-bottom: 2px;
@@ -1773,10 +1784,15 @@ tr.hole-confirmed td:first-child {
     font-size: 14px;
   }
   .race-hole-counter {
-    margin: 0 auto 4px;
+    position: absolute;
+    top: calc(env(safe-area-inset-top) + 10px);
+    left: 50%;
+    transform: translateX(-50%);
+    margin: 0;
     padding: 4px 12px;
     font-size: 13px;
     box-shadow: none;
+    z-index: 5;
   }
   .race-controls {
     margin-top: 6px;
@@ -1931,7 +1947,6 @@ tr.hole-confirmed td:first-child {
   <div class="race-controls">
   <button type="button" id="startRaceBtn">▶ Start</button>
   <input type="range" id="raceTimeline" min="0" max="0" value="0">
-  <button class="secondary" type="button" id="resetRaceBtn">↺ Zurück</button>
   </div>
 </div>
 <div class="hole-stand-popup" id="holeStandPopup">
@@ -5749,7 +5764,6 @@ function init() {
 
   document.getElementById("raceReplayBtn").addEventListener("click", openRaceReplay);
   document.getElementById("startRaceBtn").addEventListener("click", startRaceReplay);
-  document.getElementById("resetRaceBtn").addEventListener("click", openRaceReplay);
   document
   .getElementById("closeLoch19Btn")
   .addEventListener("click", closeLoch19Menu);
