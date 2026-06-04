@@ -1549,6 +1549,67 @@ tr.hole-confirmed td:first-child {
   white-space: nowrap;
 }
 
+.season-round-open {
+  cursor: pointer;
+}
+
+.oom-player {
+  cursor: pointer;
+  color: var(--accent-dark);
+  font-weight: 900;
+  text-decoration: underline;
+}
+
+.season-popup {
+  z-index: 230;
+}
+
+.season-popup .hole-stand-card {
+  width: min(560px, 100%);
+}
+
+.season-popup .hole-stand-body {
+  max-height: 72vh;
+  overflow: auto;
+}
+
+.profile-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+  margin: 4px 0 12px;
+}
+
+.profile-stats .mini-pill {
+  text-align: center;
+  white-space: normal;
+}
+
+.profile-round {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+
+.profile-round-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  cursor: pointer;
+  background: #fbfdf9;
+}
+
+.profile-round-head > div {
+  min-width: 0;
+}
+
+.profile-round-body {
+  padding: 8px 10px;
+}
+
   </style>
 </head>
 <body>
@@ -1699,6 +1760,26 @@ tr.hole-confirmed td:first-child {
     <div class="hole-stand-body" id="holeStandBody"></div>
   </div>
 </div>
+<div class="hole-stand-popup season-popup" id="roundDetailPopup">
+  <div class="hole-stand-card">
+    <div class="hole-stand-head">
+      <span id="roundDetailTitle">Runde</span>
+      <button class="secondary small" type="button" id="closeRoundDetailBtn">Schließen</button>
+    </div>
+    <div class="hole-stand-body" id="roundDetailBody"></div>
+  </div>
+</div>
+
+<div class="hole-stand-popup season-popup" id="playerProfilePopup">
+  <div class="hole-stand-card">
+    <div class="hole-stand-head">
+      <span id="playerProfileTitle">Spieler</span>
+      <button class="secondary small" type="button" id="closePlayerProfileBtn">Schließen</button>
+    </div>
+    <div class="hole-stand-body" id="playerProfileBody"></div>
+  </div>
+</div>
+
 <datalist id="knownPlayerNames"></datalist>
 
 <script>
@@ -4786,6 +4867,16 @@ function addCurrentRoundToSeason() {
     i = j + 1;
   }
 
+  // Loch-Brutto der bestätigten Löcher mitspeichern (self-contained).
+  const holesSnapshot = {};
+  for (const h of getCourseHoles()) {
+    const k = String(h.hole);
+    const d = state.holes[k];
+    if (d && d.confirmed && Array.isArray(d.gross)) {
+      holesSnapshot[k] = d.gross.slice(0, pc);
+    }
+  }
+
   const season = loadSeason();
   season.rounds.push({
     id: now.getTime(),
@@ -4796,7 +4887,8 @@ function addCurrentRoundToSeason() {
     holesPlayed: calc.playedHoles,
     complete: calc.playedHoles === 18,
     hasPar: !!course.hasPar,
-    results
+    results,
+    holes: holesSnapshot
   });
   saveSeason(season);
   showToast("Runde zur Saison hinzugefügt");
@@ -4808,13 +4900,14 @@ function computeOrderOfMerit(season) {
     for (const res of r.results) {
       const key = res.name;
       if (!map[key]) {
-        map[key] = { name: res.name, merit: 0, rounds: 0, wins: 0, posSum: 0, grossSumFull: 0, fullRounds: 0 };
+        map[key] = { name: res.name, merit: 0, rounds: 0, wins: 0, posSum: 0, grossSumFull: 0, fullRounds: 0, placements: {} };
       }
       const a = map[key];
       a.merit += Number(res.merit) || 0;
       a.rounds += 1;
       if (res.position === 1) a.wins += 1;
       a.posSum += res.position;
+      a.placements[res.position] = (a.placements[res.position] || 0) + 1;
       if (r.complete) {
         a.grossSumFull += Number(res.gross) || 0;
         a.fullRounds += 1;
@@ -4828,12 +4921,15 @@ function computeOrderOfMerit(season) {
       merit: a.merit,
       rounds: a.rounds,
       wins: a.wins,
+      avgMerit: a.rounds ? a.merit / a.rounds : 0,
       avgPos: a.rounds ? a.posSum / a.rounds : 0,
-      avgGross: a.fullRounds ? a.grossSumFull / a.fullRounds : null
+      avgGross: a.fullRounds ? a.grossSumFull / a.fullRounds : null,
+      placements: a.placements
     };
   });
   arr.sort((x, y) => {
-    if (y.merit !== x.merit) return y.merit - x.merit;
+    if (y.avgMerit !== x.avgMerit) return y.avgMerit - x.avgMerit;
+    if (y.wins !== x.wins) return y.wins - x.wins;
     if (x.avgPos !== y.avgPos) return x.avgPos - y.avgPos;
     return (x.avgGross === null ? 999 : x.avgGross) - (y.avgGross === null ? 999 : y.avgGross);
   });
@@ -4874,21 +4970,19 @@ function openSeasonTable() {
   if (oom.length === 0) {
     html += "<p class='help'>Noch keine Runden in der Saison. Über „⛳ Loch 19 → ➕ Runde zur Saison hinzufügen“ nimmst du die aktuelle Runde auf.</p>";
   } else {
-    html += "<div style='overflow-x:auto;'><table class='player-detail-table'>";
-    html += "<thead><tr><th>#</th><th>Spieler</th><th>Punkte</th><th>Ø&nbsp;Brutto</th><th>Siege</th><th>Runden</th><th>Ø&nbsp;Platz</th></tr></thead><tbody>";
-    oom.forEach((p, idx) => {
-      html += "<tr>";
-      html += "<td>" + (idx + 1) + "</td>";
-      html += "<td style='text-align:left;'>" + escapeHtml(p.name) + "</td>";
-      html += "<td><strong>" + formatNum(p.merit) + "</strong></td>";
-      html += "<td>" + (p.avgGross === null ? "–" : formatNum(p.avgGross)) + "</td>";
-      html += "<td>" + p.wins + "</td>";
-      html += "<td>" + p.rounds + "</td>";
-      html += "<td>" + formatNum(p.avgPos) + "</td>";
-      html += "</tr>";
-    });
-    html += "</tbody></table></div>";
-    html += "<div class='help' style='margin-top:6px;'>Ø&nbsp;Brutto nur aus vollständigen 18-Loch-Runden.</div>";
+    const total = season.rounds.length;
+    const threshold = Math.max(1, Math.ceil(total / 3));
+    const ranked = oom.filter(p => p.rounds >= threshold);
+    const unranked = oom.filter(p => p.rounds < threshold);
+
+    html += renderOomTable(ranked, true);
+
+    if (unranked.length) {
+      html += "<div class='help' style='margin-top:10px; margin-bottom:2px;'>Noch nicht gewertet (weniger als " + threshold + " Runde(n)):</div>";
+      html += renderOomTable(unranked, false);
+    }
+
+    html += "<div class='help' style='margin-top:8px;'>Gewertet nach Ø&nbsp;Punkten pro Runde. Offizielle Wertung ab " + threshold + " Runde(n) (ein Drittel der bisherigen Saison-Runden). Tippe auf einen Namen für das Spielerprofil. Ø&nbsp;Brutto nur aus 18-Loch-Runden.</div>";
   }
 
   if (season.rounds.length) {
@@ -4898,9 +4992,9 @@ function openSeasonTable() {
     for (const r of rounds) {
       const winner = r.results && r.results[0] ? r.results[0].name : "?";
       html += "<div class='season-round-row'>";
-      html += "<div><strong>" + escapeHtml(r.dateText || "") + "</strong> · " + escapeHtml(r.courseName || "") +
+      html += "<div class='season-round-open' data-id='" + r.id + "'><strong>" + escapeHtml(r.dateText || "") + "</strong> · " + escapeHtml(r.courseName || "") +
               "<div class='hole-small'>Sieger: " + escapeHtml(winner) + " · " + r.playerCount + " Spieler · " +
-              (r.complete ? "18 Löcher" : (r.holesPlayed + "/18 Löcher")) + "</div></div>";
+              (r.complete ? "18 Löcher" : (r.holesPlayed + "/18 Löcher")) + " · tippen für Details</div></div>";
       html += "<button type='button' class='danger small season-del' data-id='" + r.id + "'>Löschen</button>";
       html += "</div>";
     }
@@ -4925,7 +5019,8 @@ function wireSeasonOverlayEvents() {
   if (!root) return;
 
   root.querySelectorAll(".season-del").forEach(btn => {
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
       const id = Number(btn.dataset.id);
       if (!confirm("Diese Runde aus der Saison löschen?")) return;
       const season = loadSeason();
@@ -4933,6 +5028,14 @@ function wireSeasonOverlayEvents() {
       saveSeason(season);
       openSeasonTable();
     });
+  });
+
+  root.querySelectorAll(".oom-player").forEach(el => {
+    el.addEventListener("click", () => openPlayerProfile(el.dataset.name));
+  });
+
+  root.querySelectorAll(".season-round-open").forEach(el => {
+    el.addEventListener("click", () => openRoundDetail(el.dataset.id));
   });
 
   const backup = root.querySelector("#seasonBackupBtn");
@@ -4978,6 +5081,155 @@ function wireSeasonOverlayEvents() {
   });
 }
 
+function formatNum2(n) {
+  if (n === null || n === undefined || Number.isNaN(n)) return "";
+  const r = Math.round(n * 100) / 100;
+  return String(r).replace(".", ",");
+}
+
+function renderOomTable(list, ranked) {
+  let h = "<div style='overflow-x:auto;'><table class='player-detail-table'>";
+  h += "<thead><tr><th>#</th><th>Spieler</th><th>Ø&nbsp;Pkt</th><th>Ø&nbsp;Brutto</th><th>Siege</th><th>Runden</th><th>Ø&nbsp;Platz</th></tr></thead><tbody>";
+  list.forEach((p, idx) => {
+    h += "<tr>";
+    h += "<td>" + (ranked ? (idx + 1) : "–") + "</td>";
+    h += "<td style='text-align:left;'><span class='oom-player' data-name='" + escapeHtml(p.name) + "'>" + escapeHtml(p.name) + "</span></td>";
+    h += "<td><strong>" + formatNum2(p.avgMerit) + "</strong></td>";
+    h += "<td>" + (p.avgGross === null ? "–" : formatNum(p.avgGross)) + "</td>";
+    h += "<td>" + p.wins + "</td>";
+    h += "<td>" + p.rounds + "</td>";
+    h += "<td>" + formatNum2(p.avgPos) + "</td>";
+    h += "</tr>";
+  });
+  h += "</tbody></table></div>";
+  return h;
+}
+
+// Endstand-Tabelle einer einzelnen Runde (optional einen Spieler hervorheben).
+function renderRoundStandingsHtml(round, highlightName) {
+  const hasPar = !!round.hasPar;
+  let h = "<div style='overflow-x:auto;'><table class='player-detail-table'><thead><tr><th>#</th><th>Spieler</th><th>Punkte</th><th>Brutto</th>";
+  if (hasPar) h += "<th>+/-&nbsp;PAR</th>";
+  h += "</tr></thead><tbody>";
+  round.results.forEach((res, idx) => {
+    const hi = (highlightName && res.name === highlightName) ? " style='background:#eef6eb;'" : "";
+    h += "<tr" + hi + ">";
+    h += "<td>" + (idx + 1) + "</td>";
+    h += "<td style='text-align:left;'>" + escapeHtml(res.name) + "</td>";
+    h += "<td>" + formatNum(res.points) + "</td>";
+    h += "<td>" + res.gross + "</td>";
+    if (hasPar) h += "<td>" + formatPar(res.parDelta) + "</td>";
+    h += "</tr>";
+  });
+  h += "</tbody></table></div>";
+  return h;
+}
+
+function openRoundDetail(id) {
+  const season = loadSeason();
+  const round = season.rounds.find(r => Number(r.id) === Number(id));
+  if (!round) return;
+
+  const title = document.getElementById("roundDetailTitle");
+  const body = document.getElementById("roundDetailBody");
+  const popup = document.getElementById("roundDetailPopup");
+  if (!title || !body || !popup) return;
+
+  title.textContent = (round.dateText || "Runde") + " · " + (round.courseName || "");
+  let html = "<div class='hole-small' style='margin-bottom:8px;'>" +
+    round.playerCount + " Spieler · " +
+    (round.complete ? "18 Löcher" : (round.holesPlayed + "/18 Löcher")) + "</div>";
+  html += renderRoundStandingsHtml(round, null);
+  body.innerHTML = html;
+
+  popup.classList.add("show");
+}
+
+function closeRoundDetail() {
+  const popup = document.getElementById("roundDetailPopup");
+  if (popup) popup.classList.remove("show");
+}
+
+function openPlayerProfile(name) {
+  const season = loadSeason();
+  const agg = computeOrderOfMerit(season).find(p => p.name === name);
+  const rounds = season.rounds
+    .filter(r => r.results.some(x => x.name === name))
+    .slice()
+    .reverse();
+
+  const title = document.getElementById("playerProfileTitle");
+  const body = document.getElementById("playerProfileBody");
+  const popup = document.getElementById("playerProfilePopup");
+  if (!title || !body || !popup) return;
+
+  title.textContent = "🏌️ " + name;
+
+  let html = "";
+
+  if (agg) {
+    html += "<div class='profile-stats'>";
+    html += "<span class='mini-pill'>Ø Pkt: " + formatNum2(agg.avgMerit) + "</span>";
+    html += "<span class='mini-pill'>Punkte ges.: " + formatNum(agg.merit) + "</span>";
+    html += "<span class='mini-pill'>Runden: " + agg.rounds + "</span>";
+    html += "<span class='mini-pill'>Siege: " + agg.wins + "</span>";
+    html += "<span class='mini-pill'>Ø Platz: " + formatNum2(agg.avgPos) + "</span>";
+    html += "<span class='mini-pill'>Ø Brutto: " + (agg.avgGross === null ? "–" : formatNum(agg.avgGross)) + "</span>";
+    html += "</div>";
+
+    const pl = agg.placements || {};
+    const parts = [];
+    for (let pos = 1; pos <= 4; pos++) {
+      if (pl[pos]) parts.push(pos + ".: " + pl[pos] + "×");
+    }
+    if (parts.length) {
+      html += "<div class='help' style='margin:-4px 0 10px;'>Platzierungen: " + parts.join(" · ") + "</div>";
+    }
+  }
+
+  html += "<h3 style='margin:6px 0 8px; font-size:15px;'>Runden (zum Aufklappen tippen)</h3>";
+
+  if (rounds.length === 0) {
+    html += "<p class='help'>Keine Runden gefunden.</p>";
+  } else {
+    for (const r of rounds) {
+      const me = r.results.find(x => x.name === name);
+      const myPos = me ? me.position : "?";
+      const myGross = me ? me.gross : "?";
+      const parTxt = (r.hasPar && me) ? (" · " + formatPar(me.parDelta) + " PAR") : "";
+
+      html += "<div class='profile-round'>";
+      html += "<div class='profile-round-head' data-rid='" + r.id + "'>";
+      html += "<div><strong>" + escapeHtml(r.dateText || "") + "</strong> · " + escapeHtml(r.courseName || "") +
+              "<div class='hole-small'>Platz " + myPos + " von " + r.playerCount + " · Brutto " + myGross + parTxt + "</div></div>";
+      html += "<span class='summary-toggle'>⊕</span>";
+      html += "</div>";
+      html += "<div class='profile-round-body' style='display:none;'>" + renderRoundStandingsHtml(r, name) + "</div>";
+      html += "</div>";
+    }
+  }
+
+  body.innerHTML = html;
+
+  body.querySelectorAll(".profile-round-head").forEach(head => {
+    head.addEventListener("click", () => {
+      const det = head.nextElementSibling;
+      const tog = head.querySelector(".summary-toggle");
+      if (!det) return;
+      const open = det.style.display !== "none";
+      det.style.display = open ? "none" : "block";
+      if (tog) tog.textContent = open ? "⊕" : "⊖";
+    });
+  });
+
+  popup.classList.add("show");
+}
+
+function closePlayerProfile() {
+  const popup = document.getElementById("playerProfilePopup");
+  if (popup) popup.classList.remove("show");
+}
+
 function init() {
   state = normalizeState(state);
   loadStateFromUrl();
@@ -5015,6 +5267,16 @@ function init() {
   document.addEventListener("click", closeLoch19Menu);
 
   document.getElementById("closeHoleStandBtn").addEventListener("click", closeHoleStandPopup);
+
+  document.getElementById("closeRoundDetailBtn").addEventListener("click", closeRoundDetail);
+  document.getElementById("closePlayerProfileBtn").addEventListener("click", closePlayerProfile);
+
+  document.getElementById("roundDetailPopup").addEventListener("click", function(e) {
+    if (e.target === this) closeRoundDetail();
+  });
+  document.getElementById("playerProfilePopup").addEventListener("click", function(e) {
+    if (e.target === this) closePlayerProfile();
+  });
 
   document.getElementById("raceSpeedSelect").addEventListener("change", function() {
   raceReplaySeconds = Number(this.value) || 20;
