@@ -22,8 +22,8 @@
       --radius: 16px;
       --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
       --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      --race-start-x: 60px;
-      --race-finish-right: 90px;
+      --race-start-x: 44px;
+      --race-finish-right: 44px;
     }
 
     * { box-sizing: border-box; }
@@ -1248,6 +1248,11 @@ input.score-triplebogey {
   box-shadow: 0 1px 4px rgba(0,0,0,.15);
 }
 
+.race-runner-name.name-left {
+  left: auto;
+  right: 32px;
+}
+
 #raceTimeline {
   flex: 2;
 }
@@ -1784,9 +1789,6 @@ tr.hole-confirmed td:first-child {
 
 /* Querformat / niedrige Höhe: oben kompakter, damit die Rennbahn größer wird */
 @media (orientation: landscape) and (max-height: 520px) {
-  :root {
-    --race-finish-right: 70px;
-  }
   .race-overlay {
     padding:
       calc(env(safe-area-inset-top) + 6px)
@@ -4809,14 +4811,14 @@ function getRaceMedal(rank) {
   return String(rank);
 }
 
-function getRaceRunnerHtml(playerIndex, name, points) {
+function getRaceRunnerHtml(playerIndex, name, points, labelLeft) {
   const color = racePlayerColors[playerIndex] || "#555";
 
   return (
     "<span class='race-snail'>🐌</span>" +
     "<span class='race-dot' style='background:" +
     color +
-    "'></span><span class='race-runner-name'>" +
+    "'></span><span class='race-runner-name" + (labelLeft ? " name-left" : "") + "'>" +
     escapeHtml(name) +
     (points === null ? "" : " (" + formatNum(points) + ")") +
     "</span>"
@@ -4948,6 +4950,7 @@ track.appendChild(finishMarker);
   }
 
   showRaceStep(history, 0);
+  setRaceButton(false);
 }
 
 function getRaceTopForPlayer(playerIndex) {
@@ -4984,6 +4987,7 @@ function showRaceStep(history, stepIndex) {
   const totalHoles = getCourseHoles().length || 18;
   const holeFrac = Math.max(0, Math.min(totalHoles, step.hole)) / totalHoles;
   const leaderDist = holeFrac * span;
+  const mid = startX + span / 2;
 
   let leaderPts = 0;
   for (let i = 0; i < state.playerCount; i++) {
@@ -4999,14 +5003,43 @@ function showRaceStep(history, stepIndex) {
     const points = Math.max(0, Number(p.points) || 0);
     const frac = leaderPts > 0 ? Math.min(1, points / leaderPts) : 0;
     const left = startX + frac * leaderDist;
+    // Etikett zeigt nach innen: rechte Hälfte -> Etikett links, sonst rechts.
+    const labelLeft = left >= mid;
 
-    runner.innerHTML = getRaceRunnerHtml(i, p.name, p.points);
+    runner.innerHTML = getRaceRunnerHtml(i, p.name, p.points, labelLeft);
     runner.style.left = left + "px";
     runner.style.top = getRaceTopForPlayer(i) + "%";
   }
 
   const timeline = document.getElementById("raceTimeline");
   if (timeline) timeline.value = String(stepIndex);
+}
+
+let raceStarted = false;
+
+function setRaceButton(started) {
+  raceStarted = started;
+  const b = document.getElementById("startRaceBtn");
+  if (b) b.textContent = started ? "↺ Auf Anfang" : "▶ Start";
+}
+
+function onRaceStartButton() {
+  const history = getRaceHistory();
+  if (raceStarted) {
+    // Auf Anfang: Lauf stoppen, alle Schnecken zurück an den Start
+    clearInterval(raceTimer);
+    showRaceStep(history, 0);
+    const tl = document.getElementById("raceTimeline");
+    if (tl) tl.value = "0";
+    setRaceButton(false);
+  } else {
+    if (history.length <= 1) {
+      showToast("Noch keine bestätigten Löcher fürs Rennen");
+      return;
+    }
+    startRaceReplay();
+    setRaceButton(true);
+  }
 }
 
 function startRaceReplay() {
@@ -6036,7 +6069,7 @@ function init() {
   document.getElementById("playerCount").addEventListener("change", onPlayerCountChange);
 
   document.getElementById("raceReplayBtn").addEventListener("click", openRaceReplay);
-  document.getElementById("startRaceBtn").addEventListener("click", startRaceReplay);
+  document.getElementById("startRaceBtn").addEventListener("click", onRaceStartButton);
   document
   .getElementById("closeLoch19Btn")
   .addEventListener("click", closeLoch19Menu);
