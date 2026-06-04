@@ -1523,6 +1523,32 @@ tr.hole-confirmed td:first-child {
   white-space: nowrap;
 }
 
+.season-rounds {
+  display: grid;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.season-round-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 8px 10px;
+  background: #fbfdf9;
+}
+
+.season-round-row > div {
+  min-width: 0;
+}
+
+.season-round-row .season-del {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
   </style>
 </head>
 <body>
@@ -1631,6 +1657,8 @@ tr.hole-confirmed td:first-child {
     </button>
   </div>
 
+  <button type="button" id="addRoundToSeasonBtn">➕ Runde zur Saison hinzufügen</button>
+  <button type="button" id="seasonTableBtn">🏅 Saison-Tabelle</button>
   <button type="button" id="rankingChartBtn">📈 Ranking-Verlauf</button>
   <button type="button" id="highlightsBtn">🏆 Highlights</button>
   <button type="button" id="raceReplayBtn">🐌 Replay</button>
@@ -1677,6 +1705,7 @@ tr.hole-confirmed td:first-child {
 "use strict";
 
 const STORAGE_KEY = "kopenhagen-golf-rechner-TEST-eingabe";
+const SEASON_KEY = "kopenhagen-saison-TEST-v1";
 
 const courses = {
   velte: {
@@ -4687,6 +4716,268 @@ function openHighlights() {
 }
 
 
+// ===== Saison / Order of Merit =====
+
+function loadSeason() {
+  try {
+    const raw = localStorage.getItem(SEASON_KEY);
+    if (!raw) return { v: 1, name: "Saison", rounds: [] };
+    const s = JSON.parse(raw);
+    if (!s || typeof s !== "object" || !Array.isArray(s.rounds)) {
+      return { v: 1, name: "Saison", rounds: [] };
+    }
+    return { v: 1, name: s.name || "Saison", rounds: s.rounds };
+  } catch (e) {
+    return { v: 1, name: "Saison", rounds: [] };
+  }
+}
+
+function saveSeason(season) {
+  localStorage.setItem(SEASON_KEY, JSON.stringify(season));
+}
+
+// Meritpunkte nach Platzierung = gleicher Vektor wie im Spiel (3er: 2/1/0, 4er: 3/2/1/0).
+function meritForPosition(playerCount, position) {
+  const vec = pointVector(playerCount);
+  return (vec[position - 1] !== undefined) ? vec[position - 1] : 0;
+}
+
+function addCurrentRoundToSeason() {
+  closeLoch19Menu();
+
+  const calc = calculateRound();
+  if (calc.playedHoles === 0) {
+    showToast("Noch keine bestätigten Löcher");
+    return;
+  }
+  if (calc.playedHoles < 18) {
+    if (!confirm("Erst " + calc.playedHoles + " von 18 Löchern bestätigt. Runde trotzdem zur Saison hinzufügen?")) return;
+  }
+
+  const course = getCourse();
+  const now = new Date();
+  const pc = state.playerCount;
+
+  const results = calc.sortedTotals.map((p, idx) => ({
+    name: p.name,
+    position: idx + 1,
+    points: p.points,
+    gross: p.gross,
+    parDelta: p.parDelta,
+    holesPlayed: p.holesPlayed,
+    merit: meritForPosition(pc, idx + 1)
+  }));
+
+  // Echter Gleichstand (gleiche Punkte UND gleiche Schläge): Meritpunkte teilen.
+  let i = 0;
+  while (i < results.length) {
+    let j = i;
+    while (j + 1 < results.length &&
+           results[j + 1].points === results[i].points &&
+           results[j + 1].gross === results[i].gross) {
+      j++;
+    }
+    if (j > i) {
+      let sum = 0;
+      for (let k = i; k <= j; k++) sum += results[k].merit;
+      const avg = sum / (j - i + 1);
+      for (let k = i; k <= j; k++) results[k].merit = avg;
+    }
+    i = j + 1;
+  }
+
+  const season = loadSeason();
+  season.rounds.push({
+    id: now.getTime(),
+    dateText: now.toLocaleString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" }),
+    courseId: course.id,
+    courseName: course.shortName,
+    playerCount: pc,
+    holesPlayed: calc.playedHoles,
+    complete: calc.playedHoles === 18,
+    hasPar: !!course.hasPar,
+    results
+  });
+  saveSeason(season);
+  showToast("Runde zur Saison hinzugefügt");
+}
+
+function computeOrderOfMerit(season) {
+  const map = {};
+  for (const r of season.rounds) {
+    for (const res of r.results) {
+      const key = res.name;
+      if (!map[key]) {
+        map[key] = { name: res.name, merit: 0, rounds: 0, wins: 0, posSum: 0, grossSumFull: 0, fullRounds: 0 };
+      }
+      const a = map[key];
+      a.merit += Number(res.merit) || 0;
+      a.rounds += 1;
+      if (res.position === 1) a.wins += 1;
+      a.posSum += res.position;
+      if (r.complete) {
+        a.grossSumFull += Number(res.gross) || 0;
+        a.fullRounds += 1;
+      }
+    }
+  }
+  const arr = Object.keys(map).map(k => {
+    const a = map[k];
+    return {
+      name: a.name,
+      merit: a.merit,
+      rounds: a.rounds,
+      wins: a.wins,
+      avgPos: a.rounds ? a.posSum / a.rounds : 0,
+      avgGross: a.fullRounds ? a.grossSumFull / a.fullRounds : null
+    };
+  });
+  arr.sort((x, y) => {
+    if (y.merit !== x.merit) return y.merit - x.merit;
+    if (x.avgPos !== y.avgPos) return x.avgPos - y.avgPos;
+    return (x.avgGross === null ? 999 : x.avgGross) - (y.avgGross === null ? 999 : y.avgGross);
+  });
+  return arr;
+}
+
+function createSeasonCsv() {
+  const season = loadSeason();
+  const oom = computeOrderOfMerit(season);
+
+  let csv = "KOPENHAGEN ORDER OF MERIT\n";
+  csv += "Platz;Spieler;Punkte;Runden;Siege;Schnitt Platz;Schnitt Brutto (18)\n";
+  oom.forEach((p, idx) => {
+    csv += [idx + 1, p.name, formatNum(p.merit), p.rounds, p.wins, formatNum(p.avgPos),
+            (p.avgGross === null ? "" : formatNum(p.avgGross))].map(csvEscape).join(";") + "\n";
+  });
+
+  csv += "\nRUNDEN\n";
+  csv += "Datum;Platz;Spieler;Loecher;Sieger\n";
+  season.rounds.forEach(r => {
+    const winner = r.results && r.results[0] ? r.results[0].name : "";
+    csv += [r.dateText, r.courseName, r.playerCount,
+            (r.complete ? "18" : (r.holesPlayed + "/18")), winner].map(csvEscape).join(";") + "\n";
+  });
+  return csv;
+}
+
+function openSeasonTable() {
+  closeLoch19Menu();
+
+  const season = loadSeason();
+  const oom = computeOrderOfMerit(season);
+
+  let html = "<div style='padding:14px; height:100%; overflow:auto;'>";
+  html += "<h3 style='margin:0 0 4px;'>🏅 Order of Merit</h3>";
+  html += "<div class='help' style='margin-bottom:10px;'>" + season.rounds.length + " Runde(n) gespeichert</div>";
+
+  if (oom.length === 0) {
+    html += "<p class='help'>Noch keine Runden in der Saison. Über „⛳ Loch 19 → ➕ Runde zur Saison hinzufügen“ nimmst du die aktuelle Runde auf.</p>";
+  } else {
+    html += "<div style='overflow-x:auto;'><table class='player-detail-table'>";
+    html += "<thead><tr><th>#</th><th>Spieler</th><th>Punkte</th><th>Ø&nbsp;Brutto</th><th>Siege</th><th>Runden</th><th>Ø&nbsp;Platz</th></tr></thead><tbody>";
+    oom.forEach((p, idx) => {
+      html += "<tr>";
+      html += "<td>" + (idx + 1) + "</td>";
+      html += "<td style='text-align:left;'>" + escapeHtml(p.name) + "</td>";
+      html += "<td><strong>" + formatNum(p.merit) + "</strong></td>";
+      html += "<td>" + (p.avgGross === null ? "–" : formatNum(p.avgGross)) + "</td>";
+      html += "<td>" + p.wins + "</td>";
+      html += "<td>" + p.rounds + "</td>";
+      html += "<td>" + formatNum(p.avgPos) + "</td>";
+      html += "</tr>";
+    });
+    html += "</tbody></table></div>";
+    html += "<div class='help' style='margin-top:6px;'>Ø&nbsp;Brutto nur aus vollständigen 18-Loch-Runden.</div>";
+  }
+
+  if (season.rounds.length) {
+    html += "<h3 style='margin:16px 0 6px;'>Gespeicherte Runden</h3>";
+    html += "<div class='season-rounds'>";
+    const rounds = season.rounds.slice().reverse();
+    for (const r of rounds) {
+      const winner = r.results && r.results[0] ? r.results[0].name : "?";
+      html += "<div class='season-round-row'>";
+      html += "<div><strong>" + escapeHtml(r.dateText || "") + "</strong> · " + escapeHtml(r.courseName || "") +
+              "<div class='hole-small'>Sieger: " + escapeHtml(winner) + " · " + r.playerCount + " Spieler · " +
+              (r.complete ? "18 Löcher" : (r.holesPlayed + "/18 Löcher")) + "</div></div>";
+      html += "<button type='button' class='danger small season-del' data-id='" + r.id + "'>Löschen</button>";
+      html += "</div>";
+    }
+    html += "</div>";
+  }
+
+  html += "<div class='actions' style='margin-top:14px;'>";
+  html += "<button type='button' class='secondary small' id='seasonBackupBtn'>💾 Sichern</button>";
+  html += "<button type='button' class='secondary small' id='seasonRestoreBtn'>📥 Wiederherstellen</button>";
+  html += "<button type='button' class='secondary small' id='seasonCsvBtn'>📤 CSV</button>";
+  html += "<button type='button' class='danger small' id='seasonNewBtn'>Neue Saison</button>";
+  html += "</div>";
+
+  html += "</div>";
+
+  openAnalysisOverlay("🏅 Saison", html);
+  wireSeasonOverlayEvents();
+}
+
+function wireSeasonOverlayEvents() {
+  const root = document.getElementById("analysisContent");
+  if (!root) return;
+
+  root.querySelectorAll(".season-del").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const id = Number(btn.dataset.id);
+      if (!confirm("Diese Runde aus der Saison löschen?")) return;
+      const season = loadSeason();
+      season.rounds = season.rounds.filter(r => Number(r.id) !== id);
+      saveSeason(season);
+      openSeasonTable();
+    });
+  });
+
+  const backup = root.querySelector("#seasonBackupBtn");
+  if (backup) backup.addEventListener("click", () => {
+    downloadFile(JSON.stringify(loadSeason(), null, 2), "kopenhagen-saison.json", "application/json;charset=utf-8");
+  });
+
+  const csv = root.querySelector("#seasonCsvBtn");
+  if (csv) csv.addEventListener("click", () => {
+    downloadFile("﻿" + createSeasonCsv(), "kopenhagen-saison.csv", "text/csv;charset=utf-8");
+  });
+
+  const restore = root.querySelector("#seasonRestoreBtn");
+  if (restore) restore.addEventListener("click", () => {
+    const inp = document.createElement("input");
+    inp.type = "file";
+    inp.accept = "application/json,.json";
+    inp.addEventListener("change", () => {
+      const file = inp.files && inp.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const data = JSON.parse(reader.result);
+          if (!data || !Array.isArray(data.rounds)) throw new Error("ungültig");
+          saveSeason({ v: 1, name: data.name || "Saison", rounds: data.rounds });
+          showToast("Saison wiederhergestellt");
+          openSeasonTable();
+        } catch (e) {
+          showToast("Datei konnte nicht gelesen werden");
+        }
+      };
+      reader.readAsText(file);
+    });
+    inp.click();
+  });
+
+  const newBtn = root.querySelector("#seasonNewBtn");
+  if (newBtn) newBtn.addEventListener("click", () => {
+    if (!confirm("Neue Saison starten? Die aktuelle Saison wird gelöscht – vorher am besten sichern!")) return;
+    saveSeason({ v: 1, name: "Saison", rounds: [] });
+    openSeasonTable();
+  });
+}
+
 function init() {
   state = normalizeState(state);
   loadStateFromUrl();
@@ -4716,6 +5007,8 @@ function init() {
   document.getElementById("raceTimeline").addEventListener("input", onRaceTimelineInput);
   document.getElementById("closeRaceBtn").addEventListener("click", closeRaceReplay);
 
+  document.getElementById("addRoundToSeasonBtn").addEventListener("click", addCurrentRoundToSeason);
+  document.getElementById("seasonTableBtn").addEventListener("click", openSeasonTable);
   document.getElementById("rankingChartBtn").addEventListener("click", openRankingChart);
   document.getElementById("highlightsBtn").addEventListener("click", openHighlights);
 
