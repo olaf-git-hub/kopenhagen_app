@@ -1685,6 +1685,67 @@ tr.hole-confirmed td:first-child {
   touch-action: manipulation;
 }
 
+/* Rundenrückblick */
+.hl-card {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+
+.hl-title {
+  font-weight: 950;
+  font-size: 15px;
+  margin-bottom: 6px;
+}
+
+.hl-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.hl-pill {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-weight: 800;
+  font-size: 13px;
+  background: #fbfdf9;
+}
+
+.hl-pill b { color: var(--accent-dark); }
+
+.hl-pill.hl-top {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.hl-pill.hl-top b { color: #fff; }
+
+.hl-big {
+  font-size: 18px;
+  font-weight: 950;
+  color: var(--accent-dark);
+}
+
+.hl-note {
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+/* Stinkefinger des Führenden im Schnecken-Rennen (zeigt nach hinten/links) */
+.race-finger {
+  display: inline-block;
+  transform: rotate(-90deg);
+  font-size: 22px;
+  line-height: 1;
+  margin-right: 2px;
+}
+
   </style>
 </head>
 <body>
@@ -1799,8 +1860,7 @@ tr.hole-confirmed td:first-child {
 
   <button type="button" id="addRoundToSeasonBtn">➕ Runde zur Saison hinzufügen</button>
   <button type="button" id="seasonTableBtn">🏅 Saison-Tabelle</button>
-  <button type="button" id="rankingChartBtn">📈 Ranking-Verlauf</button>
-  <button type="button" id="highlightsBtn">🏆 Highlights</button>
+  <button type="button" id="highlightsBtn">🏆 Rundenrückblick</button>
   <button type="button" id="raceReplayBtn">🐌 Replay</button>
 
 </div>
@@ -4505,10 +4565,11 @@ function getRaceMedal(rank) {
   return String(rank);
 }
 
-function getRaceRunnerHtml(playerIndex, name, points) {
+function getRaceRunnerHtml(playerIndex, name, points, isLeader) {
   const color = racePlayerColors[playerIndex] || "#555";
 
   return (
+    (isLeader ? "<span class='race-finger'>🖕</span>" : "") +
     "<span class='race-snail'>🐌</span>" +
     "<span class='race-dot' style='background:" +
     color +
@@ -4517,6 +4578,28 @@ function getRaceRunnerHtml(playerIndex, name, points) {
     (points === null ? "" : " (" + formatNum(points) + ")") +
     "</span>"
   );
+}
+
+// Kurzer, leiser Tick je Replay-Schritt.
+function playRaceTick() {
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    const ctx = new AC();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "triangle";
+    osc.frequency.value = 300;
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    const t = ctx.currentTime;
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.10, t + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+    osc.start(t);
+    osc.stop(t + 0.13);
+    setTimeout(() => ctx.close(), 300);
+  } catch (e) {}
 }
 
 function openRaceReplay() {
@@ -4650,6 +4733,17 @@ function showRaceStep(history, stepIndex) {
     ...history[history.length - 1].ranking.map(p => Number(p.points) || 0)
   );
 
+  // Stinkefinger NUR im Moment eines Führungswechsels (neuer Führender),
+  // danach wieder weg – bis zum nächsten Wechsel.
+  function leaderOf(s) {
+    if (!s || s.hole <= 0 || !s.ranking || !s.ranking.length || state.playerCount <= 1) return -1;
+    const top = s.ranking[0];
+    return (Number(top.points) || 0) > 0 ? top.index : -1;
+  }
+  const curLeader = leaderOf(step);
+  const prevLeader = stepIndex > 0 ? leaderOf(history[stepIndex - 1]) : -1;
+  const fingerIndex = (curLeader !== -1 && curLeader !== prevLeader) ? curLeader : -1;
+
 for (let i = 0; i < state.playerCount; i++) {
   const p = byPlayer[i];
   const runner = document.getElementById("raceRunner_" + i);
@@ -4671,7 +4765,8 @@ for (let i = 0; i < state.playerCount; i++) {
   runner.innerHTML = getRaceRunnerHtml(
     i,
     p.name,
-    p.points
+    p.points,
+    i === fingerIndex
   );
 
   runner.style.left = left + "px";
@@ -4706,6 +4801,12 @@ function startRaceReplay() {
     }
 
     showRaceStep(history, step);
+
+    if (step === history.length - 1) {
+      playRankingChangeSound(); // Fanfare beim Zieleinlauf
+    } else {
+      playRaceTick();
+    }
   }, delay);
 }
 
@@ -4756,148 +4857,130 @@ function onRaceTimelineInput() {
   showRaceStep(history, step);
 }
 
-function openRankingChart() {
-  const history = getRaceHistory();
-
-  if (history.length === 0) {
-    showToast("Noch keine vollständigen Löcher für Ranking-Verlauf");
-    return;
-  }
-
-  let html = "<div style='padding:14px; height:100%; overflow:auto;'>";
-  html += "<h3>📈 Ranking-Verlauf</h3>";
-  html += "<table class='player-detail-table'>";
-  html += "<thead><tr><th>Loch</th>";
-
-  for (let i = 0; i < state.playerCount; i++) {
-    html += "<th>" + escapeHtml(state.players[i].name || ("Spieler " + (i + 1))) + "</th>";
-  }
-
-  html += "</tr></thead><tbody>";
-
-  for (const step of history) {
-    const byPlayer = {};
-
-    for (const p of step.ranking) {
-      byPlayer[p.index] = p.rank;
-    }
-
-    html += "<tr>";
-    html += "<td>" + step.hole + "</td>";
-
-    for (let i = 0; i < state.playerCount; i++) {
-      html += "<td>" + getRaceMedal(byPlayer[i]) + "</td>";
-    }
-
-    html += "</tr>";
-  }
-
-  html += "</tbody></table>";
-  html += "</div>";
-
-  openAnalysisOverlay("📈 Ranking-Verlauf", html);
-}
-
 function openHighlights() {
-  const history = getRaceHistory();
-
-  if (history.length === 0) {
-    showToast("Noch keine vollständigen Löcher für Highlights");
+  const calc = calculateRound();
+  if (calc.playedHoles === 0) {
+    showToast("Noch keine bestätigten Löcher für den Rückblick");
     return;
   }
 
-  const leadCount = {};
-  const bestRank = {};
-  const worstRank = {};
-  const biggestJump = { name: "", value: 0, hole: 0 };
-  const biggestDrop = { name: "", value: 0, hole: 0 };
+  const course = getCourse();
+  const pc = state.playerCount;
+  const names = [];
+  for (let i = 0; i < pc; i++) names.push(state.players[i].name || ("Spieler " + (i + 1)));
 
-  let previousRanks = null;
+  // Bestätigte, vollständige Löcher in Reihenfolge
+  const holes = [];
+  for (const h of getCourseHoles()) {
+    const data = state.holes[String(h.hole)];
+    if (!data || !data.confirmed) continue;
+    const result = calculateHole(h, data.gross, pc);
+    if (!result.complete) continue;
+    holes.push({ h, gross: data.gross, result });
+  }
+  if (holes.length === 0) { showToast("Noch keine bestätigten Löcher für den Rückblick"); return; }
 
-  for (const step of history) {
-    const ranks = {};
+  // 🏆 Loch-Siege (meiste Punkte je Loch; geteilte zählen für alle Spitzenreiter)
+  const wins = new Array(pc).fill(0);
+  for (const x of holes) {
+    let max = -Infinity;
+    for (let i = 0; i < pc; i++) max = Math.max(max, x.result.points[i]);
+    for (let i = 0; i < pc; i++) if (Math.abs(x.result.points[i] - max) < 1e-9) wins[i]++;
+  }
+  const winOrder = names.map((n, i) => ({ name: n, w: wins[i] })).sort((a, b) => b.w - a.w);
 
-    for (const p of step.ranking) {
-      ranks[p.index] = p.rank;
-
-      if (p.rank === 1) {
-        leadCount[p.index] = (leadCount[p.index] || 0) + 1;
-      }
-
-      bestRank[p.index] = bestRank[p.index] === undefined
-        ? p.rank
-        : Math.min(bestRank[p.index], p.rank);
-
-      worstRank[p.index] = worstRank[p.index] === undefined
-        ? p.rank
-        : Math.max(worstRank[p.index], p.rank);
-    }
-
-    if (previousRanks) {
-      for (const p of step.ranking) {
-        const diff = previousRanks[p.index] - p.rank;
-
-        if (diff > biggestJump.value) {
-          biggestJump.name = p.name;
-          biggestJump.value = diff;
-          biggestJump.hole = step.hole;
-        }
-
-        if (-diff > biggestDrop.value) {
-          biggestDrop.name = p.name;
-          biggestDrop.value = -diff;
-          biggestDrop.hole = step.hole;
-        }
+  // 🐦 Birdies/Eagles + 💥 Klatsche des Tages
+  const good = [];
+  let worst = null;
+  if (course.hasPar) {
+    for (const x of holes) {
+      if (x.h.par === null || x.h.par === undefined) continue;
+      for (let i = 0; i < pc; i++) {
+        const g = Number(x.gross[i]);
+        const delta = g - x.h.par;
+        if (delta <= -1) good.push({ name: names[i], hole: x.h.hole, eagle: delta <= -2 });
+        if (!worst || delta > worst.delta) worst = { name: names[i], hole: x.h.hole, gross: g, delta };
       }
     }
-
-    previousRanks = ranks;
   }
 
-  let leaderName = "niemand";
-  let leaderCount = 0;
+  // 🎯 Wie eng war's + Führungswechsel
+  const sorted = calc.sortedTotals;
+  const margin = sorted.length >= 2 ? (sorted[0].points - sorted[1].points) : null;
+  const history = getRaceHistory();
+  const leaders = history.filter(s => s.hole > 0).map(s => s.ranking[0].index);
+  let leadChanges = 0;
+  for (let i = 1; i < leaders.length; i++) if (leaders[i] !== leaders[i - 1]) leadChanges++;
 
-  for (let i = 0; i < state.playerCount; i++) {
-    if ((leadCount[i] || 0) > leaderCount) {
-      leaderName = state.players[i].name || ("Spieler " + (i + 1));
-      leaderCount = leadCount[i] || 0;
-    }
+  // 🏁 Schlussspurt (letzte bis zu 3 bestätigte Löcher)
+  const last3 = holes.slice(-3);
+  const sprint = new Array(pc).fill(0);
+  for (const x of last3) for (let i = 0; i < pc; i++) sprint[i] += x.result.points[i];
+  const sprintOrder = names.map((n, i) => ({ name: n, p: sprint[i] })).sort((a, b) => b.p - a.p);
+
+  function card(title, inner) {
+    return "<div class='hl-card'><div class='hl-title'>" + title + "</div><div class='hl-body'>" + inner + "</div></div>";
   }
 
   let html = "<div style='padding:14px; height:100%; overflow:auto;'>";
-  html += "<h3>🏆 Highlights</h3>";
+  html += "<h3 style='margin:0 0 10px;'>🏆 Rundenrückblick</h3>";
 
-  html += "<p class='mini-pill'>👑 Längste Führung: " +
-    escapeHtml(leaderName) + " (" + leaderCount + " Löcher)</p>";
-
-  html += "<p class='mini-pill'>🚀 Größter Aufstieg: " +
-    (biggestJump.value > 0
-      ? escapeHtml(biggestJump.name) + " ▲" + biggestJump.value + " an Loch " + biggestJump.hole
-      : "keine Veränderung") +
-    "</p>";
-
-  html += "<p class='mini-pill'>📉 Größter Absturz: " +
-    (biggestDrop.value > 0
-      ? escapeHtml(biggestDrop.name) + " ▼" + biggestDrop.value + " an Loch " + biggestDrop.hole
-      : "keine Veränderung") +
-    "</p>";
-
-  html += "<table class='player-detail-table' style='margin-top:12px;'>";
-  html += "<thead><tr><th>Spieler</th><th>Beste Platzierung</th><th>Schlechteste Platzierung</th><th>Führung nach Löchern</th></tr></thead><tbody>";
-
-  for (let i = 0; i < state.playerCount; i++) {
-    html += "<tr>";
-    html += "<td>" + escapeHtml(state.players[i].name || ("Spieler " + (i + 1))) + "</td>";
-    html += "<td>" + getRaceMedal(bestRank[i]) + "</td>";
-    html += "<td>" + getRaceMedal(worstRank[i]) + "</td>";
-    html += "<td>" + (leadCount[i] || 0) + "</td>";
-    html += "</tr>";
+  // Loch-Siege
+  {
+    const maxW = winOrder.length ? winOrder[0].w : 0;
+    let inner = "<div class='hl-row'>";
+    winOrder.forEach(o => {
+      const lead = (o.w === maxW && maxW > 0);
+      inner += "<span class='hl-pill" + (lead ? " hl-top" : "") + "'>" + escapeHtml(o.name) + " <b>" + o.w + "</b></span>";
+    });
+    inner += "</div><div class='hl-note'>Meiste gewonnene Löcher (geteilte zählen mit).</div>";
+    html += card("🏆 Loch-Siege", inner);
   }
 
-  html += "</tbody></table>";
-  html += "</div>";
+  // Birdies & Eagles
+  if (course.hasPar) {
+    let inner;
+    if (good.length === 0) {
+      inner = "<div class='hl-note'>Heute kein Birdie – beim nächsten Mal! 🙈</div>";
+    } else {
+      inner = "<div class='hl-row'>";
+      good.forEach(g => {
+        inner += "<span class='hl-pill'>" + (g.eagle ? "🦅" : "🐦") + " " + escapeHtml(g.name) + " · L" + g.hole + "</span>";
+      });
+      inner += "</div>";
+    }
+    html += card("🐦 Birdies & Eagles", inner);
+  }
 
-  openAnalysisOverlay("🏆 Highlights", html);
+  // Klatsche des Tages
+  if (course.hasPar && worst) {
+    const dtxt = worst.delta > 0 ? "+" + worst.delta : String(worst.delta);
+    html += card("💥 Klatsche des Tages",
+      "<div class='hl-big'>" + escapeHtml(worst.name) + "</div>" +
+      "<div class='hl-note'>" + worst.gross + " Schläge auf Loch " + worst.hole + " (" + dtxt + " über PAR)</div>");
+  }
+
+  // Wie eng war's
+  {
+    let inner = "";
+    if (margin !== null) {
+      inner += "<div class='hl-big'>" + (margin === 0 ? "Kopf-an-Kopf!" : ("+" + formatNum(margin) + " Punkte")) + "</div>";
+      inner += "<div class='hl-note'>Vorsprung " + escapeHtml(sorted[0].name) + " vor " + escapeHtml(sorted[1].name) + "</div>";
+    }
+    inner += "<div class='hl-note'>🔁 Führungswechsel: <b>" + leadChanges + "</b>" + (leadChanges >= 3 ? " – ein echter Krimi!" : "") + "</div>";
+    html += card("🎯 Wie eng war's?", inner);
+  }
+
+  // Schlussspurt
+  {
+    const top = sprintOrder[0];
+    html += card("🏁 Schlussspurt",
+      "<div class='hl-big'>" + escapeHtml(top.name) + "</div>" +
+      "<div class='hl-note'>" + formatNum(top.p) + " Punkte auf den letzten " + last3.length + " Löchern</div>");
+  }
+
+  html += "</div>";
+  openAnalysisOverlay("🏆 Rundenrückblick", html);
 }
 
 
@@ -5406,15 +5489,23 @@ function openPlayerProfile(name) {
     html += "<span class='mini-pill'>Ø Brutto: " + (agg.avgGross === null ? "–" : formatNum(agg.avgGross)) + "</span>";
     html += "</div>";
 
-    const pl = agg.placements || {};
-    let maxPos = 0;
-    Object.keys(pl).forEach(k => { maxPos = Math.max(maxPos, Number(k)); });
-    let badges = "";
-    for (let pos = 1; pos <= maxPos; pos++) {
-      if (!pl[pos]) continue;
-      const label = pos <= 3 ? getRaceMedal(pos) : (pos + ".");
-      badges += "<span class='place-badge'>" + label + " <span class='cnt'>" + pl[pos] + "×</span></span>";
+    // Platzierungen feldgrößen-gerecht: „Letzter" wird gesondert gezählt
+    // (kein Bronze für den Letzten im Dreierspiel).
+    const medals = { gold: 0, silver: 0, bronze: 0, last: 0 };
+    for (const r of rounds) {
+      const me = r.results.find(x => x.name === name);
+      if (!me) continue;
+      const pos = me.position, pc = r.playerCount;
+      if (pos === 1) medals.gold++;
+      else if (pc > 1 && pos === pc) medals.last++;
+      else if (pos === 2) medals.silver++;
+      else if (pos === 3) medals.bronze++;
     }
+    let badges = "";
+    if (medals.gold)   badges += "<span class='place-badge' title='Siege'>🥇 <span class='cnt'>" + medals.gold + "×</span></span>";
+    if (medals.silver) badges += "<span class='place-badge' title='2. Platz'>🥈 <span class='cnt'>" + medals.silver + "×</span></span>";
+    if (medals.bronze) badges += "<span class='place-badge' title='3. Platz (nicht Letzter)'>🥉 <span class='cnt'>" + medals.bronze + "×</span></span>";
+    if (medals.last)   badges += "<span class='place-badge' title='Letzter Platz'>😱 <span class='cnt'>" + medals.last + "×</span></span>";
     if (badges) html += "<div class='profile-placements'>" + badges + "</div>";
   }
 
@@ -5649,7 +5740,6 @@ function init() {
   document.getElementById("suggestPopup").addEventListener("click", function(e) {
     if (e.target === this) closeSuggestModal();
   });
-  document.getElementById("rankingChartBtn").addEventListener("click", openRankingChart);
   document.getElementById("highlightsBtn").addEventListener("click", openHighlights);
 
   document.addEventListener("click", closeLoch19Menu);
