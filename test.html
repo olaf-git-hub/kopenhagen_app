@@ -195,6 +195,7 @@
       font-weight: 800;
       cursor: pointer;
       min-height: 42px;
+      touch-action: manipulation;
     }
 
     button.secondary {
@@ -994,8 +995,20 @@ input.score-triplebogey {
   .summary-name {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 10px;
+    gap: 8px;
+  }
+
+  .summary-pname {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .summary-pts {
+    flex: 0 0 auto;
+    font-weight: 950;
   }
 
   .summary-toggle {
@@ -1043,9 +1056,8 @@ input.score-triplebogey {
   display: inline-flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 18px;
-  min-width: 100px;
-  flex-shrink: 0;
+  gap: 12px;
+  flex: 0 0 auto;
 }
 
 .rank-move {
@@ -1410,11 +1422,11 @@ input.score-triplebogey {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 14px;
 }
 
 .step-btn {
-  width: 40px;
+  width: 42px;
   height: 44px;
   min-height: 44px;
   padding: 0;
@@ -1424,15 +1436,17 @@ input.score-triplebogey {
   font-size: 22px;
   font-weight: 950;
   line-height: 1;
+  touch-action: manipulation;
 }
 
 .score-stepper input {
-  width: 54px;
+  width: 52px;
   text-align: center;
   font-size: 18px;
   font-weight: 900;
   padding: 10px 4px;
   border-radius: 10px;
+  touch-action: manipulation;
 }
 
 .score-stepper input::placeholder {
@@ -1441,7 +1455,9 @@ input.score-triplebogey {
 }
 
 .hole-confirm-wrap {
-  padding: 0 10px 10px;
+  margin-top: 6px;
+  padding: 18px 10px 12px;
+  border-top: 1px solid var(--line);
 }
 
 .hole-confirm-btn {
@@ -1489,6 +1505,18 @@ tr.hole-confirmed td:first-child {
 
 .mobile-name-wrap {
   min-width: 0;
+}
+
+.hole-stand-row > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hole-stand-row > span:last-child {
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
   </style>
@@ -2850,11 +2878,12 @@ function renderSummary() {
     }
 
     name.innerHTML =
-      "<span>" +
+      "<span class='summary-pname' title='" + escapeHtml(p.name) + "'>" +
       escapeHtml(p.name) +
-      " · " +
+      "</span>" +
+      "<span class='summary-pts'>" +
       formatNum(p.points) +
-      " Punkte</span>" +
+      " P.</span>" +
       "<span class='summary-actions'>" +
       moveHtml +
       "<span class='summary-toggle'>" +
