@@ -2019,6 +2019,27 @@ tr.hole-confirmed td:first-child {
   </div>
 </div>
 
+<div class="hole-stand-popup season-popup" id="shareHelpPopup">
+  <div class="hole-stand-card">
+    <div class="hole-stand-head">
+      <span>📲 Order of Merit teilen</span>
+      <button class="loch19-close-btn" type="button" id="closeShareHelpBtn">✕</button>
+    </div>
+    <div class="hole-stand-body">
+      <button type="button" id="shareAsFileBtn" style="width:100%;">💾 Als Datei teilen (empfohlen)</button>
+      <div class="help" style="margin:6px 0 16px;">
+        Für Freunde, die die App auf dem <b>Home-Bildschirm</b> haben.<br>
+        So machen sie es: ihr <b>App-Icon öffnen → ⛳ Loch 19 → 🏅 Saison-Tabelle → 📥 Wiederherstellen</b> → die geschickte Datei auswählen.
+      </div>
+
+      <button type="button" class="secondary" id="shareAsLinkBtn" style="width:100%;">📲 Als Link teilen</button>
+      <div class="help" style="margin:6px 0 0;">
+        Bequem – aber <b>Achtung:</b> Tippt der Freund den Link in WhatsApp, landet die Tabelle im dortigen Browser, <b>nicht</b> in seiner Home-Bildschirm-App. Nur sinnvoll, wenn er die App in Safari nutzt.
+      </div>
+    </div>
+  </div>
+</div>
+
 <datalist id="knownPlayerNames"></datalist>
 
 <script>
@@ -3848,6 +3869,28 @@ function createShareLink() {
 function loadStateFromUrl() {
   const hash = window.location.hash || "";
 
+  // Geteilte Order of Merit (Saison) per Link aktualisieren
+  if (hash.startsWith("#oom=")) {
+    try {
+      const data = hash.substring(5);
+      const json = decodeURIComponent(escape(atob(decodeURIComponent(data))));
+      const obj = JSON.parse(json);
+      if (obj && Array.isArray(obj.rounds)) {
+        if (confirm("Order of Merit aktualisieren?\n" + obj.rounds.length + " Runde(n) werden übernommen. Deine bisherige Saison wird ersetzt.")) {
+          saveSeason({ v: 1, name: obj.name || "Saison", rounds: obj.rounds });
+          window.history.replaceState({}, document.title, window.location.origin + window.location.pathname);
+          showToast("Order of Merit aktualisiert");
+          setTimeout(function () { try { openSeasonTable(); } catch (e) {} }, 300);
+          return;
+        }
+      }
+    } catch (e) {
+      console.error("Saison-Link konnte nicht geladen werden", e);
+    }
+    window.history.replaceState({}, document.title, window.location.origin + window.location.pathname);
+    return;
+  }
+
   if (!hash.startsWith("#s=")) return;
 
   const data = hash.substring(3);
@@ -4082,22 +4125,135 @@ function downloadFile(content, filename, type) {
 }
 
 
-function shareRound() {
-  const link = createShareLink();
+// Erzeugt ein hübsches Ergebnis-Bild (PNG-Blob) des aktuellen Gesamtstands.
+function buildResultImageBlob() {
+  return new Promise((resolve) => {
+    try {
+      const FONT = '-apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+      const calc = calculateRound();
+      const course = getCourse();
+      const rows = calc.sortedTotals;
 
-  if (navigator.share) {
-    navigator.share({
-      title: "Kopenhagen Golfrunde",
-      text: "Hier ist der aktuelle Spielstand der Kopenhagen-Runde:",
-      url: link
-    }).catch(() => {});
-  } else {
-    navigator.clipboard.writeText(link)
-      .then(() => showToast("Runden-Link kopiert"))
-      .catch(() => {
-        prompt("Runden-Link kopieren:", link);
+      const scale = Math.min(3, Math.max(2, window.devicePixelRatio || 2));
+      const W = 1000;
+      const headerH = 190;
+      const rowH = 108;
+      const footerH = 84;
+      const H = headerH + rows.length * rowH + footerH;
+
+      const canvas = document.createElement("canvas");
+      canvas.width = W * scale;
+      canvas.height = H * scale;
+      const ctx = canvas.getContext("2d");
+      ctx.scale(scale, scale);
+
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, W, H);
+
+      // Kopfband
+      ctx.fillStyle = "#2f7d46";
+      ctx.fillRect(0, 0, W, headerH);
+      ctx.fillStyle = "#ffffff";
+      ctx.textBaseline = "alphabetic";
+      ctx.textAlign = "left";
+      ctx.font = "bold 48px " + FONT;
+      ctx.fillText("🏌️ Kopenhagen", 44, 78);
+      const now = new Date();
+      const dt = now.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
+      ctx.font = "26px " + FONT;
+      ctx.fillText(course.shortName + "  ·  " + dt + "  ·  " + calc.playedHoles + " Löcher", 44, 124);
+      ctx.font = "bold 24px " + FONT;
+      ctx.fillText("Gesamtstand", 44, 164);
+
+      rows.forEach((p, i) => {
+        const y = headerH + i * rowH;
+        ctx.fillStyle = (i % 2 === 0) ? "#ffffff" : "#f3fbf5";
+        ctx.fillRect(0, y, W, rowH);
+
+        const cy = y + rowH / 2;
+        const cx = 74, r = 34;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fillStyle = (i === 0) ? "#d9a400" : "#2f7d46";
+        ctx.fill();
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 36px " + FONT;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(String(i + 1), cx, cy + 2);
+
+        ctx.textAlign = "left";
+        ctx.fillStyle = "#172016";
+        ctx.font = "bold 40px " + FONT;
+        ctx.fillText(p.name, 130, cy - 10);
+
+        ctx.fillStyle = "#637062";
+        ctx.font = "24px " + FONT;
+        let sub = "Schläge " + p.gross;
+        if (course.hasPar) sub += "  ·  " + formatPar(p.parDelta) + " PAR";
+        sub += "  ·  " + p.holesPlayed + " Löcher";
+        ctx.fillText(sub, 130, cy + 28);
+
+        ctx.textAlign = "right";
+        ctx.fillStyle = "#172016";
+        ctx.font = "bold 46px " + FONT;
+        ctx.fillText(formatNum(p.points) + " P.", W - 44, cy + 2);
       });
+
+      const fy = headerH + rows.length * rowH;
+      ctx.fillStyle = "#eef6eb";
+      ctx.fillRect(0, fy, W, footerH);
+      ctx.fillStyle = "#637062";
+      ctx.font = "22px " + FONT;
+      ctx.textAlign = "left";
+      ctx.textBaseline = "middle";
+      ctx.fillText("Erstellt mit dem Kopenhagen Golf-Rechner", 44, fy + footerH / 2);
+
+      canvas.toBlob((b) => resolve(b), "image/png");
+    } catch (e) {
+      resolve(null);
+    }
+  });
+}
+
+async function shareRound() {
+  const link = createShareLink();
+  const text = "Aktueller Stand der Kopenhagen-Runde:\n" + link;
+
+  let file = null;
+  try {
+    const blob = await buildResultImageBlob();
+    if (blob) file = new File([blob], "kopenhagen-ergebnis.png", { type: "image/png" });
+  } catch (e) {}
+
+  // Bevorzugt: Bild + Link gemeinsam teilen
+  if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ title: "Kopenhagen Golfrunde", text: text, files: [file] });
+      return;
+    } catch (e) {
+      if (e && e.name === "AbortError") return;
+    }
   }
+
+  // Fallback ohne Bild: nur Link teilen
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: "Kopenhagen Golfrunde",
+        text: "Hier ist der aktuelle Spielstand der Kopenhagen-Runde:",
+        url: link
+      });
+      return;
+    } catch (e) {
+      if (e && e.name === "AbortError") return;
+    }
+  }
+
+  // Letzter Fallback: Link kopieren
+  navigator.clipboard.writeText(link)
+    .then(() => showToast("Runden-Link kopiert"))
+    .catch(() => prompt("Runden-Link kopieren:", link));
 }
 
 
@@ -5259,6 +5415,93 @@ function createSeasonCsv() {
   return csv;
 }
 
+// Saison als kompakten Link verpacken (ohne Loch-Details, damit der Link klein bleibt).
+function createSeasonShareLink() {
+  const season = loadSeason();
+  const slim = {
+    v: 1,
+    name: season.name || "Saison",
+    rounds: season.rounds.map(r => ({
+      id: r.id,
+      dateText: r.dateText,
+      courseId: r.courseId,
+      courseName: r.courseName,
+      playerCount: r.playerCount,
+      holesPlayed: r.holesPlayed,
+      complete: r.complete,
+      hasPar: r.hasPar,
+      players: r.players,
+      results: r.results
+    }))
+  };
+  const json = JSON.stringify(slim);
+  const enc = encodeURIComponent(btoa(unescape(encodeURIComponent(json))));
+  return window.location.origin + window.location.pathname + "#oom=" + enc;
+}
+
+async function shareSeason() {
+  const season = loadSeason();
+  if (!season.rounds.length) {
+    showToast("Noch keine Runden in der Saison");
+    return;
+  }
+  const link = createSeasonShareLink();
+  const text = "Aktuelle Kopenhagen Order of Merit – zum Aktualisieren auf den Link tippen:\n" + link;
+
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: "Kopenhagen Order of Merit", text: text });
+      return;
+    } catch (e) {
+      if (e && e.name === "AbortError") return;
+    }
+  }
+  navigator.clipboard.writeText(link)
+    .then(() => showToast("Saison-Link kopiert"))
+    .catch(() => prompt("Saison-Link kopieren:", link));
+}
+
+function openShareHelp() {
+  const season = loadSeason();
+  if (!season.rounds.length) {
+    showToast("Noch keine Runden in der Saison");
+    return;
+  }
+  const p = document.getElementById("shareHelpPopup");
+  if (p) p.classList.add("show");
+}
+
+function closeShareHelp() {
+  const p = document.getElementById("shareHelpPopup");
+  if (p) p.classList.remove("show");
+}
+
+// Saison als JSON-Datei teilen (vollständig, inkl. Loch-Details) – fürs Wiederherstellen.
+async function shareSeasonAsFile() {
+  const season = loadSeason();
+  if (!season.rounds.length) {
+    showToast("Noch keine Runden in der Saison");
+    return;
+  }
+  const json = JSON.stringify(season, null, 2);
+  const file = new File([json], "kopenhagen-saison.json", { type: "application/json" });
+
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({
+        title: "Kopenhagen Order of Merit",
+        text: "Order of Merit – in der App über 🏅 Saison-Tabelle → 📥 Wiederherstellen einlesen.",
+        files: [file]
+      });
+      return;
+    } catch (e) {
+      if (e && e.name === "AbortError") return;
+    }
+  }
+  downloadFile(json, "kopenhagen-saison.json", "application/json;charset=utf-8");
+  showToast("Saison-Datei gespeichert");
+}
+
 function openSeasonTable() {
   closeLoch19Menu();
 
@@ -5304,6 +5547,7 @@ function openSeasonTable() {
   }
 
   html += "<div class='actions' style='margin-top:14px;'>";
+  html += "<button type='button' class='small' id='seasonShareBtn'>📲 Order of Merit teilen</button>";
   html += "<button type='button' class='secondary small' id='seasonBackupBtn'>💾 Sichern</button>";
   html += "<button type='button' class='secondary small' id='seasonRestoreBtn'>📥 Wiederherstellen</button>";
   html += "<button type='button' class='secondary small' id='seasonCsvBtn'>📤 CSV</button>";
@@ -5339,6 +5583,9 @@ function wireSeasonOverlayEvents() {
   root.querySelectorAll(".season-round-open").forEach(el => {
     el.addEventListener("click", () => openRoundDetail(el.dataset.id));
   });
+
+  const shareBtn = root.querySelector("#seasonShareBtn");
+  if (shareBtn) shareBtn.addEventListener("click", openShareHelp);
 
   const backup = root.querySelector("#seasonBackupBtn");
   if (backup) backup.addEventListener("click", () => {
@@ -5831,6 +6078,13 @@ function init() {
   });
   document.getElementById("playerProfilePopup").addEventListener("click", function(e) {
     if (e.target === this) closePlayerProfile();
+  });
+
+  document.getElementById("closeShareHelpBtn").addEventListener("click", closeShareHelp);
+  document.getElementById("shareAsLinkBtn").addEventListener("click", function() { closeShareHelp(); shareSeason(); });
+  document.getElementById("shareAsFileBtn").addEventListener("click", function() { closeShareHelp(); shareSeasonAsFile(); });
+  document.getElementById("shareHelpPopup").addEventListener("click", function(e) {
+    if (e.target === this) closeShareHelp();
   });
 
   document.getElementById("raceSpeedSelect").addEventListener("change", function() {
