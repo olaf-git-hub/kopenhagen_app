@@ -1761,6 +1761,31 @@ tr.hole-confirmed td:first-child {
   margin: 0 auto 10px;
 }
 
+/* Querformat / niedrige Höhe: oben kompakter, damit die Rennbahn größer wird */
+@media (orientation: landscape) and (max-height: 520px) {
+  .race-overlay {
+    padding: calc(env(safe-area-inset-top) + 6px) 10px calc(env(safe-area-inset-bottom) + 6px);
+  }
+  .race-head {
+    margin-bottom: 2px;
+  }
+  .race-head strong {
+    font-size: 14px;
+  }
+  .race-hole-counter {
+    margin: 0 auto 4px;
+    padding: 4px 12px;
+    font-size: 13px;
+    box-shadow: none;
+  }
+  .race-controls {
+    margin-top: 6px;
+  }
+  .race-controls button {
+    min-height: 38px;
+  }
+}
+
   </style>
 </head>
 <body>
@@ -4639,7 +4664,7 @@ function openRaceReplay() {
   const analysis = document.getElementById("analysisContent");
   const controls = document.querySelector(".race-controls");
   const counter = document.getElementById("raceHoleCounter");
-  const speed = document.getElementById("raceSpeedSelect");
+  const speed = document.querySelector(".race-speed-wrap");
 
   if (!overlay || !track || !labels) return;
 
@@ -4835,7 +4860,7 @@ function openAnalysisOverlay(title, html) {
   const analysis = document.getElementById("analysisContent");
   const controls = document.querySelector(".race-controls");
   const counter = document.getElementById("raceHoleCounter");
-  const speed = document.getElementById("raceSpeedSelect");
+  const speed = document.querySelector(".race-speed-wrap");
 
 
 
@@ -5654,7 +5679,9 @@ function openSuggestModal() {
   const setup = readSetupInputs();
   suggestPlayers = setup.players.map(p => p.name);
 
-  const wf = loadWeightFactor();
+  // Beim Öffnen immer mit dem Standard 0,7 starten (nicht zuletzt verwendet).
+  const wf = 0.7;
+  saveWeightFactor(wf);
   const slider = document.getElementById("suggestWeight");
   const val = document.getElementById("suggestWeightVal");
   if (slider) slider.value = String(wf);
