@@ -22,8 +22,8 @@
       --radius: 16px;
       --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
       --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      --race-start-x: 60px;
-      --race-finish-right: 90px;
+      --race-start-x: 44px;
+      --race-finish-right: 44px;
     }
 
     * { box-sizing: border-box; }
@@ -1154,7 +1154,11 @@ input.score-triplebogey {
   inset: 0;
   z-index: 200;
   background: #f5f7f2;
-  padding: calc(env(safe-area-inset-top) + 12px) 12px calc(env(safe-area-inset-bottom) + 12px);
+  padding:
+    calc(env(safe-area-inset-top) + 12px)
+    calc(env(safe-area-inset-right) + 12px)
+    calc(env(safe-area-inset-bottom) + 12px)
+    calc(env(safe-area-inset-left) + 12px);
 }
 
 .race-overlay.show {
@@ -1242,6 +1246,11 @@ input.score-triplebogey {
   white-space: nowrap;
 
   box-shadow: 0 1px 4px rgba(0,0,0,.15);
+}
+
+.race-runner-name.name-left {
+  left: auto;
+  right: 32px;
 }
 
 #raceTimeline {
@@ -1462,6 +1471,7 @@ input.score-triplebogey {
   margin-top: 6px;
   padding: 18px 10px 12px;
   border-top: 1px solid var(--line);
+  text-align: right;
 }
 
 .hole-confirm-btn {
@@ -1480,6 +1490,10 @@ input.score-triplebogey {
   background: #e3f5e8;
   color: var(--good);
   border: 1px solid #b6e0c2;
+  width: auto;
+  min-height: 30px;
+  padding: 4px 12px;
+  font-size: 12px;
 }
 
 .hole-card.hole-confirmed {
@@ -1610,6 +1624,18 @@ tr.hole-confirmed td:first-child {
   padding: 8px 10px;
 }
 
+/* Zeilen-Hervorhebung in Detailtabellen (über die weißen Zellen-Hintergründe legen) */
+.player-detail-table tr.hl-best td { background: #e3f5e8; }
+.player-detail-table tr.hl-self td { background: #eef6eb; }
+
+/* "i"-Symbol am Loch: zeigt, dass man für den Stand nach diesem Loch tippen kann */
+.hole-info {
+  font-size: 0.82em;
+  color: var(--accent-dark);
+  opacity: 0.65;
+  vertical-align: middle;
+}
+
 .profile-placements {
   display: flex;
   flex-wrap: wrap;
@@ -1737,13 +1763,62 @@ tr.hole-confirmed td:first-child {
   margin-top: 2px;
 }
 
-/* Stinkefinger des Führenden im Schnecken-Rennen (zeigt nach hinten/links) */
-.race-finger {
-  display: inline-block;
-  transform: rotate(-90deg);
-  font-size: 22px;
-  line-height: 1;
-  margin-right: 2px;
+/* Replay-Kopf */
+.race-head strong { font-size: 16px; }
+
+.race-head-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.race-speed-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.race-hole-counter {
+  align-self: center;
+  margin: 0 auto 10px;
+}
+
+/* Querformat / niedrige Höhe: oben kompakter, damit die Rennbahn größer wird */
+@media (orientation: landscape) and (max-height: 520px) {
+  .race-overlay {
+    padding:
+      calc(env(safe-area-inset-top) + 6px)
+      calc(env(safe-area-inset-right) + 16px)
+      calc(env(safe-area-inset-bottom) + 6px)
+      calc(env(safe-area-inset-left) + 16px);
+  }
+  .race-head {
+    margin-bottom: 2px;
+  }
+  .race-head strong {
+    font-size: 14px;
+  }
+  .race-hole-counter {
+    position: absolute;
+    top: calc(env(safe-area-inset-top) + 10px);
+    left: 50%;
+    transform: translateX(-50%);
+    margin: 0;
+    padding: 4px 12px;
+    font-size: 13px;
+    box-shadow: none;
+    z-index: 5;
+  }
+  .race-controls {
+    margin-top: 6px;
+  }
+  .race-controls button {
+    min-height: 38px;
+  }
 }
 
   </style>
@@ -1867,16 +1942,20 @@ tr.hole-confirmed td:first-child {
 
 <div class="race-overlay" id="raceOverlay">
   <div class="race-head">
-  <strong>🐌 Kopenhagen Replay</strong>
-  <select id="raceSpeedSelect" class="race-speed-select">
-  <option value="10">10s</option>
-  <option value="20" selected>20s</option>
-  <option value="30">30s</option>
-</select>
+    <strong>🐌 Replay</strong>
+    <div class="race-head-right">
+      <label class="race-speed-wrap">Tempo
+        <select id="raceSpeedSelect" class="race-speed-select">
+          <option value="10">10s</option>
+          <option value="20" selected>20s</option>
+          <option value="30">30s</option>
+        </select>
+      </label>
+      <button class="secondary small" type="button" id="closeRaceBtn">Schließen</button>
+    </div>
+  </div>
 
-  <div class="race-hole-counter" id="raceHoleCounter">⛳ Loch 0</div>
-  <button class="secondary small" type="button" id="closeRaceBtn">Schließen</button>
-</div>
+  <div class="race-hole-counter" id="raceHoleCounter">⛳ Start</div>
 
   <div class="race-track" id="raceTrack">
     <div class="race-hole-labels" id="raceHoleLabels"></div>
@@ -1887,7 +1966,6 @@ tr.hole-confirmed td:first-child {
   <div class="race-controls">
   <button type="button" id="startRaceBtn">▶ Start</button>
   <input type="range" id="raceTimeline" min="0" max="0" value="0">
-  <button class="secondary" type="button" id="resetRaceBtn">↺ Zurück</button>
   </div>
 </div>
 <div class="hole-stand-popup" id="holeStandPopup">
@@ -1938,6 +2016,27 @@ tr.hole-confirmed td:first-child {
       <div id="suggestTable" style="margin-top:10px;"></div>
       <div class="actions" style="margin-top:12px;">
         <button type="button" id="applySuggestBtn">Übernehmen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="hole-stand-popup season-popup" id="shareHelpPopup">
+  <div class="hole-stand-card">
+    <div class="hole-stand-head">
+      <span>📲 Order of Merit teilen</span>
+      <button class="loch19-close-btn" type="button" id="closeShareHelpBtn">✕</button>
+    </div>
+    <div class="hole-stand-body">
+      <button type="button" id="shareAsFileBtn" style="width:100%;">💾 Als Datei teilen (empfohlen)</button>
+      <div class="help" style="margin:6px 0 16px;">
+        Für Freunde, die die App auf dem <b>Home-Bildschirm</b> haben.<br>
+        So machen sie es: ihr <b>App-Icon öffnen → ⛳ Loch 19 → 🏅 Saison-Tabelle → 📥 Wiederherstellen</b> → die geschickte Datei auswählen.
+      </div>
+
+      <button type="button" class="secondary" id="shareAsLinkBtn" style="width:100%;">📲 Als Link teilen</button>
+      <div class="help" style="margin:6px 0 0;">
+        Bequem – aber <b>Achtung:</b> Tippt der Freund den Link in WhatsApp, landet die Tabelle im dortigen Browser, <b>nicht</b> in seiner Home-Bildschirm-App. Nur sinnvoll, wenn er die App in Safari nutzt.
       </div>
     </div>
   </div>
@@ -2873,7 +2972,7 @@ function buildTable() {
     const metaTop = document.createElement("div");
     metaTop.className = "clickable-hole";
     metaTop.innerHTML =
-      "Loch " + h.hole +
+      "Loch " + h.hole + " <span class='hole-info'>ⓘ</span>" +
       (data.confirmed ? " <span class='hole-state ok'>✓</span>" : "") +
       (details.length ? "<div class='hole-small'>" + details.join(" · ") + "</div>" : "");
     metaTop.addEventListener("click", () => openHoleStandPopup(h.hole));
@@ -2937,7 +3036,7 @@ function renderMobileCards() {
     head.addEventListener("click", () => openHoleStandPopup(h.hole));
 
     const title = document.createElement("div");
-    title.textContent = "Loch " + h.hole;
+    title.innerHTML = "Loch " + h.hole + " <span class='hole-info'>ⓘ</span>";
 
     const meta = document.createElement("div");
     meta.className = "hole-card-meta";
@@ -3769,6 +3868,28 @@ function createShareLink() {
 function loadStateFromUrl() {
   const hash = window.location.hash || "";
 
+  // Geteilte Order of Merit (Saison) per Link aktualisieren
+  if (hash.startsWith("#oom=")) {
+    try {
+      const data = hash.substring(5);
+      const json = decodeURIComponent(escape(atob(decodeURIComponent(data))));
+      const obj = JSON.parse(json);
+      if (obj && Array.isArray(obj.rounds)) {
+        if (confirm("Order of Merit aktualisieren?\n" + obj.rounds.length + " Runde(n) werden übernommen. Deine bisherige Saison wird ersetzt.")) {
+          saveSeason({ v: 1, name: obj.name || "Saison", rounds: obj.rounds });
+          window.history.replaceState({}, document.title, window.location.origin + window.location.pathname);
+          showToast("Order of Merit aktualisiert");
+          setTimeout(function () { try { openSeasonTable(); } catch (e) {} }, 300);
+          return;
+        }
+      }
+    } catch (e) {
+      console.error("Saison-Link konnte nicht geladen werden", e);
+    }
+    window.history.replaceState({}, document.title, window.location.origin + window.location.pathname);
+    return;
+  }
+
   if (!hash.startsWith("#s=")) return;
 
   const data = hash.substring(3);
@@ -3801,14 +3922,15 @@ function loadStateFromUrl() {
     imported.handicapOverrides = {};
 
     const courseHoles = courses[imported.courseId].holes;
-    const confirmedSet = new Set(Array.isArray(shared.f) ? shared.f.map(String) : []);
+    const hasConfirmedInfo = Array.isArray(shared.f);
+    const confirmedSet = new Set(hasConfirmedInfo ? shared.f.map(String) : []);
 
     for (const h of courseHoles) {
       const key = String(h.hole);
 
       imported.holes[key] = {
         gross: Array(imported.playerCount).fill(null),
-        confirmed: confirmedSet.has(key)
+        confirmed: false
       };
 
       imported.handicapOverrides[key] =
@@ -3820,6 +3942,14 @@ function loadStateFromUrl() {
             .slice(0, imported.playerCount)
             .map(toNullableInt);
       }
+
+      // Bestätigt-Status: neue Links bringen eine Liste (shared.f) mit.
+      // Ältere Links (ohne f) -> komplett ausgefüllte Löcher als bestätigt werten,
+      // damit der Gesamtstand wie früher sofort erscheint.
+      const filled = imported.holes[key].gross
+        .slice(0, imported.playerCount)
+        .every(v => v !== null && v !== undefined && v !== "");
+      imported.holes[key].confirmed = hasConfirmedInfo ? confirmedSet.has(key) : filled;
 
       if (shared.o && Array.isArray(shared.o[key])) {
         imported.handicapOverrides[key] =
@@ -3994,22 +4124,135 @@ function downloadFile(content, filename, type) {
 }
 
 
-function shareRound() {
-  const link = createShareLink();
+// Erzeugt ein hübsches Ergebnis-Bild (PNG-Blob) des aktuellen Gesamtstands.
+function buildResultImageBlob() {
+  return new Promise((resolve) => {
+    try {
+      const FONT = '-apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+      const calc = calculateRound();
+      const course = getCourse();
+      const rows = calc.sortedTotals;
 
-  if (navigator.share) {
-    navigator.share({
-      title: "Kopenhagen Golfrunde",
-      text: "Hier ist der aktuelle Spielstand der Kopenhagen-Runde:",
-      url: link
-    }).catch(() => {});
-  } else {
-    navigator.clipboard.writeText(link)
-      .then(() => showToast("Runden-Link kopiert"))
-      .catch(() => {
-        prompt("Runden-Link kopieren:", link);
+      const scale = Math.min(3, Math.max(2, window.devicePixelRatio || 2));
+      const W = 1000;
+      const headerH = 190;
+      const rowH = 108;
+      const footerH = 84;
+      const H = headerH + rows.length * rowH + footerH;
+
+      const canvas = document.createElement("canvas");
+      canvas.width = W * scale;
+      canvas.height = H * scale;
+      const ctx = canvas.getContext("2d");
+      ctx.scale(scale, scale);
+
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, W, H);
+
+      // Kopfband
+      ctx.fillStyle = "#2f7d46";
+      ctx.fillRect(0, 0, W, headerH);
+      ctx.fillStyle = "#ffffff";
+      ctx.textBaseline = "alphabetic";
+      ctx.textAlign = "left";
+      ctx.font = "bold 48px " + FONT;
+      ctx.fillText("🏌️ Kopenhagen", 44, 78);
+      const now = new Date();
+      const dt = now.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
+      ctx.font = "26px " + FONT;
+      ctx.fillText(course.shortName + "  ·  " + dt + "  ·  " + calc.playedHoles + " Löcher", 44, 124);
+      ctx.font = "bold 24px " + FONT;
+      ctx.fillText("Gesamtstand", 44, 164);
+
+      rows.forEach((p, i) => {
+        const y = headerH + i * rowH;
+        ctx.fillStyle = (i % 2 === 0) ? "#ffffff" : "#f3fbf5";
+        ctx.fillRect(0, y, W, rowH);
+
+        const cy = y + rowH / 2;
+        const cx = 74, r = 34;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fillStyle = (i === 0) ? "#d9a400" : "#2f7d46";
+        ctx.fill();
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 36px " + FONT;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(String(i + 1), cx, cy + 2);
+
+        ctx.textAlign = "left";
+        ctx.fillStyle = "#172016";
+        ctx.font = "bold 40px " + FONT;
+        ctx.fillText(p.name, 130, cy - 10);
+
+        ctx.fillStyle = "#637062";
+        ctx.font = "24px " + FONT;
+        let sub = "Schläge " + p.gross;
+        if (course.hasPar) sub += "  ·  " + formatPar(p.parDelta) + " PAR";
+        sub += "  ·  " + p.holesPlayed + " Löcher";
+        ctx.fillText(sub, 130, cy + 28);
+
+        ctx.textAlign = "right";
+        ctx.fillStyle = "#172016";
+        ctx.font = "bold 46px " + FONT;
+        ctx.fillText(formatNum(p.points) + " P.", W - 44, cy + 2);
       });
+
+      const fy = headerH + rows.length * rowH;
+      ctx.fillStyle = "#eef6eb";
+      ctx.fillRect(0, fy, W, footerH);
+      ctx.fillStyle = "#637062";
+      ctx.font = "22px " + FONT;
+      ctx.textAlign = "left";
+      ctx.textBaseline = "middle";
+      ctx.fillText("Erstellt mit dem Kopenhagen Golf-Rechner", 44, fy + footerH / 2);
+
+      canvas.toBlob((b) => resolve(b), "image/png");
+    } catch (e) {
+      resolve(null);
+    }
+  });
+}
+
+async function shareRound() {
+  const link = createShareLink();
+  const text = "Aktueller Stand der Kopenhagen-Runde:\n" + link;
+
+  let file = null;
+  try {
+    const blob = await buildResultImageBlob();
+    if (blob) file = new File([blob], "kopenhagen-ergebnis.png", { type: "image/png" });
+  } catch (e) {}
+
+  // Bevorzugt: Bild + Link gemeinsam teilen
+  if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ title: "Kopenhagen Golfrunde", text: text, files: [file] });
+      return;
+    } catch (e) {
+      if (e && e.name === "AbortError") return;
+    }
   }
+
+  // Fallback ohne Bild: nur Link teilen
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: "Kopenhagen Golfrunde",
+        text: "Hier ist der aktuelle Spielstand der Kopenhagen-Runde:",
+        url: link
+      });
+      return;
+    } catch (e) {
+      if (e && e.name === "AbortError") return;
+    }
+  }
+
+  // Letzter Fallback: Link kopieren
+  navigator.clipboard.writeText(link)
+    .then(() => showToast("Runden-Link kopiert"))
+    .catch(() => prompt("Runden-Link kopieren:", link));
 }
 
 
@@ -4565,15 +4808,14 @@ function getRaceMedal(rank) {
   return String(rank);
 }
 
-function getRaceRunnerHtml(playerIndex, name, points, isLeader) {
+function getRaceRunnerHtml(playerIndex, name, points, labelLeft) {
   const color = racePlayerColors[playerIndex] || "#555";
 
   return (
-    (isLeader ? "<span class='race-finger'>🖕</span>" : "") +
     "<span class='race-snail'>🐌</span>" +
     "<span class='race-dot' style='background:" +
     color +
-    "'></span><span class='race-runner-name'>" +
+    "'></span><span class='race-runner-name" + (labelLeft ? " name-left" : "") + "'>" +
     escapeHtml(name) +
     (points === null ? "" : " (" + formatNum(points) + ")") +
     "</span>"
@@ -4618,7 +4860,7 @@ function openRaceReplay() {
   const analysis = document.getElementById("analysisContent");
   const controls = document.querySelector(".race-controls");
   const counter = document.getElementById("raceHoleCounter");
-  const speed = document.getElementById("raceSpeedSelect");
+  const speed = document.querySelector(".race-speed-wrap");
 
   if (!overlay || !track || !labels) return;
 
@@ -4695,7 +4937,7 @@ track.appendChild(finishMarker);
   overlay.classList.add("show");
 
   const head = overlay.querySelector(".race-head strong");
-  if (head) head.textContent = "🐌 Kopenhagen Replay";
+  if (head) head.textContent = "🐌 Replay";
 
   const timeline = document.getElementById("raceTimeline");
   if (timeline) {
@@ -4705,6 +4947,7 @@ track.appendChild(finishMarker);
   }
 
   showRaceStep(history, 0);
+  setRaceButton(false);
 }
 
 function getRaceTopForPlayer(playerIndex) {
@@ -4719,7 +4962,8 @@ function showRaceStep(history, stepIndex) {
   const counter = document.getElementById("raceHoleCounter");
   if (counter) {
     counter.style.display = "flex";
-    counter.textContent = "⛳ Loch " + step.hole;
+    const totalHoles = getCourseHoles().length || 18;
+    counter.textContent = step.hole > 0 ? ("⛳ Loch " + step.hole + " / " + totalHoles) : "⛳ Start";
   }
 
   const byPlayer = {};
@@ -4728,53 +4972,71 @@ function showRaceStep(history, stepIndex) {
   }
 
 
-  const winnerPoints = Math.max(
-    1,
-    ...history[history.length - 1].ranking.map(p => Number(p.points) || 0)
-  );
-
-  // Stinkefinger NUR im Moment eines Führungswechsels (neuer Führender),
-  // danach wieder weg – bis zum nächsten Wechsel.
-  function leaderOf(s) {
-    if (!s || s.hole <= 0 || !s.ranking || !s.ranking.length || state.playerCount <= 1) return -1;
-    const top = s.ranking[0];
-    return (Number(top.points) || 0) > 0 ? top.index : -1;
-  }
-  const curLeader = leaderOf(step);
-  const prevLeader = stepIndex > 0 ? leaderOf(history[stepIndex - 1]) : -1;
-  const fingerIndex = (curLeader !== -1 && curLeader !== prevLeader) ? curLeader : -1;
-
-for (let i = 0; i < state.playerCount; i++) {
-  const p = byPlayer[i];
-  const runner = document.getElementById("raceRunner_" + i);
-  if (!runner || !p) continue;
-
-  const points = Math.max(0, Number(p.points) || 0);
+  // Position: Der Führende steht auf Höhe des aktuell gespielten Lochs
+  // (Loch 9 = Loch-9-Marker, Loch 18 = Ziel). Die anderen liegen dahinter,
+  // anteilig nach ihren Punkten im Verhältnis zum Führenden.
   const track = document.getElementById("raceTrack");
   const trackWidth = track ? track.clientWidth : window.innerWidth;
   const startX = getRaceStartX();
   const finishRight = getRaceFinishRight();
+  const span = Math.max(1, (trackWidth - finishRight) - startX);
 
-  const maxLeft = trackWidth - finishRight;
+  const totalHoles = getCourseHoles().length || 18;
+  const holeFrac = Math.max(0, Math.min(totalHoles, step.hole)) / totalHoles;
+  const leaderDist = holeFrac * span;
+  const mid = startX + span / 2;
 
-  const left =
-    startX +
-    (points / winnerPoints) *
-    (maxLeft - startX);
+  let leaderPts = 0;
+  for (let i = 0; i < state.playerCount; i++) {
+    const p = byPlayer[i];
+    if (p) leaderPts = Math.max(leaderPts, Number(p.points) || 0);
+  }
 
-  runner.innerHTML = getRaceRunnerHtml(
-    i,
-    p.name,
-    p.points,
-    i === fingerIndex
-  );
+  for (let i = 0; i < state.playerCount; i++) {
+    const p = byPlayer[i];
+    const runner = document.getElementById("raceRunner_" + i);
+    if (!runner || !p) continue;
 
-  runner.style.left = left + "px";
-  runner.style.top = getRaceTopForPlayer(i) + "%";
-}
+    const points = Math.max(0, Number(p.points) || 0);
+    const frac = leaderPts > 0 ? Math.min(1, points / leaderPts) : 0;
+    const left = startX + frac * leaderDist;
+    // Etikett zeigt nach innen: rechte Hälfte -> Etikett links, sonst rechts.
+    const labelLeft = left >= mid;
+
+    runner.innerHTML = getRaceRunnerHtml(i, p.name, p.points, labelLeft);
+    runner.style.left = left + "px";
+    runner.style.top = getRaceTopForPlayer(i) + "%";
+  }
 
   const timeline = document.getElementById("raceTimeline");
   if (timeline) timeline.value = String(stepIndex);
+}
+
+let raceStarted = false;
+
+function setRaceButton(started) {
+  raceStarted = started;
+  const b = document.getElementById("startRaceBtn");
+  if (b) b.textContent = started ? "↺ Auf Anfang" : "▶ Start";
+}
+
+function onRaceStartButton() {
+  const history = getRaceHistory();
+  if (raceStarted) {
+    // Auf Anfang: Lauf stoppen, alle Schnecken zurück an den Start
+    clearInterval(raceTimer);
+    showRaceStep(history, 0);
+    const tl = document.getElementById("raceTimeline");
+    if (tl) tl.value = "0";
+    setRaceButton(false);
+  } else {
+    if (history.length <= 1) {
+      showToast("Noch keine bestätigten Löcher fürs Rennen");
+      return;
+    }
+    startRaceReplay();
+    setRaceButton(true);
+  }
 }
 
 function startRaceReplay() {
@@ -4825,7 +5087,7 @@ function openAnalysisOverlay(title, html) {
   const analysis = document.getElementById("analysisContent");
   const controls = document.querySelector(".race-controls");
   const counter = document.getElementById("raceHoleCounter");
-  const speed = document.getElementById("raceSpeedSelect");
+  const speed = document.querySelector(".race-speed-wrap");
 
 
 
@@ -5183,6 +5445,93 @@ function createSeasonCsv() {
   return csv;
 }
 
+// Saison als kompakten Link verpacken (ohne Loch-Details, damit der Link klein bleibt).
+function createSeasonShareLink() {
+  const season = loadSeason();
+  const slim = {
+    v: 1,
+    name: season.name || "Saison",
+    rounds: season.rounds.map(r => ({
+      id: r.id,
+      dateText: r.dateText,
+      courseId: r.courseId,
+      courseName: r.courseName,
+      playerCount: r.playerCount,
+      holesPlayed: r.holesPlayed,
+      complete: r.complete,
+      hasPar: r.hasPar,
+      players: r.players,
+      results: r.results
+    }))
+  };
+  const json = JSON.stringify(slim);
+  const enc = encodeURIComponent(btoa(unescape(encodeURIComponent(json))));
+  return window.location.origin + window.location.pathname + "#oom=" + enc;
+}
+
+async function shareSeason() {
+  const season = loadSeason();
+  if (!season.rounds.length) {
+    showToast("Noch keine Runden in der Saison");
+    return;
+  }
+  const link = createSeasonShareLink();
+  const text = "Aktuelle Kopenhagen Order of Merit – zum Aktualisieren auf den Link tippen:\n" + link;
+
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: "Kopenhagen Order of Merit", text: text });
+      return;
+    } catch (e) {
+      if (e && e.name === "AbortError") return;
+    }
+  }
+  navigator.clipboard.writeText(link)
+    .then(() => showToast("Saison-Link kopiert"))
+    .catch(() => prompt("Saison-Link kopieren:", link));
+}
+
+function openShareHelp() {
+  const season = loadSeason();
+  if (!season.rounds.length) {
+    showToast("Noch keine Runden in der Saison");
+    return;
+  }
+  const p = document.getElementById("shareHelpPopup");
+  if (p) p.classList.add("show");
+}
+
+function closeShareHelp() {
+  const p = document.getElementById("shareHelpPopup");
+  if (p) p.classList.remove("show");
+}
+
+// Saison als JSON-Datei teilen (vollständig, inkl. Loch-Details) – fürs Wiederherstellen.
+async function shareSeasonAsFile() {
+  const season = loadSeason();
+  if (!season.rounds.length) {
+    showToast("Noch keine Runden in der Saison");
+    return;
+  }
+  const json = JSON.stringify(season, null, 2);
+  const file = new File([json], "kopenhagen-saison.json", { type: "application/json" });
+
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({
+        title: "Kopenhagen Order of Merit",
+        text: "Order of Merit – in der App über 🏅 Saison-Tabelle → 📥 Wiederherstellen einlesen.",
+        files: [file]
+      });
+      return;
+    } catch (e) {
+      if (e && e.name === "AbortError") return;
+    }
+  }
+  downloadFile(json, "kopenhagen-saison.json", "application/json;charset=utf-8");
+  showToast("Saison-Datei gespeichert");
+}
+
 function openSeasonTable() {
   closeLoch19Menu();
 
@@ -5228,6 +5577,7 @@ function openSeasonTable() {
   }
 
   html += "<div class='actions' style='margin-top:14px;'>";
+  html += "<button type='button' class='small' id='seasonShareBtn'>📲 Order of Merit teilen</button>";
   html += "<button type='button' class='secondary small' id='seasonBackupBtn'>💾 Sichern</button>";
   html += "<button type='button' class='secondary small' id='seasonRestoreBtn'>📥 Wiederherstellen</button>";
   html += "<button type='button' class='secondary small' id='seasonCsvBtn'>📤 CSV</button>";
@@ -5263,6 +5613,9 @@ function wireSeasonOverlayEvents() {
   root.querySelectorAll(".season-round-open").forEach(el => {
     el.addEventListener("click", () => openRoundDetail(el.dataset.id));
   });
+
+  const shareBtn = root.querySelector("#seasonShareBtn");
+  if (shareBtn) shareBtn.addEventListener("click", openShareHelp);
 
   const backup = root.querySelector("#seasonBackupBtn");
   if (backup) backup.addEventListener("click", () => {
@@ -5337,7 +5690,7 @@ function renderRoundStandingsHtml(round, highlightName) {
   if (hasPar) h += "<th>+/-&nbsp;PAR</th>";
   h += "</tr></thead><tbody>";
   round.results.forEach((res, idx) => {
-    const hi = (highlightName && res.name === highlightName) ? " style='background:#eef6eb;'" : "";
+    const hi = (highlightName && res.name === highlightName) ? " class='hl-self'" : "";
     h += "<tr" + hi + ">";
     h += "<td>" + (idx + 1) + "</td>";
     h += "<td style='text-align:left;'>" + escapeHtml(res.name) + "</td>";
@@ -5622,7 +5975,7 @@ function renderSuggestTable() {
   h += "<thead><tr><th>Spieler</th><th>Runden</th><th>Ø&nbsp;Brutto (Form)</th><th>Vorgabe</th></tr></thead><tbody>";
   rows.forEach(r => {
     const isBest = (r.wg !== null && best !== null && Math.abs(r.wg - best) < 1e-9);
-    h += "<tr" + (isBest ? " style='background:#e3f5e8;'" : "") + ">";
+    h += "<tr" + (isBest ? " class='hl-best'" : "") + ">";
     h += "<td style='text-align:left;'>" + escapeHtml(r.name) + "</td>";
     h += "<td>" + (r.n || 0) + "</td>";
     h += "<td>" + (r.wg === null ? "–" : formatNum(r.wg)) + "</td>";
@@ -5644,7 +5997,9 @@ function openSuggestModal() {
   const setup = readSetupInputs();
   suggestPlayers = setup.players.map(p => p.name);
 
-  const wf = loadWeightFactor();
+  // Beim Öffnen immer mit dem Standard 0,7 starten (nicht zuletzt verwendet).
+  const wf = 0.7;
+  saveWeightFactor(wf);
   const slider = document.getElementById("suggestWeight");
   const val = document.getElementById("suggestWeightVal");
   if (slider) slider.value = String(wf);
@@ -5711,8 +6066,7 @@ function init() {
   document.getElementById("playerCount").addEventListener("change", onPlayerCountChange);
 
   document.getElementById("raceReplayBtn").addEventListener("click", openRaceReplay);
-  document.getElementById("startRaceBtn").addEventListener("click", startRaceReplay);
-  document.getElementById("resetRaceBtn").addEventListener("click", openRaceReplay);
+  document.getElementById("startRaceBtn").addEventListener("click", onRaceStartButton);
   document
   .getElementById("closeLoch19Btn")
   .addEventListener("click", closeLoch19Menu);
@@ -5754,6 +6108,13 @@ function init() {
   });
   document.getElementById("playerProfilePopup").addEventListener("click", function(e) {
     if (e.target === this) closePlayerProfile();
+  });
+
+  document.getElementById("closeShareHelpBtn").addEventListener("click", closeShareHelp);
+  document.getElementById("shareAsLinkBtn").addEventListener("click", function() { closeShareHelp(); shareSeason(); });
+  document.getElementById("shareAsFileBtn").addEventListener("click", function() { closeShareHelp(); shareSeasonAsFile(); });
+  document.getElementById("shareHelpPopup").addEventListener("click", function(e) {
+    if (e.target === this) closeShareHelp();
   });
 
   document.getElementById("raceSpeedSelect").addEventListener("change", function() {
