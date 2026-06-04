@@ -195,6 +195,7 @@
       font-weight: 800;
       cursor: pointer;
       min-height: 42px;
+      touch-action: manipulation;
     }
 
     button.secondary {
@@ -375,7 +376,7 @@
 
     .mobile-player-row {
       display: grid;
-      grid-template-columns: minmax(82px, 1fr) 76px 88px;
+      grid-template-columns: 1fr auto;
       gap: 8px;
       align-items: center;
       border-bottom: 1px dashed var(--line);
@@ -994,8 +995,24 @@ input.score-triplebogey {
   .summary-name {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 10px;
+    gap: 8px;
+  }
+
+  .summary-pname {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .summary-pts {
+    flex: 0 0 auto;
+    min-width: 62px;
+    text-align: right;
+    font-weight: 950;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
   }
 
   .summary-toggle {
@@ -1043,9 +1060,8 @@ input.score-triplebogey {
   display: inline-flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 18px;
-  min-width: 100px;
-  flex-shrink: 0;
+  gap: 12px;
+  flex: 0 0 auto;
 }
 
 .rank-move {
@@ -1405,6 +1421,345 @@ input.score-triplebogey {
   transform: translateX(0);
 }
 
+/* ===== Score-Eingabe: Stepper + Loch bestätigen ===== */
+.score-stepper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+
+.step-btn {
+  width: 42px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
+  border-radius: 12px;
+  background: #e8eee5;
+  color: var(--accent-dark);
+  font-size: 22px;
+  font-weight: 950;
+  line-height: 1;
+  touch-action: manipulation;
+}
+
+.score-stepper input {
+  width: 52px;
+  text-align: center;
+  font-size: 18px;
+  font-weight: 900;
+  padding: 10px 4px;
+  border-radius: 10px;
+  touch-action: manipulation;
+}
+
+.score-stepper input::placeholder {
+  color: #b8c4b5;
+  font-weight: 700;
+}
+
+.hole-confirm-wrap {
+  margin-top: 6px;
+  padding: 18px 10px 12px;
+  border-top: 1px solid var(--line);
+}
+
+.hole-confirm-btn {
+  width: 100%;
+  background: var(--accent);
+  color: #fff;
+}
+
+.hole-confirm-btn:disabled {
+  background: #e6ebe3;
+  color: #9aa79a;
+  cursor: not-allowed;
+}
+
+.hole-confirm-btn.confirmed {
+  background: #e3f5e8;
+  color: var(--good);
+  border: 1px solid #b6e0c2;
+}
+
+.hole-card.hole-confirmed {
+  outline: 2px solid #bfe6cb;
+  outline-offset: -2px;
+}
+
+tr.hole-confirmed td {
+  background: #f3fbf5;
+}
+
+tr.hole-confirmed td:first-child {
+  background: #e9f7ee;
+}
+
+.hole-state.ok {
+  color: var(--good);
+  font-weight: 950;
+}
+
+.hole-meta .hole-confirm-btn {
+  margin-top: 8px;
+  font-size: 12px;
+  padding: 8px 6px;
+  min-height: 36px;
+}
+
+.mobile-name-wrap {
+  min-width: 0;
+}
+
+.hole-stand-row > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hole-stand-row > span:last-child {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.season-rounds {
+  display: grid;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.season-round-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 8px 10px;
+  background: #fbfdf9;
+}
+
+.season-round-row > div {
+  min-width: 0;
+}
+
+.season-round-row .season-del {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.season-round-open {
+  cursor: pointer;
+}
+
+.oom-player {
+  cursor: pointer;
+  color: var(--accent-dark);
+  font-weight: 900;
+  text-decoration: underline;
+}
+
+.season-popup {
+  z-index: 230;
+}
+
+.season-popup .hole-stand-card {
+  width: min(560px, 100%);
+}
+
+.season-popup .hole-stand-body {
+  max-height: 72vh;
+  overflow: auto;
+}
+
+.profile-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+  margin: 4px 0 12px;
+}
+
+.profile-stats .mini-pill {
+  text-align: center;
+  white-space: normal;
+}
+
+.profile-round {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+
+.profile-round-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  cursor: pointer;
+  background: #fbfdf9;
+}
+
+.profile-round-head > div {
+  min-width: 0;
+}
+
+.profile-round-body {
+  padding: 8px 10px;
+}
+
+.profile-placements {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 2px 0 12px;
+}
+
+.place-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 3px 10px;
+  background: #fff;
+  font-weight: 900;
+  font-size: 13px;
+}
+
+.place-badge .cnt {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.round-tag {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 900;
+  border-radius: 999px;
+  padding: 2px 8px;
+  margin-left: 6px;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.round-tag.best {
+  background: #e3f5e8;
+  color: var(--good);
+}
+
+.round-tag.worst {
+  background: #fde8ea;
+  color: var(--bad);
+}
+
+.season-suggest {
+  margin-top: 12px;
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px;
+  background: #fbfdf9;
+}
+
+.season-suggest > button {
+  width: 100%;
+}
+
+.weight-control label {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.weight-control strong {
+  color: var(--accent-dark);
+}
+
+.weight-control input[type="range"] {
+  width: 100%;
+  margin-top: 4px;
+  touch-action: manipulation;
+}
+
+/* Rundenrückblick */
+.hl-card {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+
+.hl-title {
+  font-weight: 950;
+  font-size: 15px;
+  margin-bottom: 6px;
+}
+
+.hl-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.hl-pill {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-weight: 800;
+  font-size: 13px;
+  background: #fbfdf9;
+}
+
+.hl-pill b { color: var(--accent-dark); }
+
+.hl-pill.hl-top {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.hl-pill.hl-top b { color: #fff; }
+
+.hl-big {
+  font-size: 18px;
+  font-weight: 950;
+  color: var(--accent-dark);
+}
+
+.hl-note {
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+/* Replay-Kopf */
+.race-head strong { font-size: 16px; }
+
+.race-head-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.race-speed-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.race-hole-counter {
+  align-self: center;
+  margin: 0 auto 10px;
+}
 
   </style>
 </head>
@@ -1467,6 +1822,10 @@ input.score-triplebogey {
           <button class="secondary" type="button" id="clearScoresBtn">Scores löschen</button>
         </div>
 
+        <div class="season-suggest">
+          <button type="button" id="suggestAllowanceBtn" class="secondary">🏆 Vorgaben aus Saison vorschlagen</button>
+        </div>
+
         <details class="inner" open>
           <summary>Vorgaben-Vorschau / Anpassung</summary>
           <p class="help" style="margin-top:8px">
@@ -1514,24 +1873,29 @@ input.score-triplebogey {
     </button>
   </div>
 
-  <button type="button" id="rankingChartBtn">📈 Ranking-Verlauf</button>
-  <button type="button" id="highlightsBtn">🏆 Highlights</button>
+  <button type="button" id="addRoundToSeasonBtn">➕ Runde zur Saison hinzufügen</button>
+  <button type="button" id="seasonTableBtn">🏅 Saison-Tabelle</button>
+  <button type="button" id="highlightsBtn">🏆 Rundenrückblick</button>
   <button type="button" id="raceReplayBtn">🐌 Replay</button>
 
 </div>
 
 <div class="race-overlay" id="raceOverlay">
   <div class="race-head">
-  <strong>🐌 Kopenhagen Replay</strong>
-  <select id="raceSpeedSelect" class="race-speed-select">
-  <option value="10">10s</option>
-  <option value="20" selected>20s</option>
-  <option value="30">30s</option>
-</select>
+    <strong>🐌 Replay</strong>
+    <div class="race-head-right">
+      <label class="race-speed-wrap">Tempo
+        <select id="raceSpeedSelect" class="race-speed-select">
+          <option value="10">10s</option>
+          <option value="20" selected>20s</option>
+          <option value="30">30s</option>
+        </select>
+      </label>
+      <button class="secondary small" type="button" id="closeRaceBtn">Schließen</button>
+    </div>
+  </div>
 
-  <div class="race-hole-counter" id="raceHoleCounter">⛳ Loch 0</div>
-  <button class="secondary small" type="button" id="closeRaceBtn">Schließen</button>
-</div>
+  <div class="race-hole-counter" id="raceHoleCounter">⛳ Start</div>
 
   <div class="race-track" id="raceTrack">
     <div class="race-hole-labels" id="raceHoleLabels"></div>
@@ -1554,12 +1918,58 @@ input.score-triplebogey {
     <div class="hole-stand-body" id="holeStandBody"></div>
   </div>
 </div>
+<div class="hole-stand-popup season-popup" id="roundDetailPopup">
+  <div class="hole-stand-card">
+    <div class="hole-stand-head">
+      <span id="roundDetailTitle">Runde</span>
+      <button class="secondary small" type="button" id="closeRoundDetailBtn">Schließen</button>
+    </div>
+    <div class="hole-stand-body" id="roundDetailBody"></div>
+  </div>
+</div>
+
+<div class="hole-stand-popup season-popup" id="playerProfilePopup">
+  <div class="hole-stand-card">
+    <div class="hole-stand-head">
+      <span id="playerProfileTitle">Spieler</span>
+      <button class="secondary small" type="button" id="closePlayerProfileBtn">Schließen</button>
+    </div>
+    <div class="hole-stand-body" id="playerProfileBody"></div>
+  </div>
+</div>
+
+<div class="hole-stand-popup season-popup" id="suggestPopup">
+  <div class="hole-stand-card">
+    <div class="hole-stand-head">
+      <span>🏆 Vorgaben-Vorschlag</span>
+      <button class="loch19-close-btn" type="button" id="closeSuggestBtn">✕</button>
+    </div>
+    <div class="hole-stand-body">
+      <div class="help" style="margin:0 0 8px;">
+        Berechnung aus euren Saison-Runden: Form-gewichteter Brutto-Schnitt (jüngste Runden zählen mehr).
+        Bester Schnitt = 0 Vorgaben, alle anderen erhalten die Differenz zum Besten.
+      </div>
+      <div class="weight-control">
+        <label for="suggestWeight">Gewichtung jüngster Runden: <strong id="suggestWeightVal">0,70</strong></label>
+        <input type="range" id="suggestWeight" min="0.5" max="1" step="0.05" value="0.7">
+        <div class="help" style="margin:4px 0 0;">0,50 = stark formlastig · 1,00 = ganzer Schnitt</div>
+      </div>
+      <div id="suggestTable" style="margin-top:10px;"></div>
+      <div class="actions" style="margin-top:12px;">
+        <button type="button" id="applySuggestBtn">Übernehmen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <datalist id="knownPlayerNames"></datalist>
 
 <script>
 "use strict";
 
 const STORAGE_KEY = "kopenhagen-golf-rechner-v5";
+const SEASON_KEY = "kopenhagen-saison-v1";
+const WEIGHT_KEY = "kopenhagen-weightfactor-v1";
 
 const courses = {
   velte: {
@@ -1854,10 +2264,20 @@ function normalizeState(s) {
   for (const h of courseHoles) {
     const key = String(h.hole);
     const src = s.holes && typeof s.holes === "object" ? (s.holes[key] || {}) : {};
-    holes[key] = {
-      gross: Array.isArray(src.gross) ? src.gross.slice(0, playerCount).map(toNullableInt) : Array(playerCount).fill(null)
-    };
-    while (holes[key].gross.length < playerCount) holes[key].gross.push(null);
+    const gross = Array.isArray(src.gross) ? src.gross.slice(0, playerCount).map(toNullableInt) : Array(playerCount).fill(null);
+    while (gross.length < playerCount) gross.push(null);
+
+    // confirmed-Kennzeichen: explizit übernehmen, sonst alte Runden
+    // (komplett ausgefülltes Loch) als bereits bestätigt behandeln.
+    const allFilled = gross.length === playerCount && gross.every(v => v !== null && v !== undefined && v !== "");
+    let confirmed;
+    if (typeof src.confirmed === "boolean") {
+      confirmed = src.confirmed;
+    } else {
+      confirmed = allFilled;
+    }
+
+    holes[key] = { gross, confirmed };
   }
 
   const overrides = {};
@@ -1909,7 +2329,7 @@ function buildEmptyState(base) {
   s.holes = {};
   s.handicapOverrides = {};
   for (const h of courseHoles) {
-    s.holes[String(h.hole)] = { gross: Array(s.playerCount).fill(null) };
+    s.holes[String(h.hole)] = { gross: Array(s.playerCount).fill(null), confirmed: false };
     s.handicapOverrides[String(h.hole)] = Array(s.playerCount).fill(null);
   }
   return s;
@@ -2086,7 +2506,7 @@ function calculateRound() {
 
     holeResults[key] = result;
 
-    if (result.complete) {
+    if (result.complete && data.confirmed) {
       playedHoles++;
       totalExpected += expectedPoints(playerCount);
       totalGiven += result.sum;
@@ -2373,6 +2793,65 @@ function getScoreClassForGross(hole, gross) {
   return getScoreClassForDelta(delta);
 }
 
+// Eingabe-Stepper [ − ] [ Wert ] [ + ] für einen Spieler an einem Loch.
+function buildScoreStepper(holeKey, playerIndex, holeDef, grossVal) {
+  const wrap = document.createElement("div");
+  wrap.className = "score-stepper";
+
+  const minus = document.createElement("button");
+  minus.type = "button";
+  minus.className = "step-btn step-minus";
+  minus.textContent = "−";
+  minus.addEventListener("click", (e) => { e.stopPropagation(); stepScore(holeKey, playerIndex, -1); });
+
+  const input = document.createElement("input");
+  input.type = "number";
+  input.inputMode = "numeric";
+  input.min = "1";
+  input.max = "15";
+  input.dataset.hole = holeKey;
+  input.dataset.player = String(playerIndex);
+  input.value = (grossVal === null || grossVal === undefined || grossVal === "") ? "" : String(grossVal);
+  input.placeholder = String(getDefaultScoreForHole(holeDef));
+  const scoreClass = getScoreClassForGross(holeDef, grossVal);
+  if (scoreClass) input.classList.add(scoreClass);
+  input.addEventListener("focus", function() { this.select(); });
+  input.addEventListener("change", function() { commitTypedScore(holeKey, playerIndex, this.value); });
+
+  const plus = document.createElement("button");
+  plus.type = "button";
+  plus.className = "step-btn step-plus";
+  plus.textContent = "+";
+  plus.addEventListener("click", (e) => { e.stopPropagation(); stepScore(holeKey, playerIndex, +1); });
+
+  wrap.appendChild(minus);
+  wrap.appendChild(input);
+  wrap.appendChild(plus);
+  return wrap;
+}
+
+// Bestätigen-/Bearbeiten-Button für ein Loch.
+function buildConfirmButton(holeKey) {
+  const data = state.holes[holeKey];
+  const confirmed = !!(data && data.confirmed);
+  const complete = isHoleComplete(holeKey);
+
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "hole-confirm-btn";
+
+  if (confirmed) {
+    btn.classList.add("confirmed");
+    btn.textContent = "✓ bestätigt – bearbeiten";
+    btn.addEventListener("click", (e) => { e.stopPropagation(); editHole(holeKey); });
+  } else {
+    btn.textContent = "✓ Loch bestätigen";
+    btn.disabled = !complete;
+    btn.addEventListener("click", (e) => { e.stopPropagation(); confirmHole(holeKey); });
+  }
+  return btn;
+}
+
 function buildTable() {
   const table = document.getElementById("scoreTable");
   const calc = calculateRound();
@@ -2403,75 +2882,50 @@ function buildTable() {
     const result = calc.holeResults[key];
 
     const tr = document.createElement("tr");
+    if (data.confirmed) tr.classList.add("hole-confirmed");
 
     const tdHole = document.createElement("td");
     tdHole.className = "hole-meta";
-    tdHole.classList.add("clickable-hole");
-    tdHole.addEventListener("click", () => openHoleStandPopup(h.hole));
 
-    let meta = "Loch " + h.hole;
     let details = [];
-
     if (course.hasPar && h.par !== null && h.par !== undefined) details.push("PAR " + h.par);
     if (h.length !== null && h.length !== undefined) details.push(h.length + " m");
     if (course.hasHcp && h.hcp !== null && h.hcp !== undefined) details.push("HCP " + h.hcp);
-   
 
-    tdHole.innerHTML = meta + (details.length ? "<div class='hole-small'>" + details.join(" · ") + "</div>" : "");
+    const metaTop = document.createElement("div");
+    metaTop.className = "clickable-hole";
+    metaTop.innerHTML =
+      "Loch " + h.hole +
+      (data.confirmed ? " <span class='hole-state ok'>✓</span>" : "") +
+      (details.length ? "<div class='hole-small'>" + details.join(" · ") + "</div>" : "");
+    metaTop.addEventListener("click", () => openHoleStandPopup(h.hole));
+    tdHole.appendChild(metaTop);
+    tdHole.appendChild(buildConfirmButton(key));
     tr.appendChild(tdHole);
 
     for (let i = 0; i < state.playerCount; i++) {
       const td = document.createElement("td");
-      const scorebox = document.createElement("div");
-      scorebox.className = "scorebox";
+      td.appendChild(buildScoreStepper(key, i, h, data.gross[i]));
 
-      const grossWrap = document.createElement("div");
-      const grossLab = document.createElement("div");
-      grossLab.className = "mini-label";
-      grossLab.textContent = "Brutto";
-
-      const grossInput = document.createElement("input");
-      grossInput.type = "number";
-      grossInput.inputMode = "numeric";
-      grossInput.min = "1";
-      grossInput.max = "20";
-      grossInput.dataset.hole = key;
-      grossInput.dataset.player = String(i);
-      grossInput.value = data.gross[i] === null ? "" : String(data.gross[i]);
-      const scoreClass = getScoreClassForGross(h, data.gross[i]);
-
-      if (scoreClass) {
-        grossInput.classList.add(scoreClass);
-      }
-      grossInput.addEventListener("input", onScoreInput);
-
-      grossWrap.appendChild(grossLab);
-      grossWrap.appendChild(grossInput);
-      scorebox.appendChild(grossWrap);
-
+      const hasStroke = result.strokes[i] > 0;
       const points = document.createElement("div");
       points.className = "points-cell";
 
-      const hasStroke = result.strokes[i] > 0;
-
-      const scoreDetail = hasStroke
-        ? "<div class='points-detail'>" + data.gross[i] + " → " + result.netto[i] + "</div>"
-        : "";
-
-     const strokeText = hasStroke
-      ? "<div class='points-detail'><span class='stroke-note'>V" + result.strokes[i] + "</span></div>"
-      : "";
-
-      if (result.complete) {
+      if (data.confirmed && result.complete) {
+        const scoreDetail = hasStroke
+          ? "<div class='points-detail'>" + data.gross[i] + " → " + result.netto[i] + "</div>"
+          : "";
+        const strokeText = hasStroke
+          ? "<div class='points-detail'><span class='stroke-note'>V" + result.strokes[i] + "</span></div>"
+          : "";
         points.innerHTML = formatNum(result.points[i]) + " P." + scoreDetail + strokeText;
-      } else if (data.gross[i] !== null) {
-        points.innerHTML = "–" + scoreDetail + strokeText;
       } else {
-        points.innerHTML = "–" + strokeText;
+        // Vor Bestätigung keine Punkte – nur ggf. den Vorgabe-Hinweis.
+        points.innerHTML = hasStroke
+          ? "<div class='points-detail'><span class='stroke-note'>V" + result.strokes[i] + "</span></div>"
+          : "";
       }
 
-
-      td.appendChild(scorebox);
       td.appendChild(points);
       tr.appendChild(td);
     }
@@ -2519,6 +2973,8 @@ function renderMobileCards() {
     head.appendChild(meta);
     card.appendChild(head);
 
+    if (data.confirmed) card.classList.add("hole-confirmed");
+
     const body = document.createElement("div");
     body.className = "hole-card-body";
 
@@ -2526,61 +2982,44 @@ function renderMobileCards() {
       const row = document.createElement("div");
       row.className = "mobile-player-row";
 
+      const nameWrap = document.createElement("div");
+      nameWrap.className = "mobile-name-wrap";
+
       const name = document.createElement("div");
       name.className = "mobile-player-name";
       name.textContent = state.players[i].name || ("Spieler " + (i + 1));
+      nameWrap.appendChild(name);
 
-      const inputWrap = document.createElement("div");
-      inputWrap.className = "mobile-score-input";
+      const hasStroke = result.strokes[i] > 0;
 
-      const inp = document.createElement("input");
-      inp.type = "number";
-      inp.inputMode = "numeric";
-      inp.min = "1";
-      inp.max = "20";
-      inp.dataset.hole = key;
-      inp.dataset.player = String(i);
-      inp.value = data.gross[i] === null ? "" : String(data.gross[i]);
-      const scoreClass = getScoreClassForGross(h, data.gross[i]);
-
-      if (scoreClass) {
-        inp.classList.add(scoreClass);
+      if (data.confirmed && result.complete) {
+        const sub = document.createElement("div");
+        sub.className = "mobile-player-detail";
+        let txt = formatNum(result.points[i]) + " P.";
+        if (hasStroke) txt += " · " + data.gross[i] + "→" + result.netto[i] + " · V" + result.strokes[i];
+        sub.textContent = txt;
+        nameWrap.appendChild(sub);
+      } else if (hasStroke) {
+        const sub = document.createElement("div");
+        sub.className = "mobile-player-detail";
+        sub.textContent = "Vorgabe V" + result.strokes[i];
+        nameWrap.appendChild(sub);
       }
 
-      inp.addEventListener("input", onScoreInput);
+      const stepper = buildScoreStepper(key, i, h, data.gross[i]);
 
-      inputWrap.appendChild(inp);
-
-      const points = document.createElement("div");
-      points.className = "mobile-player-points";
-
-     const hasStroke = result.strokes[i] > 0;
-
-     const strokeText = hasStroke
-      ? "V" + result.strokes[i]
-      : "";
-
-     const scoreDetail = hasStroke && data.gross[i] !== null
-      ? "<div class='mobile-player-detail'>" + data.gross[i] + "→" + result.netto[i] + " · " + strokeText + "</div>"
-      : (strokeText
-          ? "<div class='mobile-player-detail'>" + strokeText + "</div>"
-          : "");
-
-    if (result.complete) {
-      points.innerHTML = formatNum(result.points[i]) + " P." + scoreDetail;
-    } else if (data.gross[i] !== null) {
-      points.innerHTML = "–" + scoreDetail;
-    } else {
-      points.innerHTML = "–" + scoreDetail;
-    }
-
-      row.appendChild(name);
-      row.appendChild(inputWrap);
-      row.appendChild(points);
+      row.appendChild(nameWrap);
+      row.appendChild(stepper);
       body.appendChild(row);
     }
 
     card.appendChild(body);
+
+    const confirmWrap = document.createElement("div");
+    confirmWrap.className = "hole-confirm-wrap";
+    confirmWrap.appendChild(buildConfirmButton(key));
+    card.appendChild(confirmWrap);
+
     box.appendChild(card);
   }
 }
@@ -2610,7 +3049,7 @@ function getPlayerParStats(playerIndex) {
   for (const h of getCourseHoles()) {
     const key = String(h.hole);
     const data = state.holes[key];
-    if (!data) continue;
+    if (!data || !data.confirmed) continue;
 
     const gross = data.gross[playerIndex];
     if (gross === null || gross === undefined || gross === "") continue;
@@ -2647,6 +3086,7 @@ function calculateRoundAfterHole(maxHoleNumber) {
     const key = String(h.hole);
     const data = state.holes[key];
     if (!data || !Array.isArray(data.gross)) continue;
+    if (!data.confirmed) continue;
 
     const result = calculateHole(h, data.gross, playerCount);
     if (!result.complete) continue;
@@ -2738,11 +3178,12 @@ function renderSummary() {
     }
 
     name.innerHTML =
-      "<span>" +
+      "<span class='summary-pname' title='" + escapeHtml(p.name) + "'>" +
       escapeHtml(p.name) +
-      " · " +
+      "</span>" +
+      "<span class='summary-pts'>" +
       formatNum(p.points) +
-      " Punkte</span>" +
+      " P.</span>" +
       "<span class='summary-actions'>" +
       moveHtml +
       "<span class='summary-toggle'>" +
@@ -2876,7 +3317,7 @@ function renderPlayerDetail() {
   for (const h of getCourseHoles()) {
     const key = String(h.hole);
     const data = state.holes[key];
-    if (!data || data.gross[playerIndex] === null) continue;
+    if (!data || !data.confirmed || data.gross[playerIndex] === null) continue;
 
     const gross = data.gross[playerIndex];
     const result = calc.holeResults[key];
@@ -3070,26 +3511,119 @@ function checkRankingChangeAndPlaySound(oldSignature) {
   lastRankingSignature = newSignature;
 }
 
-function onScoreInput(e) {
-  const hole = e.target.dataset.hole;
+function getHoleDefByKey(holeKey) {
+  const num = Number(holeKey);
+  for (const h of getCourseHoles()) {
+    if (h.hole === num) return h;
+  }
+  return null;
+}
+
+function getDefaultScoreForHole(h) {
+  const course = getCourse();
+  if (course.hasPar && h && h.par !== null && h.par !== undefined) return Number(h.par);
+  return 5;
+}
+
+function ensureHoleEntry(holeKey) {
+  if (!state.holes[holeKey] || typeof state.holes[holeKey] !== "object") {
+    state.holes[holeKey] = { gross: Array(state.playerCount).fill(null), confirmed: false };
+  }
+  if (!Array.isArray(state.holes[holeKey].gross)) {
+    state.holes[holeKey].gross = Array(state.playerCount).fill(null);
+  }
+  while (state.holes[holeKey].gross.length < state.playerCount) {
+    state.holes[holeKey].gross.push(null);
+  }
+}
+
+// Beim ersten Anfassen eines Lochs: alle noch leeren Felder mit dem
+// Par-Vorschlag (bzw. 5 ohne Platzdaten) füllen.
+function ensureHoleStarted(holeKey) {
+  ensureHoleEntry(holeKey);
+  const def = getDefaultScoreForHole(getHoleDefByKey(holeKey));
+  const gross = state.holes[holeKey].gross;
+  for (let i = 0; i < state.playerCount; i++) {
+    if (gross[i] === null || gross[i] === undefined || gross[i] === "") {
+      gross[i] = def;
+    }
+  }
+}
+
+function clampScore(n) {
+  if (!Number.isFinite(n)) return null;
+  return Math.max(1, Math.min(15, Math.trunc(n)));
+}
+
+function isHoleComplete(holeKey) {
+  ensureHoleEntry(holeKey);
+  const gross = state.holes[holeKey].gross;
+  for (let i = 0; i < state.playerCount; i++) {
+    const v = gross[i];
+    if (v === null || v === undefined || v === "") return false;
+  }
+  return true;
+}
+
+function rerenderEntryAndSummary() {
+  buildTable();
+  renderMobileCards();
+  renderSummary();
+}
+
+// +/- an einem Spieler eines Lochs.
+function stepScore(holeKey, playerIndex, delta) {
+  ensureHoleStarted(holeKey);
+  const gross = state.holes[holeKey].gross;
+  const current = clampScore(Number(gross[playerIndex]));
+  const base = current === null ? getDefaultScoreForHole(getHoleDefByKey(holeKey)) : current;
+  gross[playerIndex] = clampScore(base + delta);
+  state.holes[holeKey].confirmed = false; // Änderung => wieder unbestätigt
+  saveState(false);
+  rerenderEntryAndSummary();
+}
+
+// Direkte Zahleneingabe (wird beim Verlassen des Feldes übernommen).
+function commitTypedScore(holeKey, playerIndex, rawValue) {
+  ensureHoleEntry(holeKey);
+  const typed = toNullableInt(rawValue);
+  if (typed === null) {
+    state.holes[holeKey].gross[playerIndex] = null;
+  } else {
+    ensureHoleStarted(holeKey); // erstes Anfassen füllt übrige leere Felder mit Par
+    state.holes[holeKey].gross[playerIndex] = clampScore(typed);
+  }
+  state.holes[holeKey].confirmed = false;
+  saveState(false);
+  rerenderEntryAndSummary();
+}
+
+function confirmHole(holeKey) {
+  if (!isHoleComplete(holeKey)) {
+    showToast("Bitte für alle Spieler einen Score eingeben");
+    return;
+  }
   const oldRankingSignature = getRankingSignature();
   const oldRankingPositions = getRankingPositions();
-  const player = Number(e.target.dataset.player);
-  const value = e.target.value;
 
-  if (!state.holes[hole]) {
-    state.holes[hole] = { gross: Array(state.playerCount).fill(null) };
-  }
-
-  state.holes[hole].gross[player] = toNullableInt(value);
-
+  ensureHoleEntry(holeKey);
+  state.holes[holeKey].confirmed = true;
   saveState(false);
+
   buildTable();
   renderMobileCards();
   updateRankMoves(oldRankingPositions);
   renderSummary();
-  
+
   checkRankingChangeAndPlaySound(oldRankingSignature);
+  showToast("Loch " + holeKey + " bestätigt");
+}
+
+function editHole(holeKey) {
+  ensureHoleEntry(holeKey);
+  state.holes[holeKey].confirmed = false;
+  saveState(false);
+  rerenderEntryAndSummary();
 }
 
 function readSetupInputs() {
@@ -3176,6 +3710,7 @@ function clearScores() {
   for (const h of getCourseHoles()) {
     const key = String(h.hole);
     state.holes[key].gross = Array(state.playerCount).fill(null);
+    state.holes[key].confirmed = false;
   }
   saveState(true);
   buildTable();
@@ -3206,7 +3741,8 @@ function createShareLink() {
       p.allowance
     ]),
     h: {},
-    o: {}
+    o: {},
+    f: []
   };
 
   for (const holeKey in state.holes) {
@@ -3220,6 +3756,10 @@ function createShareLink() {
 
     if (hasScore) {
       shareState.h[holeKey] = gross.slice(0, state.playerCount);
+    }
+
+    if (state.holes[holeKey].confirmed) {
+      shareState.f.push(holeKey);
     }
   }
 
@@ -3283,12 +3823,14 @@ function loadStateFromUrl() {
     imported.handicapOverrides = {};
 
     const courseHoles = courses[imported.courseId].holes;
+    const confirmedSet = new Set(Array.isArray(shared.f) ? shared.f.map(String) : []);
 
     for (const h of courseHoles) {
       const key = String(h.hole);
 
       imported.holes[key] = {
-        gross: Array(imported.playerCount).fill(null)
+        gross: Array(imported.playerCount).fill(null),
+        confirmed: confirmedSet.has(key)
       };
 
       imported.handicapOverrides[key] =
@@ -3420,7 +3962,7 @@ function createRoundCsv() {
     const data = state.holes[key];
     const result = calc.holeResults[key];
 
-    if (!data) continue;
+    if (!data || !data.confirmed) continue;
 
     const hasAnyScore = data.gross
       .slice(0, state.playerCount)
@@ -3907,14 +4449,11 @@ function processVoiceScore(rawText) {
     }
   }
 
+  // Sprache trägt nur ein – bestätigt wird bewusst per Knopf.
+  state.holes[holeKey].confirmed = false;
+
   saveState(false);
-
-  buildTable();
-  renderMobileCards();
-  updateRankMoves(oldRankingPositions);
-  renderSummary();
-
-  checkRankingChangeAndPlaySound(oldRankingSignature);
+  rerenderEntryAndSummary();
 
   const recognized = [];
 
@@ -3934,7 +4473,7 @@ function processVoiceScore(rawText) {
       recognized.join(", ");
   }
 
-  showToast("Score per Sprache übernommen");
+  showToast("Score per Sprache eingetragen – bitte bestätigen");
 }
 
 function toggleShareMenu(e) {
@@ -4010,6 +4549,7 @@ function getRaceHistory() {
     const data = state.holes[key];
 
     if (!data || !Array.isArray(data.gross)) continue;
+    if (!data.confirmed) continue;
 
     const result = calculateHole(h, data.gross, playerCount);
     if (!result.complete) continue;
@@ -4059,6 +4599,28 @@ function getRaceRunnerHtml(playerIndex, name, points) {
     (points === null ? "" : " (" + formatNum(points) + ")") +
     "</span>"
   );
+}
+
+// Kurzer, leiser Tick je Replay-Schritt.
+function playRaceTick() {
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    const ctx = new AC();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "triangle";
+    osc.frequency.value = 300;
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    const t = ctx.currentTime;
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.10, t + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+    osc.start(t);
+    osc.stop(t + 0.13);
+    setTimeout(() => ctx.close(), 300);
+  } catch (e) {}
 }
 
 function openRaceReplay() {
@@ -4154,7 +4716,7 @@ track.appendChild(finishMarker);
   overlay.classList.add("show");
 
   const head = overlay.querySelector(".race-head strong");
-  if (head) head.textContent = "🐌 Kopenhagen Replay";
+  if (head) head.textContent = "🐌 Replay";
 
   const timeline = document.getElementById("raceTimeline");
   if (timeline) {
@@ -4178,7 +4740,8 @@ function showRaceStep(history, stepIndex) {
   const counter = document.getElementById("raceHoleCounter");
   if (counter) {
     counter.style.display = "flex";
-    counter.textContent = "⛳ Loch " + step.hole;
+    const totalHoles = getCourseHoles().length || 18;
+    counter.textContent = step.hole > 0 ? ("⛳ Loch " + step.hole + " / " + totalHoles) : "⛳ Start";
   }
 
   const byPlayer = {};
@@ -4187,38 +4750,38 @@ function showRaceStep(history, stepIndex) {
   }
 
 
-  const winnerPoints = Math.max(
-    1,
-    ...history[history.length - 1].ranking.map(p => Number(p.points) || 0)
-  );
-
-for (let i = 0; i < state.playerCount; i++) {
-  const p = byPlayer[i];
-  const runner = document.getElementById("raceRunner_" + i);
-  if (!runner || !p) continue;
-
-  const points = Math.max(0, Number(p.points) || 0);
+  // Position: Der Führende steht auf Höhe des aktuell gespielten Lochs
+  // (Loch 9 = Loch-9-Marker, Loch 18 = Ziel). Die anderen liegen dahinter,
+  // anteilig nach ihren Punkten im Verhältnis zum Führenden.
   const track = document.getElementById("raceTrack");
   const trackWidth = track ? track.clientWidth : window.innerWidth;
   const startX = getRaceStartX();
   const finishRight = getRaceFinishRight();
+  const span = Math.max(1, (trackWidth - finishRight) - startX);
 
-  const maxLeft = trackWidth - finishRight;
+  const totalHoles = getCourseHoles().length || 18;
+  const holeFrac = Math.max(0, Math.min(totalHoles, step.hole)) / totalHoles;
+  const leaderDist = holeFrac * span;
 
-  const left =
-    startX +
-    (points / winnerPoints) *
-    (maxLeft - startX);
+  let leaderPts = 0;
+  for (let i = 0; i < state.playerCount; i++) {
+    const p = byPlayer[i];
+    if (p) leaderPts = Math.max(leaderPts, Number(p.points) || 0);
+  }
 
-  runner.innerHTML = getRaceRunnerHtml(
-    i,
-    p.name,
-    p.points
-  );
+  for (let i = 0; i < state.playerCount; i++) {
+    const p = byPlayer[i];
+    const runner = document.getElementById("raceRunner_" + i);
+    if (!runner || !p) continue;
 
-  runner.style.left = left + "px";
-  runner.style.top = getRaceTopForPlayer(i) + "%";
-}
+    const points = Math.max(0, Number(p.points) || 0);
+    const frac = leaderPts > 0 ? Math.min(1, points / leaderPts) : 0;
+    const left = startX + frac * leaderDist;
+
+    runner.innerHTML = getRaceRunnerHtml(i, p.name, p.points);
+    runner.style.left = left + "px";
+    runner.style.top = getRaceTopForPlayer(i) + "%";
+  }
 
   const timeline = document.getElementById("raceTimeline");
   if (timeline) timeline.value = String(stepIndex);
@@ -4248,6 +4811,12 @@ function startRaceReplay() {
     }
 
     showRaceStep(history, step);
+
+    if (step === history.length - 1) {
+      playRankingChangeSound(); // Fanfare beim Zieleinlauf
+    } else {
+      playRaceTick();
+    }
   }, delay);
 }
 
@@ -4298,150 +4867,838 @@ function onRaceTimelineInput() {
   showRaceStep(history, step);
 }
 
-function openRankingChart() {
-  const history = getRaceHistory();
-
-  if (history.length === 0) {
-    showToast("Noch keine vollständigen Löcher für Ranking-Verlauf");
+function openHighlights() {
+  const calc = calculateRound();
+  if (calc.playedHoles === 0) {
+    showToast("Noch keine bestätigten Löcher für den Rückblick");
     return;
   }
 
-  let html = "<div style='padding:14px; height:100%; overflow:auto;'>";
-  html += "<h3>📈 Ranking-Verlauf</h3>";
-  html += "<table class='player-detail-table'>";
-  html += "<thead><tr><th>Loch</th>";
+  const course = getCourse();
+  const pc = state.playerCount;
+  const names = [];
+  for (let i = 0; i < pc; i++) names.push(state.players[i].name || ("Spieler " + (i + 1)));
 
-  for (let i = 0; i < state.playerCount; i++) {
-    html += "<th>" + escapeHtml(state.players[i].name || ("Spieler " + (i + 1))) + "</th>";
+  // Bestätigte, vollständige Löcher in Reihenfolge
+  const holes = [];
+  for (const h of getCourseHoles()) {
+    const data = state.holes[String(h.hole)];
+    if (!data || !data.confirmed) continue;
+    const result = calculateHole(h, data.gross, pc);
+    if (!result.complete) continue;
+    holes.push({ h, gross: data.gross, result });
+  }
+  if (holes.length === 0) { showToast("Noch keine bestätigten Löcher für den Rückblick"); return; }
+
+  // 🏆 Loch-Siege (meiste Punkte je Loch; geteilte zählen für alle Spitzenreiter)
+  const wins = new Array(pc).fill(0);
+  for (const x of holes) {
+    let max = -Infinity;
+    for (let i = 0; i < pc; i++) max = Math.max(max, x.result.points[i]);
+    for (let i = 0; i < pc; i++) if (Math.abs(x.result.points[i] - max) < 1e-9) wins[i]++;
+  }
+  const winOrder = names.map((n, i) => ({ name: n, w: wins[i] })).sort((a, b) => b.w - a.w);
+
+  // 🐦 Birdies/Eagles + 💥 Klatsche des Tages
+  const good = [];
+  let worst = null;
+  if (course.hasPar) {
+    for (const x of holes) {
+      if (x.h.par === null || x.h.par === undefined) continue;
+      for (let i = 0; i < pc; i++) {
+        const g = Number(x.gross[i]);
+        const delta = g - x.h.par;
+        if (delta <= -1) good.push({ name: names[i], hole: x.h.hole, eagle: delta <= -2 });
+        if (!worst || delta > worst.delta) worst = { name: names[i], hole: x.h.hole, gross: g, delta };
+      }
+    }
   }
 
+  // 🎯 Wie eng war's + Führungswechsel
+  const sorted = calc.sortedTotals;
+  const margin = sorted.length >= 2 ? (sorted[0].points - sorted[1].points) : null;
+  const history = getRaceHistory();
+  const leaders = history.filter(s => s.hole > 0).map(s => s.ranking[0].index);
+  let leadChanges = 0;
+  for (let i = 1; i < leaders.length; i++) if (leaders[i] !== leaders[i - 1]) leadChanges++;
+
+  // 🏁 Schlussspurt (letzte bis zu 3 bestätigte Löcher)
+  const last3 = holes.slice(-3);
+  const sprint = new Array(pc).fill(0);
+  for (const x of last3) for (let i = 0; i < pc; i++) sprint[i] += x.result.points[i];
+  const sprintOrder = names.map((n, i) => ({ name: n, p: sprint[i] })).sort((a, b) => b.p - a.p);
+
+  function card(title, inner) {
+    return "<div class='hl-card'><div class='hl-title'>" + title + "</div><div class='hl-body'>" + inner + "</div></div>";
+  }
+
+  let html = "<div style='padding:14px; height:100%; overflow:auto;'>";
+  html += "<h3 style='margin:0 0 10px;'>🏆 Rundenrückblick</h3>";
+
+  // Loch-Siege
+  {
+    const maxW = winOrder.length ? winOrder[0].w : 0;
+    let inner = "<div class='hl-row'>";
+    winOrder.forEach(o => {
+      const lead = (o.w === maxW && maxW > 0);
+      inner += "<span class='hl-pill" + (lead ? " hl-top" : "") + "'>" + escapeHtml(o.name) + " <b>" + o.w + "</b></span>";
+    });
+    inner += "</div><div class='hl-note'>Meiste gewonnene Löcher (geteilte zählen mit).</div>";
+    html += card("🏆 Loch-Siege", inner);
+  }
+
+  // Birdies & Eagles
+  if (course.hasPar) {
+    let inner;
+    if (good.length === 0) {
+      inner = "<div class='hl-note'>Heute kein Birdie – beim nächsten Mal! 🙈</div>";
+    } else {
+      inner = "<div class='hl-row'>";
+      good.forEach(g => {
+        inner += "<span class='hl-pill'>" + (g.eagle ? "🦅" : "🐦") + " " + escapeHtml(g.name) + " · L" + g.hole + "</span>";
+      });
+      inner += "</div>";
+    }
+    html += card("🐦 Birdies & Eagles", inner);
+  }
+
+  // Klatsche des Tages
+  if (course.hasPar && worst) {
+    const dtxt = worst.delta > 0 ? "+" + worst.delta : String(worst.delta);
+    html += card("💥 Klatsche des Tages",
+      "<div class='hl-big'>" + escapeHtml(worst.name) + "</div>" +
+      "<div class='hl-note'>" + worst.gross + " Schläge auf Loch " + worst.hole + " (" + dtxt + " über PAR)</div>");
+  }
+
+  // Wie eng war's
+  {
+    let inner = "";
+    if (margin !== null) {
+      inner += "<div class='hl-big'>" + (margin === 0 ? "Kopf-an-Kopf!" : ("+" + formatNum(margin) + " Punkte")) + "</div>";
+      inner += "<div class='hl-note'>Vorsprung " + escapeHtml(sorted[0].name) + " vor " + escapeHtml(sorted[1].name) + "</div>";
+    }
+    inner += "<div class='hl-note'>🔁 Führungswechsel: <b>" + leadChanges + "</b>" + (leadChanges >= 3 ? " – ein echter Krimi!" : "") + "</div>";
+    html += card("🎯 Wie eng war's?", inner);
+  }
+
+  // Schlussspurt
+  {
+    const top = sprintOrder[0];
+    html += card("🏁 Schlussspurt",
+      "<div class='hl-big'>" + escapeHtml(top.name) + "</div>" +
+      "<div class='hl-note'>" + formatNum(top.p) + " Punkte auf den letzten " + last3.length + " Löchern</div>");
+  }
+
+  html += "</div>";
+  openAnalysisOverlay("🏆 Rundenrückblick", html);
+}
+
+
+// ===== Saison / Order of Merit =====
+
+function loadSeason() {
+  try {
+    const raw = localStorage.getItem(SEASON_KEY);
+    if (!raw) return { v: 1, name: "Saison", rounds: [] };
+    const s = JSON.parse(raw);
+    if (!s || typeof s !== "object" || !Array.isArray(s.rounds)) {
+      return { v: 1, name: "Saison", rounds: [] };
+    }
+    return { v: 1, name: s.name || "Saison", rounds: s.rounds };
+  } catch (e) {
+    return { v: 1, name: "Saison", rounds: [] };
+  }
+}
+
+function saveSeason(season) {
+  localStorage.setItem(SEASON_KEY, JSON.stringify(season));
+}
+
+function loadWeightFactor() {
+  const v = parseFloat(localStorage.getItem(WEIGHT_KEY));
+  return (Number.isFinite(v) && v >= 0.5 && v <= 1) ? v : 0.7;
+}
+
+function saveWeightFactor(v) {
+  localStorage.setItem(WEIGHT_KEY, String(v));
+}
+
+// Meritpunkte nach Platzierung = gleicher Vektor wie im Spiel (3er: 2/1/0, 4er: 3/2/1/0).
+function meritForPosition(playerCount, position) {
+  const vec = pointVector(playerCount);
+  return (vec[position - 1] !== undefined) ? vec[position - 1] : 0;
+}
+
+let roundIdCounter = 0;
+function newRoundId() {
+  return Date.now() * 1000 + (roundIdCounter++ % 1000);
+}
+
+// Baut aus dem AKTUELLEN globalen state einen Saison-Schnappschuss (oder null).
+function buildRoundSnapshot(dateText) {
+  const calc = calculateRound();
+  if (calc.playedHoles === 0) return null;
+
+  const course = getCourse();
+  const pc = state.playerCount;
+
+  const results = calc.sortedTotals.map((p, idx) => ({
+    name: p.name,
+    position: idx + 1,
+    points: p.points,
+    gross: p.gross,
+    parDelta: p.parDelta,
+    holesPlayed: p.holesPlayed,
+    merit: meritForPosition(pc, idx + 1)
+  }));
+
+  // Echter Gleichstand (gleiche Punkte UND gleiche Schläge): Meritpunkte teilen.
+  let i = 0;
+  while (i < results.length) {
+    let j = i;
+    while (j + 1 < results.length &&
+           results[j + 1].points === results[i].points &&
+           results[j + 1].gross === results[i].gross) {
+      j++;
+    }
+    if (j > i) {
+      let sum = 0;
+      for (let k = i; k <= j; k++) sum += results[k].merit;
+      const avg = sum / (j - i + 1);
+      for (let k = i; k <= j; k++) results[k].merit = avg;
+    }
+    i = j + 1;
+  }
+
+  // Loch-Details der bestätigten Löcher mitspeichern (gross/Vorgabe/netto/Punkte),
+  // damit das Spielerprofil die volle persönliche Tageskarte zeigen kann.
+  const holeDetails = {};
+  for (const h of getCourseHoles()) {
+    const k = String(h.hole);
+    const d = state.holes[k];
+    if (!(d && d.confirmed)) continue;
+    const res = calc.holeResults[k];
+    const arr = [];
+    for (let pi = 0; pi < pc; pi++) {
+      arr.push({
+        g: d.gross[pi],
+        s: res ? res.strokes[pi] : 0,
+        n: res ? res.netto[pi] : null,
+        p: (res && res.complete) ? res.points[pi] : null
+      });
+    }
+    holeDetails[k] = arr;
+  }
+
+  return {
+    id: newRoundId(),
+    dateText: dateText,
+    courseId: course.id,
+    courseName: course.shortName,
+    playerCount: pc,
+    holesPlayed: calc.playedHoles,
+    complete: calc.playedHoles === 18,
+    hasPar: !!course.hasPar,
+    players: state.players.slice(0, pc).map(p => p.name),
+    results,
+    holeDetails
+  };
+}
+
+function addCurrentRoundToSeason() {
+  closeLoch19Menu();
+
+  const calc = calculateRound();
+  if (calc.playedHoles === 0) {
+    showToast("Noch keine bestätigten Löcher");
+    return;
+  }
+  if (calc.playedHoles < 18) {
+    if (!confirm("Erst " + calc.playedHoles + " von 18 Löchern bestätigt. Runde trotzdem zur Saison hinzufügen?")) return;
+  }
+
+  const now = new Date();
+  const dateText = now.toLocaleString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
+  const snap = buildRoundSnapshot(dateText);
+  if (!snap) {
+    showToast("Keine bestätigten Löcher");
+    return;
+  }
+
+  const season = loadSeason();
+  season.rounds.push(snap);
+  saveSeason(season);
+  showToast("Runde zur Saison hinzugefügt");
+}
+
+function computeOrderOfMerit(season) {
+  const map = {};
+  for (const r of season.rounds) {
+    for (const res of r.results) {
+      const key = res.name;
+      if (!map[key]) {
+        map[key] = { name: res.name, merit: 0, rounds: 0, wins: 0, posSum: 0, grossSumFull: 0, fullRounds: 0, placements: {} };
+      }
+      const a = map[key];
+      a.merit += Number(res.merit) || 0;
+      a.rounds += 1;
+      if (res.position === 1) a.wins += 1;
+      a.posSum += res.position;
+      a.placements[res.position] = (a.placements[res.position] || 0) + 1;
+      if (r.complete) {
+        a.grossSumFull += Number(res.gross) || 0;
+        a.fullRounds += 1;
+      }
+    }
+  }
+  const arr = Object.keys(map).map(k => {
+    const a = map[k];
+    return {
+      name: a.name,
+      merit: a.merit,
+      rounds: a.rounds,
+      wins: a.wins,
+      avgMerit: a.rounds ? a.merit / a.rounds : 0,
+      avgPos: a.rounds ? a.posSum / a.rounds : 0,
+      avgGross: a.fullRounds ? a.grossSumFull / a.fullRounds : null,
+      placements: a.placements
+    };
+  });
+  arr.sort((x, y) => {
+    if (y.avgMerit !== x.avgMerit) return y.avgMerit - x.avgMerit;
+    if (y.wins !== x.wins) return y.wins - x.wins;
+    return (x.avgGross === null ? 999 : x.avgGross) - (y.avgGross === null ? 999 : y.avgGross);
+  });
+  return arr;
+}
+
+function createSeasonCsv() {
+  const season = loadSeason();
+  const oom = computeOrderOfMerit(season);
+
+  let csv = "KOPENHAGEN ORDER OF MERIT\n";
+  csv += "Platz;Spieler;Punkte;Runden;Siege;Schnitt Platz;Schnitt Brutto (18)\n";
+  oom.forEach((p, idx) => {
+    csv += [idx + 1, p.name, formatNum(p.merit), p.rounds, p.wins, formatNum(p.avgPos),
+            (p.avgGross === null ? "" : formatNum(p.avgGross))].map(csvEscape).join(";") + "\n";
+  });
+
+  csv += "\nRUNDEN\n";
+  csv += "Datum;Platz;Spieler;Loecher;Sieger\n";
+  season.rounds.forEach(r => {
+    const winner = r.results && r.results[0] ? r.results[0].name : "";
+    csv += [r.dateText, r.courseName, r.playerCount,
+            (r.complete ? "18" : (r.holesPlayed + "/18")), winner].map(csvEscape).join(";") + "\n";
+  });
+  return csv;
+}
+
+function openSeasonTable() {
+  closeLoch19Menu();
+
+  const season = loadSeason();
+  const oom = computeOrderOfMerit(season);
+
+  let html = "<div style='padding:14px; height:100%; overflow:auto;'>";
+  html += "<h3 style='margin:0 0 4px;'>🏅 Order of Merit</h3>";
+  html += "<div class='help' style='margin-bottom:10px;'>" + season.rounds.length + " Runde(n) gespeichert</div>";
+
+  if (oom.length === 0) {
+    html += "<p class='help'>Noch keine Runden in der Saison. Über „⛳ Loch 19 → ➕ Runde zur Saison hinzufügen“ nimmst du die aktuelle Runde auf.</p>";
+  } else {
+    const total = season.rounds.length;
+    const threshold = Math.max(1, Math.ceil(total / 3));
+    const ranked = oom.filter(p => p.rounds >= threshold);
+    const unranked = oom.filter(p => p.rounds < threshold);
+
+    html += renderOomTable(ranked, true);
+
+    if (unranked.length) {
+      html += "<div class='help' style='margin-top:10px; margin-bottom:2px;'>Noch nicht gewertet (weniger als " + threshold + " Runde(n)):</div>";
+      html += renderOomTable(unranked, false);
+    }
+
+    html += "<div class='help' style='margin-top:8px;'>Gewertet nach Ø&nbsp;Punkten pro Runde. Offizielle Wertung ab " + threshold + " Runde(n) (ein Drittel der bisherigen Saison-Runden). Tippe auf einen Namen für das Spielerprofil. Ø&nbsp;Brutto nur aus 18-Loch-Runden.</div>";
+  }
+
+  if (season.rounds.length) {
+    html += "<h3 style='margin:16px 0 6px;'>Gespeicherte Runden</h3>";
+    html += "<div class='season-rounds'>";
+    const rounds = season.rounds.slice().reverse();
+    for (const r of rounds) {
+      const winner = r.results && r.results[0] ? r.results[0].name : "?";
+      html += "<div class='season-round-row'>";
+      html += "<div class='season-round-open' data-id='" + r.id + "'><strong>" + escapeHtml(r.dateText || "") + "</strong> · " + escapeHtml(r.courseName || "") +
+              "<div class='hole-small'>Sieger: " + escapeHtml(winner) + " · " + r.playerCount + " Spieler · " +
+              (r.complete ? "18 Löcher" : (r.holesPlayed + "/18 Löcher")) + " · tippen für Details</div></div>";
+      html += "<button type='button' class='danger small season-del' data-id='" + r.id + "'>Löschen</button>";
+      html += "</div>";
+    }
+    html += "</div>";
+  }
+
+  html += "<div class='actions' style='margin-top:14px;'>";
+  html += "<button type='button' class='secondary small' id='seasonBackupBtn'>💾 Sichern</button>";
+  html += "<button type='button' class='secondary small' id='seasonRestoreBtn'>📥 Wiederherstellen</button>";
+  html += "<button type='button' class='secondary small' id='seasonCsvBtn'>📤 CSV</button>";
+  html += "<button type='button' class='danger small' id='seasonNewBtn'>Neue Saison</button>";
+  html += "</div>";
+
+  html += "</div>";
+
+  openAnalysisOverlay("🏅 Saison", html);
+  wireSeasonOverlayEvents();
+}
+
+function wireSeasonOverlayEvents() {
+  const root = document.getElementById("analysisContent");
+  if (!root) return;
+
+  root.querySelectorAll(".season-del").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const id = Number(btn.dataset.id);
+      if (!confirm("Diese Runde aus der Saison löschen?")) return;
+      const season = loadSeason();
+      season.rounds = season.rounds.filter(r => Number(r.id) !== id);
+      saveSeason(season);
+      openSeasonTable();
+    });
+  });
+
+  root.querySelectorAll(".oom-player").forEach(el => {
+    el.addEventListener("click", () => openPlayerProfile(el.dataset.name));
+  });
+
+  root.querySelectorAll(".season-round-open").forEach(el => {
+    el.addEventListener("click", () => openRoundDetail(el.dataset.id));
+  });
+
+  const backup = root.querySelector("#seasonBackupBtn");
+  if (backup) backup.addEventListener("click", () => {
+    downloadFile(JSON.stringify(loadSeason(), null, 2), "kopenhagen-saison.json", "application/json;charset=utf-8");
+  });
+
+  const csv = root.querySelector("#seasonCsvBtn");
+  if (csv) csv.addEventListener("click", () => {
+    downloadFile("﻿" + createSeasonCsv(), "kopenhagen-saison.csv", "text/csv;charset=utf-8");
+  });
+
+  const restore = root.querySelector("#seasonRestoreBtn");
+  if (restore) restore.addEventListener("click", () => {
+    const inp = document.createElement("input");
+    inp.type = "file";
+    inp.accept = "application/json,.json";
+    inp.addEventListener("change", () => {
+      const file = inp.files && inp.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const data = JSON.parse(reader.result);
+          if (!data || !Array.isArray(data.rounds)) throw new Error("ungültig");
+          saveSeason({ v: 1, name: data.name || "Saison", rounds: data.rounds });
+          showToast("Saison wiederhergestellt");
+          openSeasonTable();
+        } catch (e) {
+          showToast("Datei konnte nicht gelesen werden");
+        }
+      };
+      reader.readAsText(file);
+    });
+    inp.click();
+  });
+
+  const newBtn = root.querySelector("#seasonNewBtn");
+  if (newBtn) newBtn.addEventListener("click", () => {
+    if (!confirm("Neue Saison starten? Die aktuelle Saison wird gelöscht – vorher am besten sichern!")) return;
+    saveSeason({ v: 1, name: "Saison", rounds: [] });
+    openSeasonTable();
+  });
+}
+
+function formatNum2(n) {
+  if (n === null || n === undefined || Number.isNaN(n)) return "";
+  const r = Math.round(n * 100) / 100;
+  return String(r).replace(".", ",");
+}
+
+function renderOomTable(list, ranked) {
+  let h = "<div style='overflow-x:auto;'><table class='player-detail-table'>";
+  h += "<thead><tr><th>#</th><th>Spieler</th><th>Ø&nbsp;Pkt</th><th>Ø&nbsp;Brutto</th><th>Siege</th><th>Runden</th></tr></thead><tbody>";
+  list.forEach((p, idx) => {
+    h += "<tr>";
+    h += "<td>" + (ranked ? (idx + 1) : "–") + "</td>";
+    h += "<td style='text-align:left;'><span class='oom-player' data-name='" + escapeHtml(p.name) + "'>" + escapeHtml(p.name) + "</span></td>";
+    h += "<td><strong>" + formatNum2(p.avgMerit) + "</strong></td>";
+    h += "<td>" + (p.avgGross === null ? "–" : formatNum(p.avgGross)) + "</td>";
+    h += "<td>" + p.wins + "</td>";
+    h += "<td>" + p.rounds + "</td>";
+    h += "</tr>";
+  });
+  h += "</tbody></table></div>";
+  return h;
+}
+
+// Endstand-Tabelle einer einzelnen Runde (optional einen Spieler hervorheben).
+function renderRoundStandingsHtml(round, highlightName) {
+  const hasPar = !!round.hasPar;
+  let h = "<div style='overflow-x:auto;'><table class='player-detail-table'><thead><tr><th>#</th><th>Spieler</th><th>Punkte</th><th>Brutto</th>";
+  if (hasPar) h += "<th>+/-&nbsp;PAR</th>";
+  h += "</tr></thead><tbody>";
+  round.results.forEach((res, idx) => {
+    const hi = (highlightName && res.name === highlightName) ? " style='background:#eef6eb;'" : "";
+    h += "<tr" + hi + ">";
+    h += "<td>" + (idx + 1) + "</td>";
+    h += "<td style='text-align:left;'>" + escapeHtml(res.name) + "</td>";
+    h += "<td>" + formatNum(res.points) + "</td>";
+    h += "<td>" + res.gross + "</td>";
+    if (hasPar) h += "<td>" + formatPar(res.parDelta) + "</td>";
+    h += "</tr>";
+  });
+  h += "</tbody></table></div>";
+  return h;
+}
+
+// Persönliche Loch-für-Loch-Tageskarte eines Spielers (wie das ⊕ im Gesamtstand).
+function renderPlayerRoundCardHtml(round, name) {
+  const idx = Array.isArray(round.players) ? round.players.indexOf(name) : -1;
+
+  if (idx < 0 || !round.holeDetails) {
+    return "<div class='help'>Für diese ältere Runde sind keine Loch-Details gespeichert.</div>" +
+           renderRoundStandingsHtml(round, name);
+  }
+
+  const courseHoles = (courses[round.courseId] || courses.velte).holes;
+  const hasPar = !!round.hasPar;
+
+  const stats = { eagle: 0, birdie: 0, par: 0, bogey: 0, doublebogey: 0, triplebogey: 0 };
+  const rows = [];
+
+  for (const h of courseHoles) {
+    const k = String(h.hole);
+    const det = round.holeDetails[k];
+    if (!det || !det[idx]) continue;
+
+    const cell = det[idx];
+    if (cell.g === null || cell.g === undefined) continue;
+
+    let scoreName = "";
+    let scoreClass = "";
+    if (hasPar && h.par !== null && h.par !== undefined) {
+      const delta = Number(cell.g) - Number(h.par);
+      scoreName = getScoreNameForDelta(delta);
+      scoreClass = getScoreClassForDelta(delta);
+      if (delta <= -2) stats.eagle++;
+      else if (delta === -1) stats.birdie++;
+      else if (delta === 0) stats.par++;
+      else if (delta === 1) stats.bogey++;
+      else if (delta === 2) stats.doublebogey++;
+      else stats.triplebogey++;
+    }
+
+    rows.push({
+      hole: h.hole,
+      par: h.par,
+      gross: cell.g,
+      strokes: cell.s,
+      netto: cell.n,
+      points: cell.p,
+      scoreName,
+      scoreClass
+    });
+  }
+
+  let html = "";
+
+  if (hasPar) {
+    html += "<div class='player-detail-stats'>";
+    html += "<div class='player-detail-stats-row'>";
+    html += "<span class='mini-pill'>Eagle+: " + stats.eagle + "</span>";
+    html += "<span class='mini-pill'>Birdies: " + stats.birdie + "</span>";
+    html += "<span class='mini-pill'>Pars: " + stats.par + "</span>";
+    html += "</div>";
+    html += "<div class='player-detail-stats-row'>";
+    html += "<span class='mini-pill'>Bogeys: " + stats.bogey + "</span>";
+    html += "<span class='mini-pill'>D-Bogeys: " + stats.doublebogey + "</span>";
+    html += "<span class='mini-pill'>T-Bogeys+: " + stats.triplebogey + "</span>";
+    html += "</div>";
+    html += "</div>";
+  }
+
+  html += "<div style='overflow-x:auto;'><table class='player-detail-table'>";
+  html += "<thead><tr><th>Loch</th>";
+  if (hasPar) html += "<th>PAR</th>";
+  html += "<th>Score</th><th>V</th><th>Netto</th><th>Punkte</th>";
+  if (hasPar) html += "<th>Wertung</th>";
   html += "</tr></thead><tbody>";
 
-  for (const step of history) {
-    const byPlayer = {};
-
-    for (const p of step.ranking) {
-      byPlayer[p.index] = p.rank;
-    }
-
+  for (const r of rows) {
     html += "<tr>";
-    html += "<td>" + step.hole + "</td>";
-
-    for (let i = 0; i < state.playerCount; i++) {
-      html += "<td>" + getRaceMedal(byPlayer[i]) + "</td>";
-    }
-
+    html += "<td>" + r.hole + "</td>";
+    if (hasPar) html += "<td>" + (r.par === null || r.par === undefined ? "–" : r.par) + "</td>";
+    html += "<td><span class='score-symbol " + r.scoreClass + "'>" + r.gross + "</span></td>";
+    html += "<td>" + r.strokes + "</td>";
+    html += "<td>" + (r.netto === null || r.netto === undefined ? "–" : r.netto) + "</td>";
+    html += "<td>" + (r.points === null || r.points === undefined ? "–" : formatNum(r.points)) + "</td>";
+    if (hasPar) html += "<td>" + r.scoreName + "</td>";
     html += "</tr>";
   }
 
-  html += "</tbody></table>";
-  html += "</div>";
-
-  openAnalysisOverlay("📈 Ranking-Verlauf", html);
+  html += "</tbody></table></div>";
+  return html;
 }
 
-function openHighlights() {
-  const history = getRaceHistory();
+function openRoundDetail(id) {
+  const season = loadSeason();
+  const round = season.rounds.find(r => Number(r.id) === Number(id));
+  if (!round) return;
 
-  if (history.length === 0) {
-    showToast("Noch keine vollständigen Löcher für Highlights");
-    return;
-  }
+  const title = document.getElementById("roundDetailTitle");
+  const body = document.getElementById("roundDetailBody");
+  const popup = document.getElementById("roundDetailPopup");
+  if (!title || !body || !popup) return;
 
-  const leadCount = {};
-  const bestRank = {};
-  const worstRank = {};
-  const biggestJump = { name: "", value: 0, hole: 0 };
-  const biggestDrop = { name: "", value: 0, hole: 0 };
+  title.textContent = (round.dateText || "Runde") + " · " + (round.courseName || "");
+  let html = "<div class='hole-small' style='margin-bottom:8px;'>" +
+    round.playerCount + " Spieler · " +
+    (round.complete ? "18 Löcher" : (round.holesPlayed + "/18 Löcher")) + "</div>";
+  html += renderRoundStandingsHtml(round, null);
+  body.innerHTML = html;
 
-  let previousRanks = null;
-
-  for (const step of history) {
-    const ranks = {};
-
-    for (const p of step.ranking) {
-      ranks[p.index] = p.rank;
-
-      if (p.rank === 1) {
-        leadCount[p.index] = (leadCount[p.index] || 0) + 1;
-      }
-
-      bestRank[p.index] = bestRank[p.index] === undefined
-        ? p.rank
-        : Math.min(bestRank[p.index], p.rank);
-
-      worstRank[p.index] = worstRank[p.index] === undefined
-        ? p.rank
-        : Math.max(worstRank[p.index], p.rank);
-    }
-
-    if (previousRanks) {
-      for (const p of step.ranking) {
-        const diff = previousRanks[p.index] - p.rank;
-
-        if (diff > biggestJump.value) {
-          biggestJump.name = p.name;
-          biggestJump.value = diff;
-          biggestJump.hole = step.hole;
-        }
-
-        if (-diff > biggestDrop.value) {
-          biggestDrop.name = p.name;
-          biggestDrop.value = -diff;
-          biggestDrop.hole = step.hole;
-        }
-      }
-    }
-
-    previousRanks = ranks;
-  }
-
-  let leaderName = "niemand";
-  let leaderCount = 0;
-
-  for (let i = 0; i < state.playerCount; i++) {
-    if ((leadCount[i] || 0) > leaderCount) {
-      leaderName = state.players[i].name || ("Spieler " + (i + 1));
-      leaderCount = leadCount[i] || 0;
-    }
-  }
-
-  let html = "<div style='padding:14px; height:100%; overflow:auto;'>";
-  html += "<h3>🏆 Highlights</h3>";
-
-  html += "<p class='mini-pill'>👑 Längste Führung: " +
-    escapeHtml(leaderName) + " (" + leaderCount + " Löcher)</p>";
-
-  html += "<p class='mini-pill'>🚀 Größter Aufstieg: " +
-    (biggestJump.value > 0
-      ? escapeHtml(biggestJump.name) + " ▲" + biggestJump.value + " an Loch " + biggestJump.hole
-      : "keine Veränderung") +
-    "</p>";
-
-  html += "<p class='mini-pill'>📉 Größter Absturz: " +
-    (biggestDrop.value > 0
-      ? escapeHtml(biggestDrop.name) + " ▼" + biggestDrop.value + " an Loch " + biggestDrop.hole
-      : "keine Veränderung") +
-    "</p>";
-
-  html += "<table class='player-detail-table' style='margin-top:12px;'>";
-  html += "<thead><tr><th>Spieler</th><th>Beste Platzierung</th><th>Schlechteste Platzierung</th><th>Führung nach Löchern</th></tr></thead><tbody>";
-
-  for (let i = 0; i < state.playerCount; i++) {
-    html += "<tr>";
-    html += "<td>" + escapeHtml(state.players[i].name || ("Spieler " + (i + 1))) + "</td>";
-    html += "<td>" + getRaceMedal(bestRank[i]) + "</td>";
-    html += "<td>" + getRaceMedal(worstRank[i]) + "</td>";
-    html += "<td>" + (leadCount[i] || 0) + "</td>";
-    html += "</tr>";
-  }
-
-  html += "</tbody></table>";
-  html += "</div>";
-
-  openAnalysisOverlay("🏆 Highlights", html);
+  popup.classList.add("show");
 }
 
+function closeRoundDetail() {
+  const popup = document.getElementById("roundDetailPopup");
+  if (popup) popup.classList.remove("show");
+}
+
+function openPlayerProfile(name) {
+  const season = loadSeason();
+  const agg = computeOrderOfMerit(season).find(p => p.name === name);
+  const rounds = season.rounds
+    .filter(r => r.results.some(x => x.name === name))
+    .slice()
+    .reverse();
+
+  const title = document.getElementById("playerProfileTitle");
+  const body = document.getElementById("playerProfileBody");
+  const popup = document.getElementById("playerProfilePopup");
+  if (!title || !body || !popup) return;
+
+  title.textContent = "🏌️ " + name;
+
+  let html = "";
+
+  if (agg) {
+    html += "<div class='profile-stats'>";
+    html += "<span class='mini-pill'>Ø Pkt: " + formatNum2(agg.avgMerit) + "</span>";
+    html += "<span class='mini-pill'>Runden: " + agg.rounds + "</span>";
+    html += "<span class='mini-pill'>Siege: " + agg.wins + "</span>";
+    html += "<span class='mini-pill'>Ø Brutto: " + (agg.avgGross === null ? "–" : formatNum(agg.avgGross)) + "</span>";
+    html += "</div>";
+
+    // Platzierungen feldgrößen-gerecht: „Letzter" wird gesondert gezählt
+    // (kein Bronze für den Letzten im Dreierspiel).
+    const medals = { gold: 0, silver: 0, bronze: 0, last: 0 };
+    for (const r of rounds) {
+      const me = r.results.find(x => x.name === name);
+      if (!me) continue;
+      const pos = me.position, pc = r.playerCount;
+      if (pos === 1) medals.gold++;
+      else if (pc > 1 && pos === pc) medals.last++;
+      else if (pos === 2) medals.silver++;
+      else if (pos === 3) medals.bronze++;
+    }
+    let badges = "";
+    if (medals.gold)   badges += "<span class='place-badge' title='Siege'>🥇 <span class='cnt'>" + medals.gold + "×</span></span>";
+    if (medals.silver) badges += "<span class='place-badge' title='2. Platz'>🥈 <span class='cnt'>" + medals.silver + "×</span></span>";
+    if (medals.bronze) badges += "<span class='place-badge' title='3. Platz (nicht Letzter)'>🥉 <span class='cnt'>" + medals.bronze + "×</span></span>";
+    if (medals.last)   badges += "<span class='place-badge' title='Letzter Platz'>😱 <span class='cnt'>" + medals.last + "×</span></span>";
+    if (badges) html += "<div class='profile-placements'>" + badges + "</div>";
+  }
+
+  html += "<h3 style='margin:6px 0 8px; font-size:15px;'>Runden (zum Aufklappen tippen)</h3>";
+
+  // Beste/schlechteste Runde nach Brutto (nur bei ≥2 unterschiedlichen Runden).
+  let bestId = null, worstId = null;
+  const gl = rounds
+    .map(r => { const me = r.results.find(x => x.name === name); return { id: r.id, gross: me ? Number(me.gross) : null }; })
+    .filter(x => x.gross !== null);
+  if (gl.length >= 2) {
+    let bg = gl[0], wg = gl[0];
+    for (const x of gl) { if (x.gross < bg.gross) bg = x; if (x.gross > wg.gross) wg = x; }
+    if (bg.gross !== wg.gross) { bestId = bg.id; worstId = wg.id; }
+  }
+  if (bestId !== null) {
+    html += "<div class='help' style='margin:-4px 0 8px;'>Markierung: beste/schlechteste Runde nach Brutto.</div>";
+  }
+
+  if (rounds.length === 0) {
+    html += "<p class='help'>Keine Runden gefunden.</p>";
+  } else {
+    for (const r of rounds) {
+      const me = r.results.find(x => x.name === name);
+      const myPos = me ? me.position : "?";
+      const myGross = me ? me.gross : "?";
+      const parTxt = (r.hasPar && me) ? (" · " + formatPar(me.parDelta) + " PAR") : "";
+
+      let tag = "";
+      if (r.id === bestId) tag = " <span class='round-tag best'>Beste</span>";
+      else if (r.id === worstId) tag = " <span class='round-tag worst'>Schlechteste</span>";
+
+      html += "<div class='profile-round'>";
+      html += "<div class='profile-round-head' data-rid='" + r.id + "'>";
+      html += "<div><strong>" + escapeHtml(r.dateText || "") + "</strong> · " + escapeHtml(r.courseName || "") + tag +
+              "<div class='hole-small'>Platz " + myPos + " von " + r.playerCount + " · Brutto " + myGross + parTxt + "</div></div>";
+      html += "<span class='summary-toggle'>⊕</span>";
+      html += "</div>";
+      html += "<div class='profile-round-body' style='display:none;'>" + renderPlayerRoundCardHtml(r, name) + "</div>";
+      html += "</div>";
+    }
+  }
+
+  body.innerHTML = html;
+
+  body.querySelectorAll(".profile-round-head").forEach(head => {
+    head.addEventListener("click", () => {
+      const det = head.nextElementSibling;
+      const tog = head.querySelector(".summary-toggle");
+      if (!det) return;
+      const open = det.style.display !== "none";
+      det.style.display = open ? "none" : "block";
+      if (tog) tog.textContent = open ? "⊕" : "⊖";
+    });
+  });
+
+  popup.classList.add("show");
+}
+
+function closePlayerProfile() {
+  const popup = document.getElementById("playerProfilePopup");
+  if (popup) popup.classList.remove("show");
+}
+
+// Form-gewichteter Brutto-Schnitt eines Spielers (nur volle 18-Loch-Runden).
+// Jüngste Runde zählt voll, jede ältere * factor (Reihenfolge = chronologisch).
+function weightedGrossForName(season, name, factor) {
+  const grosses = [];
+  for (const r of season.rounds) {
+    if (!r.complete) continue;
+    const res = (r.results || []).find(x => x.name === name);
+    if (res && res.gross !== null && res.gross !== undefined) grosses.push(Number(res.gross));
+  }
+  if (grosses.length === 0) return null;
+
+  let num = 0, den = 0, w = 1;
+  for (let i = grosses.length - 1; i >= 0; i--) {
+    num += w * grosses[i];
+    den += w;
+    w *= factor;
+  }
+  return num / den;
+}
+
+// Vorschlag berechnen: pro Name Anzahl voller Runden, Form-Brutto und Vorgabe.
+function computeSuggestion(names, factor) {
+  const season = loadSeason();
+  const rows = names.map(name => {
+    let n = 0;
+    for (const r of season.rounds) {
+      if (r.complete && (r.results || []).some(x => x.name === name)) n++;
+    }
+    const wg = weightedGrossForName(season, name, factor);
+    return { name, n, wg, allow: null };
+  });
+  const vals = rows.filter(r => r.wg !== null).map(r => r.wg);
+  const best = vals.length ? Math.min.apply(null, vals) : null;
+  rows.forEach(r => {
+    if (r.wg !== null && best !== null) r.allow = Math.max(0, Math.round(r.wg - best));
+  });
+  return { rows, best };
+}
+
+let suggestPlayers = [];
+
+function renderSuggestTable() {
+  const box = document.getElementById("suggestTable");
+  if (!box) return;
+  const slider = document.getElementById("suggestWeight");
+  const factor = slider ? (parseFloat(slider.value) || 0.7) : 0.7;
+  const { rows, best } = computeSuggestion(suggestPlayers, factor);
+
+  let h = "<div style='overflow-x:auto;'><table class='player-detail-table'>";
+  h += "<thead><tr><th>Spieler</th><th>Runden</th><th>Ø&nbsp;Brutto (Form)</th><th>Vorgabe</th></tr></thead><tbody>";
+  rows.forEach(r => {
+    const isBest = (r.wg !== null && best !== null && Math.abs(r.wg - best) < 1e-9);
+    h += "<tr" + (isBest ? " style='background:#e3f5e8;'" : "") + ">";
+    h += "<td style='text-align:left;'>" + escapeHtml(r.name) + "</td>";
+    h += "<td>" + (r.n || 0) + "</td>";
+    h += "<td>" + (r.wg === null ? "–" : formatNum(r.wg)) + "</td>";
+    h += "<td><strong>" + (r.allow === null ? "–" : r.allow) + "</strong></td>";
+    h += "</tr>";
+  });
+  h += "</tbody></table></div>";
+
+  const anyData = rows.some(r => r.wg !== null);
+  if (!anyData) {
+    h += "<div class='help' style='margin-top:8px;'>Für diese Spieler liegen noch keine Saison-Daten vor – kein Vorschlag möglich.</div>";
+  } else {
+    h += "<div class='help' style='margin-top:8px;'>Grün = bester Schnitt (0 Vorgaben). Strich = keine Saison-Daten (Vorgabe bleibt unverändert).</div>";
+  }
+  box.innerHTML = h;
+}
+
+function openSuggestModal() {
+  const setup = readSetupInputs();
+  suggestPlayers = setup.players.map(p => p.name);
+
+  const wf = loadWeightFactor();
+  const slider = document.getElementById("suggestWeight");
+  const val = document.getElementById("suggestWeightVal");
+  if (slider) slider.value = String(wf);
+  if (val) val.textContent = formatNum2(wf);
+
+  renderSuggestTable();
+  document.getElementById("suggestPopup").classList.add("show");
+}
+
+function closeSuggestModal() {
+  const popup = document.getElementById("suggestPopup");
+  if (popup) popup.classList.remove("show");
+}
+
+function applySuggestion() {
+  const slider = document.getElementById("suggestWeight");
+  const factor = slider ? (parseFloat(slider.value) || 0.7) : 0.7;
+
+  const setup = readSetupInputs();
+  state.playerCount = setup.playerCount;
+  state.players = setup.players.map(p => ({ name: p.name, allowance: p.allowance }));
+
+  const { rows } = computeSuggestion(state.players.map(p => p.name), factor);
+  const missing = [];
+  for (let i = 0; i < state.playerCount; i++) {
+    if (rows[i] && rows[i].allow !== null) {
+      state.players[i].allowance = rows[i].allow;
+    } else {
+      missing.push(state.players[i].name);
+    }
+  }
+
+  state = normalizeState(state);
+  saveState(false);
+  buildSetup();
+  buildTable();
+  renderMobileCards();
+  renderSummary();
+  closeSuggestModal();
+
+  let msg = "Vorgaben übernommen";
+  if (missing.length) msg += " · ohne Saison-Daten: " + missing.join(", ");
+  showToast(msg);
+}
 
 function init() {
   state = normalizeState(state);
@@ -4472,12 +5729,42 @@ function init() {
   document.getElementById("raceTimeline").addEventListener("input", onRaceTimelineInput);
   document.getElementById("closeRaceBtn").addEventListener("click", closeRaceReplay);
 
-  document.getElementById("rankingChartBtn").addEventListener("click", openRankingChart);
+  document.getElementById("addRoundToSeasonBtn").addEventListener("click", addCurrentRoundToSeason);
+  document.getElementById("seasonTableBtn").addEventListener("click", openSeasonTable);
+
+  const suggestBtn = document.getElementById("suggestAllowanceBtn");
+  if (suggestBtn) suggestBtn.addEventListener("click", openSuggestModal);
+
+  const suggestWeight = document.getElementById("suggestWeight");
+  const suggestWeightVal = document.getElementById("suggestWeightVal");
+  if (suggestWeight) {
+    suggestWeight.addEventListener("input", function() {
+      const v = parseFloat(this.value) || 0.7;
+      saveWeightFactor(v);
+      if (suggestWeightVal) suggestWeightVal.textContent = formatNum2(v);
+      renderSuggestTable();
+    });
+  }
+  document.getElementById("closeSuggestBtn").addEventListener("click", closeSuggestModal);
+  document.getElementById("applySuggestBtn").addEventListener("click", applySuggestion);
+  document.getElementById("suggestPopup").addEventListener("click", function(e) {
+    if (e.target === this) closeSuggestModal();
+  });
   document.getElementById("highlightsBtn").addEventListener("click", openHighlights);
 
   document.addEventListener("click", closeLoch19Menu);
 
   document.getElementById("closeHoleStandBtn").addEventListener("click", closeHoleStandPopup);
+
+  document.getElementById("closeRoundDetailBtn").addEventListener("click", closeRoundDetail);
+  document.getElementById("closePlayerProfileBtn").addEventListener("click", closePlayerProfile);
+
+  document.getElementById("roundDetailPopup").addEventListener("click", function(e) {
+    if (e.target === this) closeRoundDetail();
+  });
+  document.getElementById("playerProfilePopup").addEventListener("click", function(e) {
+    if (e.target === this) closePlayerProfile();
+  });
 
   document.getElementById("raceSpeedSelect").addEventListener("change", function() {
   raceReplaySeconds = Number(this.value) || 20;
