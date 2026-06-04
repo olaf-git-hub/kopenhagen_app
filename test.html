@@ -1610,6 +1610,36 @@ tr.hole-confirmed td:first-child {
   padding: 8px 10px;
 }
 
+.season-suggest {
+  margin-top: 12px;
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px;
+  background: #fbfdf9;
+}
+
+.season-suggest > button {
+  width: 100%;
+}
+
+.weight-control label {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.weight-control strong {
+  color: var(--accent-dark);
+}
+
+.weight-control input[type="range"] {
+  width: 100%;
+  margin-top: 4px;
+  touch-action: manipulation;
+}
+
   </style>
 </head>
 <body>
@@ -1669,6 +1699,15 @@ tr.hole-confirmed td:first-child {
         <div class="actions">
           <button type="button" id="applySetupBtn">Runde übernehmen</button>
           <button class="secondary" type="button" id="clearScoresBtn">Scores löschen</button>
+        </div>
+
+        <div class="season-suggest">
+          <button type="button" id="suggestAllowanceBtn" class="secondary">🏆 Vorgaben aus Saison vorschlagen</button>
+          <div class="weight-control">
+            <label for="weightFactor">Gewichtung jüngster Runden: <strong id="weightVal">0,70</strong></label>
+            <input type="range" id="weightFactor" min="0.5" max="1" step="0.05" value="0.7">
+            <div class="help" style="margin:4px 0 0;">0,50 = stark formlastig · 1,00 = ganzer Schnitt</div>
+          </div>
         </div>
 
         <details class="inner" open>
@@ -1787,6 +1826,7 @@ tr.hole-confirmed td:first-child {
 
 const STORAGE_KEY = "kopenhagen-golf-rechner-TEST-eingabe";
 const SEASON_KEY = "kopenhagen-saison-TEST-v1";
+const WEIGHT_KEY = "kopenhagen-weightfactor-TEST-v1";
 
 const courses = {
   velte: {
@@ -4817,26 +4857,32 @@ function saveSeason(season) {
   localStorage.setItem(SEASON_KEY, JSON.stringify(season));
 }
 
+function loadWeightFactor() {
+  const v = parseFloat(localStorage.getItem(WEIGHT_KEY));
+  return (Number.isFinite(v) && v >= 0.5 && v <= 1) ? v : 0.7;
+}
+
+function saveWeightFactor(v) {
+  localStorage.setItem(WEIGHT_KEY, String(v));
+}
+
 // Meritpunkte nach Platzierung = gleicher Vektor wie im Spiel (3er: 2/1/0, 4er: 3/2/1/0).
 function meritForPosition(playerCount, position) {
   const vec = pointVector(playerCount);
   return (vec[position - 1] !== undefined) ? vec[position - 1] : 0;
 }
 
-function addCurrentRoundToSeason() {
-  closeLoch19Menu();
+let roundIdCounter = 0;
+function newRoundId() {
+  return Date.now() * 1000 + (roundIdCounter++ % 1000);
+}
 
+// Baut aus dem AKTUELLEN globalen state einen Saison-Schnappschuss (oder null).
+function buildRoundSnapshot(dateText) {
   const calc = calculateRound();
-  if (calc.playedHoles === 0) {
-    showToast("Noch keine bestätigten Löcher");
-    return;
-  }
-  if (calc.playedHoles < 18) {
-    if (!confirm("Erst " + calc.playedHoles + " von 18 Löchern bestätigt. Runde trotzdem zur Saison hinzufügen?")) return;
-  }
+  if (calc.playedHoles === 0) return null;
 
   const course = getCourse();
-  const now = new Date();
   const pc = state.playerCount;
 
   const results = calc.sortedTotals.map((p, idx) => ({
@@ -4876,21 +4922,20 @@ function addCurrentRoundToSeason() {
     if (!(d && d.confirmed)) continue;
     const res = calc.holeResults[k];
     const arr = [];
-    for (let i = 0; i < pc; i++) {
+    for (let pi = 0; pi < pc; pi++) {
       arr.push({
-        g: d.gross[i],
-        s: res ? res.strokes[i] : 0,
-        n: res ? res.netto[i] : null,
-        p: (res && res.complete) ? res.points[i] : null
+        g: d.gross[pi],
+        s: res ? res.strokes[pi] : 0,
+        n: res ? res.netto[pi] : null,
+        p: (res && res.complete) ? res.points[pi] : null
       });
     }
     holeDetails[k] = arr;
   }
 
-  const season = loadSeason();
-  season.rounds.push({
-    id: now.getTime(),
-    dateText: now.toLocaleString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" }),
+  return {
+    id: newRoundId(),
+    dateText: dateText,
     courseId: course.id,
     courseName: course.shortName,
     playerCount: pc,
@@ -4900,7 +4945,31 @@ function addCurrentRoundToSeason() {
     players: state.players.slice(0, pc).map(p => p.name),
     results,
     holeDetails
-  });
+  };
+}
+
+function addCurrentRoundToSeason() {
+  closeLoch19Menu();
+
+  const calc = calculateRound();
+  if (calc.playedHoles === 0) {
+    showToast("Noch keine bestätigten Löcher");
+    return;
+  }
+  if (calc.playedHoles < 18) {
+    if (!confirm("Erst " + calc.playedHoles + " von 18 Löchern bestätigt. Runde trotzdem zur Saison hinzufügen?")) return;
+  }
+
+  const now = new Date();
+  const dateText = now.toLocaleString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
+  const snap = buildRoundSnapshot(dateText);
+  if (!snap) {
+    showToast("Keine bestätigten Löcher");
+    return;
+  }
+
+  const season = loadSeason();
+  season.rounds.push(snap);
   saveSeason(season);
   showToast("Runde zur Saison hinzugefügt");
 }
@@ -4941,7 +5010,6 @@ function computeOrderOfMerit(season) {
   arr.sort((x, y) => {
     if (y.avgMerit !== x.avgMerit) return y.avgMerit - x.avgMerit;
     if (y.wins !== x.wins) return y.wins - x.wins;
-    if (x.avgPos !== y.avgPos) return x.avgPos - y.avgPos;
     return (x.avgGross === null ? 999 : x.avgGross) - (y.avgGross === null ? 999 : y.avgGross);
   });
   return arr;
@@ -5100,7 +5168,7 @@ function formatNum2(n) {
 
 function renderOomTable(list, ranked) {
   let h = "<div style='overflow-x:auto;'><table class='player-detail-table'>";
-  h += "<thead><tr><th>#</th><th>Spieler</th><th>Ø&nbsp;Pkt</th><th>Ø&nbsp;Brutto</th><th>Siege</th><th>Runden</th><th>Ø&nbsp;Platz</th></tr></thead><tbody>";
+  h += "<thead><tr><th>#</th><th>Spieler</th><th>Ø&nbsp;Pkt</th><th>Ø&nbsp;Brutto</th><th>Siege</th><th>Runden</th></tr></thead><tbody>";
   list.forEach((p, idx) => {
     h += "<tr>";
     h += "<td>" + (ranked ? (idx + 1) : "–") + "</td>";
@@ -5109,7 +5177,6 @@ function renderOomTable(list, ranked) {
     h += "<td>" + (p.avgGross === null ? "–" : formatNum(p.avgGross)) + "</td>";
     h += "<td>" + p.wins + "</td>";
     h += "<td>" + p.rounds + "</td>";
-    h += "<td>" + formatNum2(p.avgPos) + "</td>";
     h += "</tr>";
   });
   h += "</tbody></table></div>";
@@ -5330,6 +5397,71 @@ function closePlayerProfile() {
   if (popup) popup.classList.remove("show");
 }
 
+// Form-gewichteter Brutto-Schnitt eines Spielers (nur volle 18-Loch-Runden).
+// Jüngste Runde zählt voll, jede ältere * factor (Reihenfolge = chronologisch).
+function weightedGrossForName(season, name, factor) {
+  const grosses = [];
+  for (const r of season.rounds) {
+    if (!r.complete) continue;
+    const res = (r.results || []).find(x => x.name === name);
+    if (res && res.gross !== null && res.gross !== undefined) grosses.push(Number(res.gross));
+  }
+  if (grosses.length === 0) return null;
+
+  let num = 0, den = 0, w = 1;
+  for (let i = grosses.length - 1; i >= 0; i--) {
+    num += w * grosses[i];
+    den += w;
+    w *= factor;
+  }
+  return num / den;
+}
+
+function suggestAllowancesFromSeason() {
+  const course = getCourse();
+  const factor = loadWeightFactor();
+  const setup = readSetupInputs();
+
+  // Namen aus der Eingabe übernehmen (Vorgaben kommen gleich darunter).
+  state.playerCount = setup.playerCount;
+  state.players = setup.players.map(p => ({ name: p.name, allowance: p.allowance }));
+
+  const season = loadSeason();
+  const wg = setup.players.map(p => weightedGrossForName(season, p.name, factor));
+  const withData = wg.filter(v => v !== null);
+
+  if (withData.length === 0) {
+    showToast("Keine Saison-Daten für diese Spieler gefunden");
+    return;
+  }
+
+  const best = Math.min.apply(null, withData);
+  const lines = [];
+  const missing = [];
+
+  for (let i = 0; i < setup.playerCount; i++) {
+    if (wg[i] === null) {
+      missing.push(state.players[i].name);
+      continue;
+    }
+    const allow = Math.max(0, Math.round(wg[i] - best));
+    state.players[i].allowance = allow;
+    lines.push(state.players[i].name + " " + allow);
+  }
+
+  state = normalizeState(state);
+  saveState(false);
+  buildSetup();
+  buildTable();
+  renderMobileCards();
+  renderSummary();
+
+  let msg = "Vorgaben-Vorschlag: " + lines.join(", ");
+  if (missing.length) msg += " · ohne Saison-Daten: " + missing.join(", ");
+  if (!course.hasHcp) msg += " (Hinweis: Platz ohne HCP)";
+  showToast(msg);
+}
+
 function init() {
   state = normalizeState(state);
   loadStateFromUrl();
@@ -5361,6 +5493,21 @@ function init() {
 
   document.getElementById("addRoundToSeasonBtn").addEventListener("click", addCurrentRoundToSeason);
   document.getElementById("seasonTableBtn").addEventListener("click", openSeasonTable);
+
+  const weightSlider = document.getElementById("weightFactor");
+  const weightVal = document.getElementById("weightVal");
+  if (weightSlider) {
+    const wf = loadWeightFactor();
+    weightSlider.value = String(wf);
+    if (weightVal) weightVal.textContent = formatNum2(wf);
+    weightSlider.addEventListener("input", function() {
+      const v = parseFloat(this.value) || 0.7;
+      saveWeightFactor(v);
+      if (weightVal) weightVal.textContent = formatNum2(v);
+    });
+  }
+  const suggestBtn = document.getElementById("suggestAllowanceBtn");
+  if (suggestBtn) suggestBtn.addEventListener("click", suggestAllowancesFromSeason);
   document.getElementById("rankingChartBtn").addEventListener("click", openRankingChart);
   document.getElementById("highlightsBtn").addEventListener("click", openHighlights);
 
