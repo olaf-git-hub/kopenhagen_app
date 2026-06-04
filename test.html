@@ -1610,6 +1610,51 @@ tr.hole-confirmed td:first-child {
   padding: 8px 10px;
 }
 
+.profile-placements {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 2px 0 12px;
+}
+
+.place-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 3px 10px;
+  background: #fff;
+  font-weight: 900;
+  font-size: 13px;
+}
+
+.place-badge .cnt {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.round-tag {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 900;
+  border-radius: 999px;
+  padding: 2px 8px;
+  margin-left: 6px;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.round-tag.best {
+  background: #e3f5e8;
+  color: var(--good);
+}
+
+.round-tag.worst {
+  background: #fde8ea;
+  color: var(--bad);
+}
+
 .season-suggest {
   margin-top: 12px;
   display: grid;
@@ -5356,24 +5401,38 @@ function openPlayerProfile(name) {
   if (agg) {
     html += "<div class='profile-stats'>";
     html += "<span class='mini-pill'>Ø Pkt: " + formatNum2(agg.avgMerit) + "</span>";
-    html += "<span class='mini-pill'>Punkte ges.: " + formatNum(agg.merit) + "</span>";
     html += "<span class='mini-pill'>Runden: " + agg.rounds + "</span>";
     html += "<span class='mini-pill'>Siege: " + agg.wins + "</span>";
-    html += "<span class='mini-pill'>Ø Platz: " + formatNum2(agg.avgPos) + "</span>";
     html += "<span class='mini-pill'>Ø Brutto: " + (agg.avgGross === null ? "–" : formatNum(agg.avgGross)) + "</span>";
     html += "</div>";
 
     const pl = agg.placements || {};
-    const parts = [];
-    for (let pos = 1; pos <= 4; pos++) {
-      if (pl[pos]) parts.push(pos + ".: " + pl[pos] + "×");
+    let maxPos = 0;
+    Object.keys(pl).forEach(k => { maxPos = Math.max(maxPos, Number(k)); });
+    let badges = "";
+    for (let pos = 1; pos <= maxPos; pos++) {
+      if (!pl[pos]) continue;
+      const label = pos <= 3 ? getRaceMedal(pos) : (pos + ".");
+      badges += "<span class='place-badge'>" + label + " <span class='cnt'>" + pl[pos] + "×</span></span>";
     }
-    if (parts.length) {
-      html += "<div class='help' style='margin:-4px 0 10px;'>Platzierungen: " + parts.join(" · ") + "</div>";
-    }
+    if (badges) html += "<div class='profile-placements'>" + badges + "</div>";
   }
 
   html += "<h3 style='margin:6px 0 8px; font-size:15px;'>Runden (zum Aufklappen tippen)</h3>";
+
+  // Beste/schlechteste Runde nach Brutto (nur bei ≥2 unterschiedlichen Runden).
+  let bestId = null, worstId = null;
+  const gl = rounds
+    .map(r => { const me = r.results.find(x => x.name === name); return { id: r.id, gross: me ? Number(me.gross) : null }; })
+    .filter(x => x.gross !== null);
+  if (gl.length >= 2) {
+    let bg = gl[0], wg = gl[0];
+    for (const x of gl) { if (x.gross < bg.gross) bg = x; if (x.gross > wg.gross) wg = x; }
+    if (bg.gross !== wg.gross) { bestId = bg.id; worstId = wg.id; }
+  }
+  if (bestId !== null) {
+    html += "<div class='help' style='margin:-4px 0 8px;'>Markierung: beste/schlechteste Runde nach Brutto.</div>";
+  }
 
   if (rounds.length === 0) {
     html += "<p class='help'>Keine Runden gefunden.</p>";
@@ -5384,9 +5443,13 @@ function openPlayerProfile(name) {
       const myGross = me ? me.gross : "?";
       const parTxt = (r.hasPar && me) ? (" · " + formatPar(me.parDelta) + " PAR") : "";
 
+      let tag = "";
+      if (r.id === bestId) tag = " <span class='round-tag best'>Beste</span>";
+      else if (r.id === worstId) tag = " <span class='round-tag worst'>Schlechteste</span>";
+
       html += "<div class='profile-round'>";
       html += "<div class='profile-round-head' data-rid='" + r.id + "'>";
-      html += "<div><strong>" + escapeHtml(r.dateText || "") + "</strong> · " + escapeHtml(r.courseName || "") +
+      html += "<div><strong>" + escapeHtml(r.dateText || "") + "</strong> · " + escapeHtml(r.courseName || "") + tag +
               "<div class='hole-small'>Platz " + myPos + " von " + r.playerCount + " · Brutto " + myGross + parTxt + "</div></div>";
       html += "<span class='summary-toggle'>⊕</span>";
       html += "</div>";
