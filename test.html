@@ -4867,14 +4867,24 @@ function addCurrentRoundToSeason() {
     i = j + 1;
   }
 
-  // Loch-Brutto der bestätigten Löcher mitspeichern (self-contained).
-  const holesSnapshot = {};
+  // Loch-Details der bestätigten Löcher mitspeichern (gross/Vorgabe/netto/Punkte),
+  // damit das Spielerprofil die volle persönliche Tageskarte zeigen kann.
+  const holeDetails = {};
   for (const h of getCourseHoles()) {
     const k = String(h.hole);
     const d = state.holes[k];
-    if (d && d.confirmed && Array.isArray(d.gross)) {
-      holesSnapshot[k] = d.gross.slice(0, pc);
+    if (!(d && d.confirmed)) continue;
+    const res = calc.holeResults[k];
+    const arr = [];
+    for (let i = 0; i < pc; i++) {
+      arr.push({
+        g: d.gross[i],
+        s: res ? res.strokes[i] : 0,
+        n: res ? res.netto[i] : null,
+        p: (res && res.complete) ? res.points[i] : null
+      });
     }
+    holeDetails[k] = arr;
   }
 
   const season = loadSeason();
@@ -4887,8 +4897,9 @@ function addCurrentRoundToSeason() {
     holesPlayed: calc.playedHoles,
     complete: calc.playedHoles === 18,
     hasPar: !!course.hasPar,
+    players: state.players.slice(0, pc).map(p => p.name),
     results,
-    holes: holesSnapshot
+    holeDetails
   });
   saveSeason(season);
   showToast("Runde zur Saison hinzugefügt");
@@ -5125,6 +5136,95 @@ function renderRoundStandingsHtml(round, highlightName) {
   return h;
 }
 
+// Persönliche Loch-für-Loch-Tageskarte eines Spielers (wie das ⊕ im Gesamtstand).
+function renderPlayerRoundCardHtml(round, name) {
+  const idx = Array.isArray(round.players) ? round.players.indexOf(name) : -1;
+
+  if (idx < 0 || !round.holeDetails) {
+    return "<div class='help'>Für diese ältere Runde sind keine Loch-Details gespeichert.</div>" +
+           renderRoundStandingsHtml(round, name);
+  }
+
+  const courseHoles = (courses[round.courseId] || courses.velte).holes;
+  const hasPar = !!round.hasPar;
+
+  const stats = { eagle: 0, birdie: 0, par: 0, bogey: 0, doublebogey: 0, triplebogey: 0 };
+  const rows = [];
+
+  for (const h of courseHoles) {
+    const k = String(h.hole);
+    const det = round.holeDetails[k];
+    if (!det || !det[idx]) continue;
+
+    const cell = det[idx];
+    if (cell.g === null || cell.g === undefined) continue;
+
+    let scoreName = "";
+    let scoreClass = "";
+    if (hasPar && h.par !== null && h.par !== undefined) {
+      const delta = Number(cell.g) - Number(h.par);
+      scoreName = getScoreNameForDelta(delta);
+      scoreClass = getScoreClassForDelta(delta);
+      if (delta <= -2) stats.eagle++;
+      else if (delta === -1) stats.birdie++;
+      else if (delta === 0) stats.par++;
+      else if (delta === 1) stats.bogey++;
+      else if (delta === 2) stats.doublebogey++;
+      else stats.triplebogey++;
+    }
+
+    rows.push({
+      hole: h.hole,
+      par: h.par,
+      gross: cell.g,
+      strokes: cell.s,
+      netto: cell.n,
+      points: cell.p,
+      scoreName,
+      scoreClass
+    });
+  }
+
+  let html = "";
+
+  if (hasPar) {
+    html += "<div class='player-detail-stats'>";
+    html += "<div class='player-detail-stats-row'>";
+    html += "<span class='mini-pill'>Eagle+: " + stats.eagle + "</span>";
+    html += "<span class='mini-pill'>Birdies: " + stats.birdie + "</span>";
+    html += "<span class='mini-pill'>Pars: " + stats.par + "</span>";
+    html += "</div>";
+    html += "<div class='player-detail-stats-row'>";
+    html += "<span class='mini-pill'>Bogeys: " + stats.bogey + "</span>";
+    html += "<span class='mini-pill'>D-Bogeys: " + stats.doublebogey + "</span>";
+    html += "<span class='mini-pill'>T-Bogeys+: " + stats.triplebogey + "</span>";
+    html += "</div>";
+    html += "</div>";
+  }
+
+  html += "<div style='overflow-x:auto;'><table class='player-detail-table'>";
+  html += "<thead><tr><th>Loch</th>";
+  if (hasPar) html += "<th>PAR</th>";
+  html += "<th>Score</th><th>V</th><th>Netto</th><th>Punkte</th>";
+  if (hasPar) html += "<th>Wertung</th>";
+  html += "</tr></thead><tbody>";
+
+  for (const r of rows) {
+    html += "<tr>";
+    html += "<td>" + r.hole + "</td>";
+    if (hasPar) html += "<td>" + (r.par === null || r.par === undefined ? "–" : r.par) + "</td>";
+    html += "<td><span class='score-symbol " + r.scoreClass + "'>" + r.gross + "</span></td>";
+    html += "<td>" + r.strokes + "</td>";
+    html += "<td>" + (r.netto === null || r.netto === undefined ? "–" : r.netto) + "</td>";
+    html += "<td>" + (r.points === null || r.points === undefined ? "–" : formatNum(r.points)) + "</td>";
+    if (hasPar) html += "<td>" + r.scoreName + "</td>";
+    html += "</tr>";
+  }
+
+  html += "</tbody></table></div>";
+  return html;
+}
+
 function openRoundDetail(id) {
   const season = loadSeason();
   const round = season.rounds.find(r => Number(r.id) === Number(id));
@@ -5204,7 +5304,7 @@ function openPlayerProfile(name) {
               "<div class='hole-small'>Platz " + myPos + " von " + r.playerCount + " · Brutto " + myGross + parTxt + "</div></div>";
       html += "<span class='summary-toggle'>⊕</span>";
       html += "</div>";
-      html += "<div class='profile-round-body' style='display:none;'>" + renderRoundStandingsHtml(r, name) + "</div>";
+      html += "<div class='profile-round-body' style='display:none;'>" + renderPlayerRoundCardHtml(r, name) + "</div>";
       html += "</div>";
     }
   }
