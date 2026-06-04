@@ -1,0 +1,4713 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>TEST – Eingabe – Kopenhagen Golf Rechner</title>
+  <style>
+    :root {
+      --bg: #f5f7f2;
+      --card: #ffffff;
+      --text: #172016;
+      --muted: #637062;
+      --line: #dce4d8;
+      --accent: #2f7d46;
+      --accent-dark: #245f36;
+      --warn: #b45f06;
+      --bad: #b00020;
+      --good: #1b7f3a;
+      --soft: #edf5ec;
+      --soft2: #f9fbf7;
+      --shadow: 0 10px 24px rgba(20, 45, 20, 0.10);
+      --radius: 16px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --race-start-x: 60px;
+      --race-finish-right: 90px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: var(--sans);
+      background: linear-gradient(180deg, #eaf3e8 0%, var(--bg) 32%, var(--bg) 100%);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    header {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    background: rgba(245, 247, 242, 0.94);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--line);
+    padding: calc(env(safe-area-inset-top) + 10px) 10px 12px 10px;
+    }
+
+    .topbar {
+      max-width: 1220px;
+      margin: 0 auto;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 20px;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+    }
+
+    .subtitle {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 3px;
+    }
+
+    main {
+      max-width: 1220px;
+      margin: 0 auto;
+      padding: 14px 12px 40px 12px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .card h2 {
+      font-size: 17px;
+      margin: 0;
+      padding: 14px 14px 8px;
+    }
+
+    .card .body {
+      padding: 0 14px 14px;
+    }
+
+    .help {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+      margin: 0 0 12px;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 4px;
+      font-weight: 700;
+    }
+
+    input, select, button, textarea {
+      font: inherit;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    select,
+    textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 11px 10px;
+      background: #fff;
+      color: var(--text);
+      outline: none;
+      font-size: 16px;
+    }
+
+    input[type="number"] {
+      text-align: center;
+      appearance: textfield;
+      -moz-appearance: textfield;
+    }
+
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(47, 125, 70, .14);
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .players {
+      display: grid;
+      gap: 9px;
+    }
+
+    .player-line {
+      display: grid;
+      grid-template-columns: 30px 1fr 92px;
+      gap: 8px;
+      align-items: end;
+    }
+
+    .badge {
+      width: 30px;
+      height: 30px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      background: var(--soft);
+      color: var(--accent-dark);
+      font-weight: 900;
+      margin-bottom: 3px;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 999px;
+      padding: 10px 14px;
+      background: var(--accent);
+      color: white;
+      font-weight: 800;
+      cursor: pointer;
+      min-height: 42px;
+    }
+
+    button.secondary {
+      background: #e8eee5;
+      color: var(--accent-dark);
+    }
+
+    button.danger {
+      background: #f4e6e6;
+      color: var(--bad);
+    }
+
+    button.small {
+      padding: 7px 10px;
+      min-height: 34px;
+      font-size: 13px;
+    }
+
+    button:hover { filter: brightness(.98); }
+    button:active { transform: translateY(1px); }
+
+    .setup-details {
+      border: 0;
+      border-radius: 0;
+      padding: 0;
+      background: transparent;
+      margin: 0;
+    }
+
+    .setup-details > summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      list-style: none;
+      padding: 14px;
+      font-size: 17px;
+      font-weight: 950;
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .setup-details > summary::-webkit-details-marker { display: none; }
+
+    .setup-details > summary::after {
+      content: "ausklappen";
+      color: var(--accent-dark);
+      background: var(--soft);
+      border-radius: 999px;
+      padding: 5px 9px;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .setup-details[open] > summary::after { content: "einklappen"; }
+
+    
+    .summary-card {
+    position: static;
+    }
+
+    .summary-list {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      padding: 0 14px 14px;
+    }
+
+    .summary-item {
+      display: grid;
+      grid-template-columns: 30px 1fr;
+      grid-template-rows: auto auto;
+      gap: 4px 16px;
+      align-items: center;
+      background: var(--soft2);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 9px;
+      min-width: 0;
+    }
+
+    .rank {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: white;
+      display: grid;
+      place-items: center;
+      font-weight: 900;
+      font-size: 17px;
+      grid-row: span 2;
+    }
+
+    .summary-name {
+      font-weight: 900;
+      font-size: 19px;
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .summary-sub {
+      color: var(--muted);
+      font-size: 15px;
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .summary-points {
+      font-weight: 950;
+    }
+
+    .validation-mini {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 0 14px 14px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .mini-pill {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 999px;
+      padding: 5px 8px;
+      font-weight: 800;
+    }
+
+    .mini-pill.ok { color: var(--good); background: #e3f5e8; }
+    .mini-pill.bad { color: var(--bad); background: #fde8ea; }
+
+    .table-wrap {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      border-top: 1px solid var(--line);
+    }
+
+    .mobile-cards {
+      display: none;
+      padding: 0 10px 12px;
+      gap: 10px;
+    }
+
+    .hole-card {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 5px 14px rgba(20,45,20,.06);
+    }
+
+    .hole-card-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: center;
+      background: #eef6eb;
+      padding: 9px 10px;
+      font-weight: 950;
+    }
+
+    .hole-card-meta {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .hole-card-body {
+      display: grid;
+      gap: 8px;
+      padding: 10px;
+    }
+
+    .mobile-player-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: center;
+      border-bottom: 1px dashed var(--line);
+      padding-bottom: 8px;
+    }
+
+    .mobile-player-row:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .mobile-player-name {
+      font-weight: 900;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .mobile-player-points {
+      font-weight: 950;
+      text-align: right;
+      font-size: 14px;
+    }
+
+    .mobile-player-detail {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+      text-align: right;
+      margin-top: 2px;
+    }
+
+    .mobile-score-input input {
+      font-size: 18px;
+      font-weight: 900;
+      padding: 10px 6px;
+      border-radius: 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      min-width: 620px;
+    }
+
+    th, td {
+      border-bottom: 1px solid var(--line);
+      border-right: 1px solid var(--line);
+      padding: 8px;
+      vertical-align: top;
+      background: #fff;
+    }
+
+    th:first-child, td:first-child {
+      border-left: 0;
+      position: sticky;
+      left: 0;
+      z-index: 5;
+      background: #fbfdf9;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 8;
+      background: #eef6eb;
+      text-align: center;
+      font-size: 13px;
+    }
+
+    th:first-child {
+      z-index: 9;
+      background: #e8f2e5;
+    }
+
+    .hole-meta {
+      min-width: 72px;
+      text-align: center;
+      font-weight: 900;
+    }
+
+    .hole-small {
+      color: var(--muted);
+      font-weight: 700;
+      font-size: 11px;
+      margin-top: 4px;
+    }
+
+    .scorebox {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 6px;
+      min-width: 108px;
+    }
+
+    .scorebox input {
+      padding: 12px 6px;
+      border-radius: 10px;
+      font-size: 18px;
+      font-weight: 800;
+    }
+
+    .mini-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      color: var(--muted);
+      font-weight: 900;
+      text-align: center;
+      margin-bottom: 3px;
+    }
+
+    .points-cell {
+      min-width: 104px;
+      font-weight: 950;
+      text-align: center;
+      font-size: 15px;
+      margin-top: 6px;
+    }
+
+    .points-detail {
+      color: var(--muted);
+      font-weight: 700;
+      font-size: 11px;
+      margin-top: 4px;
+      line-height: 1.25;
+    }
+
+    .stroke-note {
+      display: inline-block;
+      color: var(--accent-dark);
+      background: var(--soft);
+      border-radius: 999px;
+      padding: 2px 6px;
+      margin-top: 3px;
+      font-size: 10px;
+      font-weight: 900;
+    }
+
+    .mobile-hint {
+      display: none;
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+
+.floating-summary-btn {
+  position: fixed;
+  right: 14px;
+  bottom: calc(14px + env(safe-area-inset-bottom));
+  z-index: 40;
+  border-radius: 999px;
+  padding: 12px 16px;
+  box-shadow: var(--shadow);
+}
+
+    .toast {
+      position: fixed;
+      left: 12px;
+      right: 12px;
+      bottom: calc(12px + env(safe-area-inset-bottom));
+      z-index: 50;
+      background: #172016;
+      color: #fff;
+      border-radius: 14px;
+      padding: 12px 14px;
+      box-shadow: var(--shadow);
+      opacity: 0;
+      transform: translateY(12px);
+      pointer-events: none;
+      transition: .2s ease;
+      max-width: 720px;
+      margin: 0 auto;
+      text-align: center;
+      font-weight: 800;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    details.inner {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 9px 10px;
+      background: #fbfdf9;
+      margin-top: 10px;
+    }
+
+    details.inner > summary {
+      cursor: pointer;
+      font-weight: 900;
+      color: var(--accent-dark);
+    }
+
+    .exportbox {
+      margin-top: 10px;
+      min-height: 120px;
+      font-family: var(--mono);
+      font-size: 12px;
+    }
+
+    .course-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .choice-btn {
+      background: #fff;
+      color: var(--accent-dark);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      text-align: left;
+      min-height: 52px;
+      padding: 9px 10px;
+    }
+
+    .choice-btn.active {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    .choice-btn .small {
+      display: block;
+      font-size: 11px;
+      opacity: .8;
+      margin-top: 3px;
+      font-weight: 700;
+    }
+
+    .handicap-preview {
+      display: grid;
+      gap: 10px;
+      margin-top: 10px;
+      font-size: 12px;
+    }
+
+    .hcp-player {
+      background: #fbfdf9;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 9px;
+      line-height: 1.35;
+    }
+
+    .hcp-player-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .hcp-player strong {
+      color: var(--accent-dark);
+      font-size: 13px;
+    }
+
+    .hcp-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 5px;
+    }
+
+    .hcp-btn {
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--muted);
+      border-radius: 10px;
+      min-height: 38px;
+      padding: 4px 2px;
+      font-size: 11px;
+      line-height: 1.1;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .hcp-btn.auto,
+    .hcp-btn.override-on {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    .hcp-btn.override-off {
+      background: #f9e9e9;
+      color: var(--bad);
+      border-color: #efbfc4;
+    }
+
+    .hcp-btn .small {
+      display: block;
+      font-size: 9px;
+      opacity: .85;
+      margin-top: 2px;
+    }
+
+    .hcp-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .legend-pill {
+      border-radius: 999px;
+      padding: 3px 7px;
+      background: #fff;
+      border: 1px solid var(--line);
+      font-weight: 800;
+    }
+
+    .legend-pill.green {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    .legend-pill.red {
+      background: #f9e9e9;
+      color: var(--bad);
+      border-color: #efbfc4;
+    }
+
+    .course-warning {
+      background: #fff8e8;
+      color: #774c00;
+      border: 1px solid #f2d59a;
+      border-radius: 12px;
+      padding: 9px;
+      font-size: 13px;
+      font-weight: 800;
+      line-height: 1.35;
+      margin-bottom: 10px;
+    }
+
+    @media (max-width: 700px) {
+      .table-wrap {
+        display: none;
+      }
+
+      .mobile-cards {
+        display: grid;
+      }
+
+      header { padding-left: 8px; padding-right: 8px; }
+      main { padding-left: 8px; padding-right: 8px; }
+
+      .topbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 6px;
+      }
+
+      .topbar .actions {
+        justify-content: space-between;
+      }
+
+      .topbar .actions > button,
+      .topbar .actions > .menu-wrap {
+      flex: 1;
+      }
+
+      .menu-wrap > button {
+        width: 100%;
+      }
+
+      h1 { font-size: 18px; }
+      .card { border-radius: 14px; }
+      .mobile-hint { display: block; }
+      .row { grid-template-columns: 1fr; }
+      .player-line {
+        grid-template-columns: 26px 1fr 72px;
+        gap: 6px;
+      }
+
+      .badge {
+        width: 26px;
+        height: 26px;
+        font-size: 12px;
+      }
+
+      .course-buttons {
+        grid-template-columns: 1fr;
+      }
+
+      input[type="text"], input[type="number"], select {
+        padding: 10px 8px;
+      }
+
+     
+
+      .summary-list {
+        grid-template-columns: 1fr;
+        padding-left: 10px;
+        padding-right: 10px;
+      }
+
+      .summary-item {
+        grid-template-columns: 26px 1fr;
+        padding: 8px;
+      }
+
+      .rank {
+        width: 32px;
+        height: 32px;
+        font-size: 16px;
+      }
+
+      .summary-name {
+        font-size: 18px;
+      }
+
+      .summary-sub {
+        font-size: 14px;
+      }
+
+      .summary-card h2,
+      .score-card h2 {
+        padding-left: 10px;
+        padding-right: 10px;
+      }
+
+      .card .body {
+        padding-left: 10px;
+        padding-right: 10px;
+      }
+
+      table {
+        min-width: 590px;
+      }
+    }
+
+    @media (max-width: 420px) {
+      .summary-list {
+        grid-template-columns: 1fr;
+      }
+
+   
+    }
+
+input.score-eagle,
+input.score-birdie,
+input.score-par,
+input.score-bogey,
+input.score-doublebogey,
+input.score-triplebogey {
+  width: 46px !important;
+  height: 42px;
+  margin: 0 auto;
+  padding: 6px !important;
+  text-align: center;
+  font-weight: 950;
+  background: #fff !important;
+}
+
+input.score-eagle {
+  background: #ffe7a3 !important;
+  color: #5d3b00 !important;
+  border: 4px double #d99a00 !important;
+  border-radius: 999px !important;
+}
+
+input.score-birdie {
+  background: #f8d7da !important;
+  color: #8b0000 !important;
+  border: 3px solid #c0392b !important;
+  border-radius: 999px !important;
+}
+
+input.score-par {
+  background: #eef6eb !important;
+  color: #172016 !important;
+  border: 2px solid #7aa874 !important;
+  border-radius: 10px !important;
+}
+
+input.score-bogey {
+  color: #111 !important;
+  border: 1.5px solid #555 !important;
+  border-radius: 0 !important;
+}
+
+input.score-doublebogey {
+  color: #111 !important;
+  border: 1.5px solid #555 !important;
+  border-radius: 0 !important;
+  box-shadow:
+    inset 0 0 0 1.5px white,
+    inset 0 0 0 3px #555;
+}
+
+input.score-triplebogey {
+  color: #111 !important;
+  border: 1.5px solid #555 !important;
+  border-radius: 0 !important;
+  box-shadow:
+    inset 0 0 0 1.5px white,
+    inset 0 0 0 3px #555,
+    inset 0 0 0 4.5px white,
+    inset 0 0 0 6px #555;
+}
+
+.score-symbol {
+  display: inline-flex;
+  width: 30px;
+  height: 30px;
+  align-items: center;
+  justify-content: center;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.score-symbol.score-eagle {
+  color: #8b0000;
+  border: 4px double currentColor;
+  border-radius: 999px;
+}
+
+.score-symbol.score-birdie {
+  color: #8b0000;
+  border: 3px solid currentColor;
+  border-radius: 999px;
+}
+
+.score-symbol.score-par {
+  color: var(--good);
+}
+
+.score-symbol.score-bogey {
+  color: #111;
+  border: 1.5px solid currentColor;
+}
+
+.score-symbol.score-doublebogey {
+  color: #111;
+  border: 1.5px solid currentColor;
+  box-shadow:
+    inset 0 0 0 1.5px white,
+    inset 0 0 0 3px currentColor;
+}
+
+
+.score-symbol.score-triplebogey {
+  color: #111;
+  border: 1.5px solid currentColor;
+  box-shadow:
+    inset 0 0 0 1.5px white,
+    inset 0 0 0 3px currentColor,
+    inset 0 0 0 4.5px white,
+    inset 0 0 0 6px currentColor;
+}
+
+  .player-detail {
+    margin: 0 14px 14px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: #fbfdf9;
+    overflow: hidden;
+  }
+
+  .player-detail-head {
+    padding: 10px 12px;
+    font-weight: 950;
+    background: var(--soft);
+    color: var(--accent-dark);
+  }
+
+  .player-detail-stats {
+    display: grid;
+    gap: 6px;
+    padding: 10px 12px;
+  }
+
+.player-detail-stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.player-detail-stats .mini-pill {
+  font-size: 12px;
+  text-align: center;
+  white-space: nowrap;
+  padding: 5px 6px;
+}
+
+  .player-detail-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 0;
+  }
+
+  .player-detail-table th,
+  .player-detail-table td {
+    position: static;
+    border: 1px solid var(--line);
+    padding: 7px;
+    text-align: center;
+    background: #fff;
+    font-size: 13px;
+  }
+
+  .clickable-player {
+    cursor: pointer;
+  }
+
+  .summary-name {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .summary-toggle {
+    font-size: 24px;
+    font-weight: 900;
+    color: var(--accent-dark);
+    flex-shrink: 0;
+  }
+    .menu-wrap {
+    position: relative;
+  }
+
+.share-menu {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 80;
+  min-width: 190px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  padding: 6px;
+}
+
+.share-menu.show {
+  display: grid;
+  gap: 6px;
+}
+
+.share-menu button {
+  width: 100%;
+  border-radius: 10px;
+  text-align: left;
+  background: #fff;
+  color: var(--accent-dark);
+}
+
+.share-menu button:hover {
+  background: var(--soft);
+}
+
+.summary-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 18px;
+  min-width: 100px;
+  flex-shrink: 0;
+}
+
+.rank-move {
+  min-width: 30px;
+  text-align: right;
+  font-size: 16px;
+  font-weight: 950;
+}
+
+.rank-move.up {
+  color: var(--good);
+}
+
+.rank-move.down {
+  color: var(--bad);
+}
+
+.loch19-btn {
+  cursor: pointer;
+  color: var(--accent-dark);
+}
+
+.loch19-menu {
+  display: none;
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: calc(70px + env(safe-area-inset-bottom));
+  z-index: 90;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  padding: 8px;
+}
+
+.loch19-menu-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 4px 8px 4px;
+  font-weight: 950;
+  color: var(--accent-dark);
+}
+
+.loch19-close-btn {
+  width: 34px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0;
+
+  border-radius: 999px;
+
+  background: #f3f3f3;
+  color: #666;
+
+  font-size: 18px;
+  font-weight: 950;
+}
+
+.loch19-menu.show {
+  display: grid;
+  gap: 8px;
+}
+
+.loch19-menu button {
+  width: 100%;
+  border-radius: 12px;
+  text-align: left;
+  background: #fff;
+  color: var(--accent-dark);
+}
+
+.loch19-menu .loch19-close-btn {
+  width: 34px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0;
+  border-radius: 999px;
+  background: #f3f3f3;
+  color: #666;
+  font-size: 18px;
+  font-weight: 950;
+  text-align: center;
+}
+
+.race-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: #f5f7f2;
+  padding: calc(env(safe-area-inset-top) + 12px) 12px calc(env(safe-area-inset-bottom) + 12px);
+}
+
+.race-overlay.show {
+  display: flex;
+  flex-direction: column;
+}
+
+.race-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.race-track {
+  position: relative;
+  flex: 1;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: linear-gradient(90deg, #fff 0%, #eef6eb 100%);
+  overflow: hidden;
+}
+
+.race-hole-labels {
+  position: absolute;
+  inset: 8px 12px auto 12px;
+  display: grid;
+  grid-template-columns: repeat(18, 1fr);
+  font-size: 10px;
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.race-lane {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1px dashed rgba(0,0,0,.12);
+}
+
+
+.race-runner {
+  position: absolute;
+  overflow: visible;
+  transform: translate(-50%, -50%);
+  transition: left .8s ease, top .8s ease;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.race-snail {
+  font-size: 36px;
+  line-height: 1;
+  display: inline-block;
+}
+
+.race-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  display: inline-block;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 5px rgba(0,0,0,.25);
+}
+
+.race-runner-name {
+  position: absolute;
+  top: -12px;
+  left: 32px;
+
+  font-size: 11px;
+  font-weight: 950;
+
+  color: var(--accent-dark);
+
+  background: rgba(255,255,255,.95);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+
+  padding: 2px 7px;
+
+  white-space: nowrap;
+
+  box-shadow: 0 1px 4px rgba(0,0,0,.15);
+}
+
+#raceTimeline {
+  flex: 2;
+}
+
+.race-controls {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.race-controls button {
+  flex: 1;
+}
+
+.race-hole-counter {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  background: var(--soft);
+  color: var(--accent-dark);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+
+  padding: 8px 14px;
+  font-weight: 950;
+  font-size: 14px;
+  white-space: nowrap;
+  box-shadow: 0 3px 10px rgba(0,0,0,.10);
+}
+
+.analysis-content {
+  display: none;
+  flex: 1;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: #fff;
+  overflow: auto;
+}
+
+.hole-stand-popup {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 180;
+  background: rgba(0,0,0,.35);
+  padding: 18px;
+  align-items: center;
+  justify-content: center;
+}
+
+.hole-stand-popup.show {
+  display: flex;
+}
+
+.hole-stand-card {
+  width: min(420px, 100%);
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+
+.hole-stand-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+  padding: 12px 14px;
+  background: var(--soft);
+  color: var(--accent-dark);
+  font-weight: 950;
+}
+
+.hole-stand-body {
+  padding: 12px 14px;
+  display: grid;
+  gap: 8px;
+}
+
+.hole-stand-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 7px;
+  font-weight: 850;
+}
+
+.hole-stand-row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.clickable-hole {
+  cursor: pointer;
+}
+
+.under-par {
+  color: var(--bad);
+  font-weight: 950;
+}
+
+.race-speed-select {
+  width: auto;
+  min-width: 72px;
+  padding: 7px 8px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--accent-dark);
+  background: #fff;
+}
+
+.race-marker {
+  position: absolute;
+  top: 32px;
+  bottom: 12px;
+  pointer-events: none;
+}
+
+.race-marker-start {
+  left: var(--race-start-x);
+  width: 3px;
+  background: #8bc34a;
+}
+
+.race-marker-half {
+  left: calc(
+    var(--race-start-x) +
+    (
+      (100% - var(--race-start-x) - var(--race-finish-right))
+      / 2
+    )
+  );
+  width: 2px;
+  border-left: 2px dashed #8bc34a;
+  opacity: .65;
+}
+
+.race-marker-finish {
+  right: var(--race-finish-right);
+  width: 6px;
+  background: var(--accent);
+}
+
+.race-marker-label {
+  position: absolute;
+  top: 8px;
+  transform: translateX(-50%);
+  font-size: 11px;
+  font-weight: 950;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.race-marker-label-start {
+  left: var(--race-start-x);
+}
+
+.race-marker-label-half {
+  left: calc(
+    var(--race-start-x) +
+    (
+      (100% - var(--race-start-x) - var(--race-finish-right))
+      / 2
+    )
+  );
+}
+
+.race-marker-label-finish {
+  right: calc(var(--race-finish-right) - 10px);
+  transform: translateX(0);
+}
+
+/* ===== Score-Eingabe: Stepper + Loch bestätigen ===== */
+.score-stepper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.step-btn {
+  width: 40px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
+  border-radius: 12px;
+  background: #e8eee5;
+  color: var(--accent-dark);
+  font-size: 22px;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.score-stepper input {
+  width: 54px;
+  text-align: center;
+  font-size: 18px;
+  font-weight: 900;
+  padding: 10px 4px;
+  border-radius: 10px;
+}
+
+.score-stepper input::placeholder {
+  color: #b8c4b5;
+  font-weight: 700;
+}
+
+.hole-confirm-wrap {
+  padding: 0 10px 10px;
+}
+
+.hole-confirm-btn {
+  width: 100%;
+  background: var(--accent);
+  color: #fff;
+}
+
+.hole-confirm-btn:disabled {
+  background: #e6ebe3;
+  color: #9aa79a;
+  cursor: not-allowed;
+}
+
+.hole-confirm-btn.confirmed {
+  background: #e3f5e8;
+  color: var(--good);
+  border: 1px solid #b6e0c2;
+}
+
+.hole-card.hole-confirmed {
+  outline: 2px solid #bfe6cb;
+  outline-offset: -2px;
+}
+
+tr.hole-confirmed td {
+  background: #f3fbf5;
+}
+
+tr.hole-confirmed td:first-child {
+  background: #e9f7ee;
+}
+
+.hole-state.ok {
+  color: var(--good);
+  font-weight: 950;
+}
+
+.hole-meta .hole-confirm-btn {
+  margin-top: 8px;
+  font-size: 12px;
+  padding: 8px 6px;
+  min-height: 36px;
+}
+
+.mobile-name-wrap {
+  min-width: 0;
+}
+
+  </style>
+</head>
+<body>
+<header>
+  <div class="topbar">
+    <div>
+      <h1>🏌️ Kopenhagen <span style="font-size:12px;color:#b45f06;font-weight:900;">TEST · neue Eingabe</span></h1>
+      <div class="subtitle" id="appBuildInfo">Build wird geladen...</div>
+      <div id="voiceStatus" class="subtitle"></div>
+    </div>
+    <div class="actions">
+    <button class="secondary small" id="voiceBtn" type="button">🎤 Score</button>
+    <div class="menu-wrap">
+    <button class="secondary small" id="shareMenuBtn" type="button">Teilen ▾</button>
+    <div class="share-menu" id="shareMenu">
+      <button type="button" id="shareRoundBtn">🔗 Runde teilen</button>
+      <button type="button" id="exportRoundBtn">📤 Runde exportieren</button>
+    </div>
+  </div>
+    <button class="danger small" id="resetBtn" type="button">Neue Runde</button>
+  </div>
+  </div>
+</header>
+
+<main>
+  <section class="card setup-card">
+    <details class="setup-details" id="setupDetails">
+      <summary>Runde einrichten</summary>
+      <div class="body">
+        <p class="help">
+          Anfangsdaten eintragen, danach diesen Bereich einklappen. Velte Golf ist Standard.
+        </p>
+
+        <label>Golfplatz</label>
+        <div class="course-buttons" id="courseButtons"></div>
+        <div id="courseWarning" class="course-warning" style="display:none"></div>
+
+        <div class="row">
+          <div>
+            <label for="playerCount">Spieleranzahl</label>
+            <select id="playerCount">
+              <option value="4">4 Spieler</option>
+              <option value="3">3 Spieler</option>
+            </select>
+          </div>
+          <div></div>
+        </div>
+
+        <div class="players" id="playersBox"></div>
+
+        <label style="display:flex; gap:8px; align-items:center; margin-top:10px;">
+        <input type="checkbox" id="soundOnRankingChange">
+        Fanfare bei Änderung im Gesamtstand
+      </label>
+
+
+        <div class="actions">
+          <button type="button" id="applySetupBtn">Runde übernehmen</button>
+          <button class="secondary" type="button" id="clearScoresBtn">Scores löschen</button>
+        </div>
+
+        <details class="inner" open>
+          <summary>Vorgaben-Vorschau / Anpassung</summary>
+          <p class="help" style="margin-top:8px">
+            Alle 18 Löcher werden angezeigt. Grün = Vorgabe aktiv. Tippen: automatische Vorgabe ausschalten
+            oder zusätzliche Vorgabe einschalten. Noch einmal tippen setzt auf Automatik zurück.
+          </p>
+          <div id="handicapPreview" class="handicap-preview"></div>
+        </details>
+      </div>
+    </details>
+  </section>
+
+  <section class="card summary-card">
+    <h2>Gesamtstand</h2>
+    <div id="summaryBox" class="summary-list"></div>
+    <div id="validationBox" class="validation-mini"></div>
+    <div id="playerDetailBox"></div>
+  </section>
+
+  <section class="card score-card">
+  <h2>Loch-Eingabe</h2>
+  <div class="body">
+  
+  </div>
+  <div class="table-wrap">
+    <table id="scoreTable"></table>
+  </div>
+  <div id="mobileCards" class="mobile-cards"></div>
+  <div id="pointsCheckBox" class="validation-mini"></div>
+</section>
+</main>
+
+<button class="floating-summary-btn" id="summaryJumpBtn" type="button">🏆 Stand</button>
+
+<div class="toast" id="toast"></div>
+<div class="loch19-menu" id="loch19Menu">
+
+  <div class="loch19-menu-head">
+    <span>⛳ Loch 19</span>
+    <button
+      type="button"
+      id="closeLoch19Btn"
+      class="loch19-close-btn">
+      ✕
+    </button>
+  </div>
+
+  <button type="button" id="rankingChartBtn">📈 Ranking-Verlauf</button>
+  <button type="button" id="highlightsBtn">🏆 Highlights</button>
+  <button type="button" id="raceReplayBtn">🐌 Replay</button>
+
+</div>
+
+<div class="race-overlay" id="raceOverlay">
+  <div class="race-head">
+  <strong>🐌 Kopenhagen Replay</strong>
+  <select id="raceSpeedSelect" class="race-speed-select">
+  <option value="10">10s</option>
+  <option value="20" selected>20s</option>
+  <option value="30">30s</option>
+</select>
+
+  <div class="race-hole-counter" id="raceHoleCounter">⛳ Loch 0</div>
+  <button class="secondary small" type="button" id="closeRaceBtn">Schließen</button>
+</div>
+
+  <div class="race-track" id="raceTrack">
+    <div class="race-hole-labels" id="raceHoleLabels"></div>
+  </div>
+
+  <div class="analysis-content" id="analysisContent"></div>
+
+  <div class="race-controls">
+  <button type="button" id="startRaceBtn">▶ Start</button>
+  <input type="range" id="raceTimeline" min="0" max="0" value="0">
+  <button class="secondary" type="button" id="resetRaceBtn">↺ Zurück</button>
+  </div>
+</div>
+<div class="hole-stand-popup" id="holeStandPopup">
+  <div class="hole-stand-card">
+    <div class="hole-stand-head">
+      <span id="holeStandTitle">Stand nach Loch</span>
+      <button class="secondary small" type="button" id="closeHoleStandBtn">Schließen</button>
+    </div>
+    <div class="hole-stand-body" id="holeStandBody"></div>
+  </div>
+</div>
+<datalist id="knownPlayerNames"></datalist>
+
+<script>
+"use strict";
+
+const STORAGE_KEY = "kopenhagen-golf-rechner-TEST-eingabe";
+
+const courses = {
+  velte: {
+    id: "velte",
+    name: "Velte Golf St. Urbanus, Köln",
+    shortName: "Velte Golf",
+    hasPar: true,
+    hasHcp: true,
+    holes: [
+      { hole: 1, par: 5, length: 528, hcp: 3 },
+      { hole: 2, par: 4, length: 353, hcp: 9 },
+      { hole: 3, par: 3, length: 163, hcp: 15 },
+      { hole: 4, par: 4, length: 345, hcp: 11 },
+      { hole: 5, par: 3, length: 135, hcp: 17 },
+      { hole: 6, par: 5, length: 472, hcp: 5 },
+      { hole: 7, par: 4, length: 317, hcp: 13 },
+      { hole: 8, par: 5, length: 485, hcp: 7 },
+      { hole: 9, par: 4, length: 377, hcp: 1 },
+
+      { hole: 10, par: 4, length: 346, hcp: 10 },
+      { hole: 11, par: 4, length: 372, hcp: 6 },
+      { hole: 12, par: 3, length: 169, hcp: 16 },
+      { hole: 13, par: 5, length: 493, hcp: 2 },
+      { hole: 14, par: 4, length: 324, hcp: 12 },
+      { hole: 15, par: 3, length: 175, hcp: 14 },
+      { hole: 16, par: 5, length: 486, hcp: 8 },
+      { hole: 17, par: 3, length: 138, hcp: 18 },
+      { hole: 18, par: 4, length: 377, hcp: 4 }
+    ]
+  },
+  unknown18: {
+    id: "unknown18",
+    name: "Anderer Golfplatz / keine Lochdaten",
+    shortName: "Anderer Platz",
+    hasPar: false,
+    hasHcp: false,
+    holes: Array.from({ length: 18 }, (_, i) => ({ hole: i + 1, par: null, length: null, hcp: null }))
+  }
+};
+
+const defaultState = {
+  version: 5,
+  courseId: "velte",
+  playerCount: 3,
+  soundOnRankingChange: true,
+  players: [
+    { name: "", allowance: 0 },
+    { name: "", allowance: 0 },
+    { name: "", allowance: 0 },
+    { name: "", allowance: 0 }
+  ],
+  handicapOverrides: {},
+  holes: {}
+};
+
+
+let state = loadState();
+
+let lastScoreScrollY = 0;
+let jumpMode = "stand";
+let lastRankingSignature = "";
+
+let speechRecognition = null;
+let speechIsRunning = false;
+
+let selectedPlayerDetailIndex = null;
+
+let lastRankMoveByPlayer = {};
+
+let raceReplaySeconds = 20;
+let raceTimer = null;
+
+function getRaceStartX() {
+  return parseFloat(
+    getComputedStyle(document.documentElement)
+      .getPropertyValue("--race-start-x")
+  ) || 90;
+}
+
+function getRaceFinishRight() {
+  return parseFloat(
+    getComputedStyle(document.documentElement)
+      .getPropertyValue("--race-finish-right")
+  ) || 95;
+}
+
+
+const racePlayerColors = [
+  "#d32f2f",
+  "#1976d2",
+  "#2e7d32",
+  "#7b1fa2"
+];
+
+const knownPlayerNames = [
+  "Olaf",
+  "Astrid",
+  "Dirk",
+  "Frank",
+  "Helge",
+  "Thomas",
+  "Caroline",
+  "Andreas",
+  "Alex",
+  "Friedhelm",
+  "Louis"
+];
+
+const speechNumberWords = {
+
+  "null": 0,
+  "zero": 0,
+
+  "eins": 1,
+  "ein": 1,
+  "eine": 1,
+  "einen": 1,
+  "one": 1,
+
+  "zwei": 2,
+  "two": 2,
+  "to": 2,
+  "too": 2,
+
+  "drei": 3,
+  "three": 3,
+
+  "vier": 4,
+  "for": 4,
+  "four": 4,
+
+  "fünf": 5,
+  "fuenf": 5,
+  "five": 5,
+
+  "sechs": 6,
+  "six": 6,
+
+  "sieben": 7,
+  "seven": 7,
+
+  "acht": 8,
+  "eight": 8,
+  "ate": 8,
+
+  "neun": 9,
+  "nine": 9,
+
+  "zehn": 10,
+  "ten": 10,
+
+  "elf": 11,
+  "eleven": 11,
+
+  "zwölf": 12,
+  "zwoelf": 12,
+  "twelve": 12,
+
+  "dreizehn": 13,
+  "thirteen": 13,
+
+  "vierzehn": 14,
+  "fourteen": 14,
+
+  "fünfzehn": 15,
+  "fuenfzehn": 15,
+  "fifteen": 15,
+
+  "sechzehn": 16,
+  "sixteen": 16,
+
+  "siebzehn": 17,
+  "seventeen": 17,
+
+  "achtzehn": 18,
+  "eighteen": 18,
+
+  "neunzehn": 19,
+  "nineteen": 19,
+
+  "zwanzig": 20,
+  "twenty": 20
+};
+
+const speechPlayerAliases = {
+
+  "olaf": [
+    "olaf",
+    "olaff",
+    "olafs",
+    "ola",
+    "oder"
+  ],
+
+  "frank": [
+    "frank",
+    "franck",
+    "frangk",
+    "frengk"
+  ],
+
+  "dirk": [
+    "dirk",
+    "dierk",
+    "derk",
+    "dirkh"
+  ],
+
+  "thomas": [
+    "thomas",
+    "tomas",
+    "thommas",
+    "tommes",
+    "tom"
+  ],
+
+  "astrid": [
+    "astrid",
+    "astrit",
+    "astri",
+    "astrid port"
+  ],
+
+  "helge": [
+    "helge",
+    "hellge",
+    "helgee"
+  ],
+
+  "caroline": [
+    "caroline",
+    "karoline",
+    "carolin",
+    "karolin",
+    "caro",
+    "karo"
+  ],
+
+  "alexander": [
+    "alexander",
+    "aleksander",
+    "alex",
+    "aleks",
+    "alexx"
+  ]
+};
+
+
+
+function getCourse() {
+  return courses[state.courseId] || courses.velte;
+}
+
+function getCourseHoles() {
+  return getCourse().holes;
+}
+
+function cloneDefault() {
+  return JSON.parse(JSON.stringify(defaultState));
+}
+
+function normalizeState(s) {
+  const base = cloneDefault();
+  if (!s || typeof s !== "object") return buildEmptyState(base);
+
+  const playerCount = Number(s.playerCount) === 3 ? 3 : 4;
+  const courseId = courses[s.courseId] ? s.courseId : "velte";
+  const courseHoles = courses[courseId].holes;
+
+  let players = [];
+  if (Array.isArray(s.players) && s.players.length > 0 && typeof s.players[0] === "object") {
+    players = s.players.slice(0, playerCount).map((p, idx) => ({
+      name: (p.name && String(p.name).trim()) ? String(p.name).trim() : "Spieler " + (idx + 1),
+      allowance: Math.max(0, toIntOrZero(p.allowance))
+    }));
+  } else if (Array.isArray(s.players)) {
+    players = s.players.slice(0, playerCount).map((name, idx) => ({
+      name: (name && String(name).trim()) ? String(name).trim() : "Spieler " + (idx + 1),
+      allowance: 0
+    }));
+  }
+
+  while (players.length < playerCount) {
+    const idx = players.length;
+    players.push({
+      name: base.players[idx] ? base.players[idx].name : "Spieler " + (idx + 1),
+      allowance: 0
+    });
+  }
+
+  const holes = {};
+  for (const h of courseHoles) {
+    const key = String(h.hole);
+    const src = s.holes && typeof s.holes === "object" ? (s.holes[key] || {}) : {};
+    const gross = Array.isArray(src.gross) ? src.gross.slice(0, playerCount).map(toNullableInt) : Array(playerCount).fill(null);
+    while (gross.length < playerCount) gross.push(null);
+
+    // confirmed-Kennzeichen: explizit übernehmen, sonst alte Runden
+    // (komplett ausgefülltes Loch) als bereits bestätigt behandeln.
+    const allFilled = gross.length === playerCount && gross.every(v => v !== null && v !== undefined && v !== "");
+    let confirmed;
+    if (typeof src.confirmed === "boolean") {
+      confirmed = src.confirmed;
+    } else {
+      confirmed = allFilled;
+    }
+
+    holes[key] = { gross, confirmed };
+  }
+
+  const overrides = {};
+  if (s.handicapOverrides && typeof s.handicapOverrides === "object") {
+    for (const h of courseHoles) {
+      const key = String(h.hole);
+      const arr = Array.isArray(s.handicapOverrides[key]) ? s.handicapOverrides[key].slice(0, playerCount) : Array(playerCount).fill(null);
+      overrides[key] = arr.map(v => {
+        if (v === null || v === undefined || v === "") return null;
+        return Math.max(0, toIntOrZero(v));
+      });
+      while (overrides[key].length < playerCount) overrides[key].push(null);
+    }
+  } else {
+    for (const h of courseHoles) {
+      overrides[String(h.hole)] = Array(playerCount).fill(null);
+    }
+  }
+
+  // Migration aus älteren Versionen.
+  if (!s.handicapOverrides && s.holes && typeof s.holes === "object") {
+    for (const h of courseHoles) {
+      const key = String(h.hole);
+      const src = s.holes[key] || {};
+      if (Array.isArray(src.manualStrokes)) {
+        overrides[key] = src.manualStrokes.slice(0, playerCount).map(v => {
+          if (v === null || v === undefined || v === "") return null;
+          return Math.max(0, toIntOrZero(v));
+        });
+        while (overrides[key].length < playerCount) overrides[key].push(null);
+      }
+    }
+  }
+
+  return {
+    version: 5,
+    courseId,
+    playerCount,
+    soundOnRankingChange: s.soundOnRankingChange !== false,
+    players,
+    handicapOverrides: overrides,
+    holes
+  };
+}
+
+function buildEmptyState(base) {
+  const s = JSON.parse(JSON.stringify(base));
+  const courseHoles = courses[s.courseId || "velte"].holes;
+  s.holes = {};
+  s.handicapOverrides = {};
+  for (const h of courseHoles) {
+    s.holes[String(h.hole)] = { gross: Array(s.playerCount).fill(null), confirmed: false };
+    s.handicapOverrides[String(h.hole)] = Array(s.playerCount).fill(null);
+  }
+  return s;
+}
+
+function loadState() {
+  try {
+    const keys = [
+      STORAGE_KEY
+    ];
+    for (const key of keys) {
+      const raw = localStorage.getItem(key);
+      if (raw) return normalizeState(JSON.parse(raw));
+    }
+    return buildEmptyState(cloneDefault());
+  } catch (e) {
+    return buildEmptyState(cloneDefault());
+  }
+}
+
+function saveState(show) {
+  state = normalizeState(state);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  if (show) showToast("Runde gespeichert");
+}
+
+function toNullableInt(v) {
+  if (v === null || v === undefined || v === "") return null;
+  const n = Number(v);
+  if (!Number.isFinite(n)) return null;
+  return Math.trunc(n);
+}
+
+function toIntOrZero(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return 0;
+  return Math.trunc(n);
+}
+
+function formatNum(n) {
+  if (n === null || n === undefined || Number.isNaN(n)) return "";
+  const rounded = Math.round(n * 10) / 10;
+  return String(rounded).replace(".", ",");
+}
+
+function pointVector(playerCount) {
+  return playerCount === 3 ? [2, 1, 0] : [3, 2, 1, 0];
+}
+
+function expectedPoints(playerCount) {
+  return playerCount === 3 ? 3 : 6;
+}
+
+function automaticStrokeForHole(totalAllowance, hole) {
+  const course = getCourse();
+  if (!course.hasHcp || hole.hcp === null || hole.hcp === undefined) return 0;
+
+  const v = Math.max(0, toIntOrZero(totalAllowance));
+  const q = Math.floor(v / 18);
+  const r = v % 18;
+  return q + (hole.hcp <= r ? 1 : 0);
+}
+
+function getOverride(playerIndex, hole) {
+  const key = String(hole.hole);
+  const arr = state.handicapOverrides[key];
+  if (!arr) return null;
+  const val = arr[playerIndex];
+  if (val === null || val === undefined || val === "") return null;
+  return Math.max(0, toIntOrZero(val));
+}
+
+function getStrokeForPlayerHole(playerIndex, hole) {
+  const override = getOverride(playerIndex, hole);
+  if (override !== null) return override;
+  return automaticStrokeForHole(state.players[playerIndex].allowance, hole);
+}
+
+function calculateHole(hole, gross, playerCount) {
+  const complete = gross.slice(0, playerCount).every(v => v !== null && v !== undefined && v !== "");
+  const strokes = Array(playerCount).fill(0).map((_, i) => getStrokeForPlayerHole(i, hole));
+
+  if (!complete) {
+    return {
+      complete: false,
+      points: Array(playerCount).fill(null),
+      netto: gross.slice(0, playerCount).map((g, i) => g === null ? null : g - strokes[i]),
+      strokes,
+      valid: false,
+      sum: 0
+    };
+  }
+
+  const B = pointVector(playerCount);
+  const rows = [];
+  for (let i = 0; i < playerCount; i++) {
+    rows.push({
+      index: i,
+      gross: Number(gross[i]),
+      strokes: strokes[i],
+      netto: Number(gross[i]) - strokes[i]
+    });
+  }
+
+  rows.sort((a, b) => {
+    if (a.netto !== b.netto) return a.netto - b.netto;
+    return a.index - b.index;
+  });
+
+  const points = Array(playerCount).fill(0);
+  let pos = 0;
+
+  while (pos < rows.length) {
+    let end = pos;
+    while (end + 1 < rows.length && rows[end + 1].netto === rows[pos].netto) {
+      end++;
+    }
+
+    let groupPointSum = 0;
+    for (let r = pos; r <= end; r++) {
+      groupPointSum += B[r];
+    }
+
+    const groupSize = end - pos + 1;
+    const pointsPerPlayer = groupPointSum / groupSize;
+
+    for (let r = pos; r <= end; r++) {
+      points[rows[r].index] = pointsPerPlayer;
+    }
+
+    pos = end + 1;
+  }
+
+  const sum = points.reduce((a, b) => a + b, 0);
+  const valid = Math.abs(sum - expectedPoints(playerCount)) < 0.0001;
+  const netto = Array(playerCount).fill(null);
+  rows.forEach(r => { netto[r.index] = r.netto; });
+
+  return {
+    complete: true,
+    points,
+    netto,
+    strokes,
+    valid,
+    sum
+  };
+}
+
+function calculateRound() {
+  const playerCount = state.playerCount;
+  const totals = state.players.slice(0, playerCount).map((player, index) => ({
+    index,
+    name: player.name,
+    points: 0,
+    gross: 0,
+    parDelta: 0,
+    holesPlayed: 0
+  }));
+
+  const holeResults = {};
+  let playedHoles = 0;
+  let invalidHoles = 0;
+  let totalExpected = 0;
+  let totalGiven = 0;
+
+  for (const h of getCourseHoles()) {
+    const key = String(h.hole);
+    const data = state.holes[key] || { gross: [] };
+    const gross = data.gross || [];
+    const result = calculateHole(h, gross, playerCount);
+
+    holeResults[key] = result;
+
+    if (result.complete && data.confirmed) {
+      playedHoles++;
+      totalExpected += expectedPoints(playerCount);
+      totalGiven += result.sum;
+      if (!result.valid) invalidHoles++;
+
+      for (let i = 0; i < playerCount; i++) {
+        totals[i].points += result.points[i];
+        totals[i].gross += Number(gross[i]);
+        if (getCourse().hasPar && h.par !== null && h.par !== undefined) {
+          totals[i].parDelta += Number(gross[i]) - h.par;
+        }
+        totals[i].holesPlayed++;
+      }
+    }
+  }
+
+  const sortedTotals = totals.slice().sort((a, b) => {
+    if (b.points !== a.points) return b.points - a.points;
+    if (a.gross !== b.gross) return a.gross - b.gross;
+    return a.index - b.index;
+  });
+
+  return {
+    totals,
+    sortedTotals,
+    holeResults,
+    playedHoles,
+    invalidHoles,
+    totalExpected,
+    totalGiven
+  };
+}
+
+function buildKnownPlayerNamesList() {
+  const list = document.getElementById("knownPlayerNames");
+  if (!list) return;
+
+  list.innerHTML = "";
+
+  for (const name of knownPlayerNames) {
+    const option = document.createElement("option");
+    option.value = name;
+    list.appendChild(option);
+  }
+}
+
+function buildSetup() {
+  buildCourseButtons();
+
+  const playerCountSelect = document.getElementById("playerCount");
+  playerCountSelect.value = String(state.playerCount);
+
+  const warning = document.getElementById("courseWarning");
+  const course = getCourse();
+  if (!course.hasPar || !course.hasHcp) {
+    warning.style.display = "block";
+    warning.textContent = "Für diesen Golfplatz sind keine PAR-/HCP-Daten hinterlegt. PAR und HCP werden nicht angezeigt. Automatische Vorgaben nach HCP sind nicht möglich; du kannst Vorgaben in der 18-Loch-Matrix direkt setzen.";
+  } else {
+    warning.style.display = "none";
+    warning.textContent = "";
+  }
+
+  const box = document.getElementById("playersBox");
+  box.innerHTML = "";
+
+  const soundCheck = document.getElementById("soundOnRankingChange");
+
+  if (soundCheck) {
+    soundCheck.checked = state.soundOnRankingChange !== false;
+
+    soundCheck.onchange = function() {
+      state.soundOnRankingChange = soundCheck.checked;
+      saveState(false);
+    };
+  }
+
+  for (let i = 0; i < state.playerCount; i++) {
+    const wrap = document.createElement("div");
+    wrap.className = "player-line";
+
+    const badge = document.createElement("div");
+    badge.className = "badge";
+    badge.textContent = String(i + 1);
+
+    const fieldWrap = document.createElement("div");
+    const label = document.createElement("label");
+    label.textContent = "Spieler " + (i + 1);
+    label.htmlFor = "playerName_" + i;
+
+    const inp = document.createElement("input");
+    inp.type = "text";
+    inp.id = "playerName_" + i;
+    inp.value = state.players[i].name || ("Spieler " + (i + 1));
+    inp.placeholder = "Spieler " + (i + 1);
+    inp.setAttribute("list", "knownPlayerNames");
+    inp.autocomplete = "off";
+
+inp.addEventListener("focus", () => {
+  if (inp.value === "Spieler " + (i + 1)) {
+    inp.value = "";
+  }
+});
+
+    inp.addEventListener("input", () => {
+    state.players[i].name = inp.value.trim() || ("Spieler " + (i + 1));
+    saveState(false);
+    buildTable();
+    renderMobileCards();
+    renderSummary();
+    renderHandicapPreview();
+});
+
+    fieldWrap.appendChild(label);
+    fieldWrap.appendChild(inp);
+
+    const allowanceWrap = document.createElement("div");
+    const allowanceLabel = document.createElement("label");
+    allowanceLabel.textContent = "Vorgabe";
+    allowanceLabel.htmlFor = "allowance_" + i;
+
+    const allowance = document.createElement("input");
+    allowance.type = "number";
+    allowance.inputMode = "numeric";
+    allowance.min = "0";
+    allowance.max = "99";
+    allowance.id = "allowance_" + i;
+    allowance.value = state.players[i].allowance ? String(state.players[i].allowance) : "";
+    allowance.disabled = !getCourse().hasHcp;
+    allowance.addEventListener("input", () => {
+      state.players[i].allowance = Math.max(0, toIntOrZero(allowance.value));
+      saveState(false);
+      buildTable();
+      renderMobileCards();
+      renderSummary();
+      renderHandicapPreview();
+    });
+
+    allowanceWrap.appendChild(allowanceLabel);
+    allowanceWrap.appendChild(allowance);
+
+    wrap.appendChild(badge);
+    wrap.appendChild(fieldWrap);
+    wrap.appendChild(allowanceWrap);
+    box.appendChild(wrap);
+  }
+
+  renderHandicapPreview();
+}
+
+function buildCourseButtons() {
+  const box = document.getElementById("courseButtons");
+  box.innerHTML = "";
+
+  Object.values(courses).forEach(c => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "choice-btn" + (state.courseId === c.id ? " active" : "");
+    btn.dataset.courseId = c.id;
+    btn.innerHTML = escapeHtml(c.shortName) + "<span class='small'>" + (c.hasHcp ? "PAR/HCP hinterlegt" : "ohne Lochdaten") + "</span>";
+    btn.addEventListener("click", () => {
+      changeCourse(c.id);
+    });
+    box.appendChild(btn);
+  });
+}
+
+function renderHandicapPreview() {
+  const box = document.getElementById("handicapPreview");
+  if (!box) return;
+
+  box.innerHTML = "";
+
+  const course = getCourse();
+  const holes = getCourseHoles();
+
+  for (let i = 0; i < state.playerCount; i++) {
+    const player = state.players[i];
+    const div = document.createElement("div");
+    div.className = "hcp-player";
+
+    const head = document.createElement("div");
+    head.className = "hcp-player-head";
+    const title = document.createElement("strong");
+    title.textContent = player.name;
+    const info = document.createElement("span");
+    info.textContent = course.hasHcp ? (player.allowance + " Vorgabe") : "direkt setzen";
+    head.appendChild(title);
+    head.appendChild(info);
+    div.appendChild(head);
+
+    const grid = document.createElement("div");
+    grid.className = "hcp-grid";
+
+    for (const h of holes) {
+      const auto = automaticStrokeForHole(player.allowance, h);
+      const override = getOverride(i, h);
+      const effective = getStrokeForPlayerHole(i, h);
+
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "hcp-btn";
+
+      if (override !== null) {
+        btn.classList.add(override > 0 ? "override-on" : "override-off");
+      } else if (auto > 0) {
+        btn.classList.add("auto");
+      }
+
+      let hcpText = "";
+      if (course.hasHcp && h.hcp !== null && h.hcp !== undefined) {
+        hcpText = "HCP " + h.hcp;
+      } else {
+        hcpText = "ohne HCP";
+      }
+
+      btn.innerHTML = "L" + h.hole + ": " + effective + "<span class='small'>" + hcpText + "</span>";
+      btn.title = "Loch " + h.hole + ": Vorgabe " + effective;
+
+      btn.addEventListener("click", () => cycleOverride(i, h));
+      grid.appendChild(btn);
+    }
+
+    div.appendChild(grid);
+
+    const legend = document.createElement("div");
+    legend.className = "hcp-legend";
+    legend.innerHTML =
+      "<span class='legend-pill green'>grün = Vorgabe aktiv</span>" +
+      "<span class='legend-pill red'>rot = Vorgabe ausgeschaltet</span>" +
+      "<span class='legend-pill'>weiß = keine Vorgabe</span>";
+    div.appendChild(legend);
+
+    box.appendChild(div);
+  }
+}
+
+function cycleOverride(playerIndex, hole) {
+  const key = String(hole.hole);
+  if (!state.handicapOverrides[key]) {
+    state.handicapOverrides[key] = Array(state.playerCount).fill(null);
+  }
+
+  const currentOverride = getOverride(playerIndex, hole);
+  const auto = automaticStrokeForHole(state.players[playerIndex].allowance, hole);
+
+  if (currentOverride === null) {
+    state.handicapOverrides[key][playerIndex] = auto > 0 ? 0 : 1;
+  } else {
+    state.handicapOverrides[key][playerIndex] = null;
+  }
+
+  saveState(false);
+  renderHandicapPreview();
+  buildTable();
+  renderMobileCards();
+  renderSummary();
+}
+
+function getScoreClassForDelta(delta) {
+  if (delta <= -2) return "score-eagle";
+  if (delta === -1) return "score-birdie";
+  if (delta === 0) return "score-par";
+  if (delta === 1) return "score-bogey";
+  if (delta === 2) return "score-doublebogey";
+  return "score-triplebogey";
+}
+
+function getScoreClassForGross(hole, gross) {
+  const course = getCourse();
+
+  if (!course.hasPar) return "";
+
+  if (
+    hole.par === null ||
+    hole.par === undefined ||
+    gross === null ||
+    gross === undefined ||
+    gross === ""
+  ) {
+    return "";
+  }
+
+  const delta = Number(gross) - Number(hole.par);
+  return getScoreClassForDelta(delta);
+}
+
+// Eingabe-Stepper [ − ] [ Wert ] [ + ] für einen Spieler an einem Loch.
+function buildScoreStepper(holeKey, playerIndex, holeDef, grossVal) {
+  const wrap = document.createElement("div");
+  wrap.className = "score-stepper";
+
+  const minus = document.createElement("button");
+  minus.type = "button";
+  minus.className = "step-btn step-minus";
+  minus.textContent = "−";
+  minus.addEventListener("click", (e) => { e.stopPropagation(); stepScore(holeKey, playerIndex, -1); });
+
+  const input = document.createElement("input");
+  input.type = "number";
+  input.inputMode = "numeric";
+  input.min = "1";
+  input.max = "15";
+  input.dataset.hole = holeKey;
+  input.dataset.player = String(playerIndex);
+  input.value = (grossVal === null || grossVal === undefined || grossVal === "") ? "" : String(grossVal);
+  input.placeholder = String(getDefaultScoreForHole(holeDef));
+  const scoreClass = getScoreClassForGross(holeDef, grossVal);
+  if (scoreClass) input.classList.add(scoreClass);
+  input.addEventListener("focus", function() { this.select(); });
+  input.addEventListener("change", function() { commitTypedScore(holeKey, playerIndex, this.value); });
+
+  const plus = document.createElement("button");
+  plus.type = "button";
+  plus.className = "step-btn step-plus";
+  plus.textContent = "+";
+  plus.addEventListener("click", (e) => { e.stopPropagation(); stepScore(holeKey, playerIndex, +1); });
+
+  wrap.appendChild(minus);
+  wrap.appendChild(input);
+  wrap.appendChild(plus);
+  return wrap;
+}
+
+// Bestätigen-/Bearbeiten-Button für ein Loch.
+function buildConfirmButton(holeKey) {
+  const data = state.holes[holeKey];
+  const confirmed = !!(data && data.confirmed);
+  const complete = isHoleComplete(holeKey);
+
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "hole-confirm-btn";
+
+  if (confirmed) {
+    btn.classList.add("confirmed");
+    btn.textContent = "✓ bestätigt – bearbeiten";
+    btn.addEventListener("click", (e) => { e.stopPropagation(); editHole(holeKey); });
+  } else {
+    btn.textContent = "✓ Loch bestätigen";
+    btn.disabled = !complete;
+    btn.addEventListener("click", (e) => { e.stopPropagation(); confirmHole(holeKey); });
+  }
+  return btn;
+}
+
+function buildTable() {
+  const table = document.getElementById("scoreTable");
+  const calc = calculateRound();
+  const course = getCourse();
+  table.innerHTML = "";
+
+  const thead = document.createElement("thead");
+  const headRow = document.createElement("tr");
+
+  const thHole = document.createElement("th");
+  thHole.textContent = "Loch";
+  headRow.appendChild(thHole);
+
+  for (let i = 0; i < state.playerCount; i++) {
+    const th = document.createElement("th");
+    th.textContent = state.players[i].name || ("Spieler " + (i + 1));
+    headRow.appendChild(th);
+  }
+
+  thead.appendChild(headRow);
+  table.appendChild(thead);
+
+  const tbody = document.createElement("tbody");
+
+  for (const h of getCourseHoles()) {
+    const key = String(h.hole);
+    const data = state.holes[key];
+    const result = calc.holeResults[key];
+
+    const tr = document.createElement("tr");
+    if (data.confirmed) tr.classList.add("hole-confirmed");
+
+    const tdHole = document.createElement("td");
+    tdHole.className = "hole-meta";
+
+    let details = [];
+    if (course.hasPar && h.par !== null && h.par !== undefined) details.push("PAR " + h.par);
+    if (h.length !== null && h.length !== undefined) details.push(h.length + " m");
+    if (course.hasHcp && h.hcp !== null && h.hcp !== undefined) details.push("HCP " + h.hcp);
+
+    const metaTop = document.createElement("div");
+    metaTop.className = "clickable-hole";
+    metaTop.innerHTML =
+      "Loch " + h.hole +
+      (data.confirmed ? " <span class='hole-state ok'>✓</span>" : "") +
+      (details.length ? "<div class='hole-small'>" + details.join(" · ") + "</div>" : "");
+    metaTop.addEventListener("click", () => openHoleStandPopup(h.hole));
+    tdHole.appendChild(metaTop);
+    tdHole.appendChild(buildConfirmButton(key));
+    tr.appendChild(tdHole);
+
+    for (let i = 0; i < state.playerCount; i++) {
+      const td = document.createElement("td");
+      td.appendChild(buildScoreStepper(key, i, h, data.gross[i]));
+
+      const hasStroke = result.strokes[i] > 0;
+      const points = document.createElement("div");
+      points.className = "points-cell";
+
+      if (data.confirmed && result.complete) {
+        const scoreDetail = hasStroke
+          ? "<div class='points-detail'>" + data.gross[i] + " → " + result.netto[i] + "</div>"
+          : "";
+        const strokeText = hasStroke
+          ? "<div class='points-detail'><span class='stroke-note'>V" + result.strokes[i] + "</span></div>"
+          : "";
+        points.innerHTML = formatNum(result.points[i]) + " P." + scoreDetail + strokeText;
+      } else {
+        // Vor Bestätigung keine Punkte – nur ggf. den Vorgabe-Hinweis.
+        points.innerHTML = hasStroke
+          ? "<div class='points-detail'><span class='stroke-note'>V" + result.strokes[i] + "</span></div>"
+          : "";
+      }
+
+      td.appendChild(points);
+      tr.appendChild(td);
+    }
+
+    tbody.appendChild(tr);
+  }
+
+  table.appendChild(tbody);
+}
+
+
+function renderMobileCards() {
+  const box = document.getElementById("mobileCards");
+  if (!box) return;
+
+  const calc = calculateRound();
+  const course = getCourse();
+  box.innerHTML = "";
+
+  for (const h of getCourseHoles()) {
+    const key = String(h.hole);
+    const data = state.holes[key];
+    const result = calc.holeResults[key];
+
+    const card = document.createElement("div");
+    card.className = "hole-card";
+
+    const head = document.createElement("div");
+    head.className = "hole-card-head";
+    head.classList.add("clickable-hole");
+    head.addEventListener("click", () => openHoleStandPopup(h.hole));
+
+    const title = document.createElement("div");
+    title.textContent = "Loch " + h.hole;
+
+    const meta = document.createElement("div");
+    meta.className = "hole-card-meta";
+    const details = [];
+    if (course.hasPar && h.par !== null && h.par !== undefined) details.push("PAR " + h.par);
+    if (h.length !== null && h.length !== undefined) details.push(h.length + " m");
+    if (course.hasHcp && h.hcp !== null && h.hcp !== undefined) details.push("HCP " + h.hcp);
+    meta.textContent = details.join(" · ");
+
+    head.appendChild(title);
+    head.appendChild(meta);
+    card.appendChild(head);
+
+    if (data.confirmed) card.classList.add("hole-confirmed");
+
+    const body = document.createElement("div");
+    body.className = "hole-card-body";
+
+    for (let i = 0; i < state.playerCount; i++) {
+      const row = document.createElement("div");
+      row.className = "mobile-player-row";
+
+      const nameWrap = document.createElement("div");
+      nameWrap.className = "mobile-name-wrap";
+
+      const name = document.createElement("div");
+      name.className = "mobile-player-name";
+      name.textContent = state.players[i].name || ("Spieler " + (i + 1));
+      nameWrap.appendChild(name);
+
+      const hasStroke = result.strokes[i] > 0;
+
+      if (data.confirmed && result.complete) {
+        const sub = document.createElement("div");
+        sub.className = "mobile-player-detail";
+        let txt = formatNum(result.points[i]) + " P.";
+        if (hasStroke) txt += " · " + data.gross[i] + "→" + result.netto[i] + " · V" + result.strokes[i];
+        sub.textContent = txt;
+        nameWrap.appendChild(sub);
+      } else if (hasStroke) {
+        const sub = document.createElement("div");
+        sub.className = "mobile-player-detail";
+        sub.textContent = "Vorgabe V" + result.strokes[i];
+        nameWrap.appendChild(sub);
+      }
+
+      const stepper = buildScoreStepper(key, i, h, data.gross[i]);
+
+      row.appendChild(nameWrap);
+      row.appendChild(stepper);
+      body.appendChild(row);
+    }
+
+    card.appendChild(body);
+
+    const confirmWrap = document.createElement("div");
+    confirmWrap.className = "hole-confirm-wrap";
+    confirmWrap.appendChild(buildConfirmButton(key));
+    card.appendChild(confirmWrap);
+
+    box.appendChild(card);
+  }
+}
+
+function getScoreNameForDelta(delta) {
+  if (delta <= -2) return "Eagle+";
+  if (delta === -1) return "Birdie";
+  if (delta === 0) return "Par";
+  if (delta === 1) return "Bogey";
+  if (delta === 2) return "D-Bogey";
+  return "T-Bogey+";
+}
+
+function getPlayerParStats(playerIndex) {
+  const stats = {
+    eagle: 0,
+    birdie: 0,
+    par: 0,
+    bogey: 0,
+    doublebogey: 0,
+    triplebogey: 0
+  };
+
+  const course = getCourse();
+  if (!course.hasPar) return stats;
+
+  for (const h of getCourseHoles()) {
+    const key = String(h.hole);
+    const data = state.holes[key];
+    if (!data || !data.confirmed) continue;
+
+    const gross = data.gross[playerIndex];
+    if (gross === null || gross === undefined || gross === "") continue;
+    if (h.par === null || h.par === undefined) continue;
+
+    const delta = Number(gross) - Number(h.par);
+
+    if (delta <= -2) stats.eagle++;
+    else if (delta === -1) stats.birdie++;
+    else if (delta === 0) stats.par++;
+    else if (delta === 1) stats.bogey++;
+    else if (delta === 2) stats.doublebogey++;
+    else stats.triplebogey++;
+  }
+
+  return stats;
+}
+
+function calculateRoundAfterHole(maxHoleNumber) {
+  const playerCount = state.playerCount;
+
+  const totals = state.players.slice(0, playerCount).map((player, index) => ({
+    index,
+    name: player.name || ("Spieler " + (index + 1)),
+    points: 0,
+    gross: 0,
+    parTotal: 0,
+    holesPlayed: 0
+  }));
+
+  for (const h of getCourseHoles()) {
+    if (h.hole > maxHoleNumber) continue;
+
+    const key = String(h.hole);
+    const data = state.holes[key];
+    if (!data || !Array.isArray(data.gross)) continue;
+    if (!data.confirmed) continue;
+
+    const result = calculateHole(h, data.gross, playerCount);
+    if (!result.complete) continue;
+
+    for (let i = 0; i < playerCount; i++) {
+      totals[i].points += result.points[i];
+      totals[i].gross += Number(data.gross[i]);
+      totals[i].parTotal += Number(h.par || 0);
+      totals[i].holesPlayed++;
+    }
+  }
+
+  return totals.sort((a, b) => {
+    if (b.points !== a.points) return b.points - a.points;
+    if (a.gross !== b.gross) return a.gross - b.gross;
+    return a.index - b.index;
+  });
+}
+
+function openHoleStandPopup(holeNumber) {
+  const popup = document.getElementById("holeStandPopup");
+  const title = document.getElementById("holeStandTitle");
+  const body = document.getElementById("holeStandBody");
+
+  if (!popup || !title || !body) return;
+
+  const ranking = calculateRoundAfterHole(holeNumber);
+
+  title.textContent = "Gesamtstand nach Loch " + holeNumber;
+  body.innerHTML = "";
+
+  for (let i = 0; i < ranking.length; i++) {
+    const p = ranking[i];
+
+    const toPar = p.gross - p.parTotal;
+    const toParText =
+      toPar > 0 ? "+" + toPar :
+      toPar < 0 ? String(toPar) :
+      "E";
+
+    const toParClass = toPar < 0 ? " class='under-par'" : "";
+
+    const row = document.createElement("div");
+    row.className = "hole-stand-row";
+    row.innerHTML =
+      "<span>" + (i + 1) + ". " + escapeHtml(p.name) + "</span>" +
+      "<span>" + formatNum(p.points) + " Punkte  ·  <span" + toParClass + ">" + toParText + "</span></span>";
+
+    body.appendChild(row);
+  }
+
+  popup.classList.add("show");
+}
+
+function closeHoleStandPopup() {
+  const popup = document.getElementById("holeStandPopup");
+  if (popup) popup.classList.remove("show");
+}
+
+
+function renderSummary() {
+  const calc = calculateRound();
+  const course = getCourse();
+  const box = document.getElementById("summaryBox");
+  box.innerHTML = "";
+
+  calc.sortedTotals.forEach((p, rankIdx) => {
+    const item = document.createElement("div");
+    item.className = "summary-item";
+
+    const rank = document.createElement("div");
+    rank.className = "rank";
+    rank.textContent = String(rankIdx + 1);
+
+    const name = document.createElement("div");
+    name.className = "summary-name";
+    const isOpen = selectedPlayerDetailIndex === p.index;
+
+    const moveValue = lastRankMoveByPlayer[p.index] || 0;
+
+    let moveHtml = "";
+
+    if (moveValue > 0) {
+      moveHtml = "<span class='rank-move up'>▲" + moveValue + "</span>";
+    } else if (moveValue < 0) {
+      moveHtml = "<span class='rank-move down'>▼" + Math.abs(moveValue) + "</span>";
+    } else {
+      moveHtml = "<span class='rank-move'></span>";
+    }
+
+    name.innerHTML =
+      "<span>" +
+      escapeHtml(p.name) +
+      " · " +
+      formatNum(p.points) +
+      " Punkte</span>" +
+      "<span class='summary-actions'>" +
+      moveHtml +
+      "<span class='summary-toggle'>" +
+      (isOpen ? "⊖" : "⊕") +
+      "</span>" +
+      "</span>";
+
+    name.classList.add("clickable-player");
+
+    name.addEventListener("click", () => {
+
+      selectedPlayerDetailIndex =
+        selectedPlayerDetailIndex === p.index
+          ? null
+          : p.index;
+
+      renderSummary();
+  });
+
+    const sub = document.createElement("div");
+    sub.className = "summary-sub";
+    const parText = course.hasPar ? (" · " + formatPar(p.parDelta) + " PAR") : "";
+    sub.textContent = "Schläge " + p.gross + parText + " · " + p.holesPlayed + " Löcher";
+
+    item.appendChild(rank);
+    item.appendChild(name);
+    item.appendChild(sub);
+    box.appendChild(item);
+  });
+
+  const v = document.getElementById("validationBox");
+  v.innerHTML = "";
+
+  const pills = [
+    ["Golfplatz: " + course.shortName, ""],
+    ["Löcher: " + calc.playedHoles, ""]
+  ];
+
+  for (const [txt, cls] of pills) {
+    const span = document.createElement("span");
+    span.className = "mini-pill " + cls;
+    span.textContent = txt;
+    v.appendChild(span);
+  }
+
+  const loch19 = document.createElement("span");
+  loch19.className = "mini-pill loch19-btn";
+  loch19.textContent = "⛳ Loch 19";
+  loch19.addEventListener("click", toggleLoch19Menu);
+  v.appendChild(loch19);
+
+  renderPointsCheck(calc);
+  renderPlayerDetail();
+}
+
+
+function renderPointsCheck(calc) {
+  const box = document.getElementById("pointsCheckBox");
+  if (!box) return;
+
+  box.innerHTML = "";
+
+  const expectedSoFar = calc.playedHoles * expectedPoints(state.playerCount);
+  const isOk = Math.abs(calc.totalGiven - expectedSoFar) < 0.0001;
+
+  const span = document.createElement("span");
+
+  if (isOk) {
+    span.className = "mini-pill ok";
+
+    if (calc.playedHoles === 18) {
+      span.textContent =
+        "✅ Punkteprüfung erfolgreich: " +
+        formatNum(calc.totalGiven) +
+        " / " +
+        formatNum(expectedSoFar) +
+        " nach 18 Löchern";
+    } else {
+      span.textContent =
+        "✅ Punkteprüfung korrekt: " +
+        formatNum(calc.totalGiven) +
+        " / " +
+        formatNum(expectedSoFar) +
+        " nach " +
+        calc.playedHoles +
+        " Löchern";
+    }
+  } else {
+    span.className = "mini-pill bad";
+    span.textContent =
+      "⚠ Punkteprüfung Fehler: " +
+      formatNum(calc.totalGiven) +
+      " / " +
+      formatNum(expectedSoFar) +
+      " nach " +
+      calc.playedHoles +
+      " Löchern";
+  }
+
+  box.appendChild(span);
+}
+
+function renderPlayerDetail() {
+  const box = document.getElementById("playerDetailBox");
+  if (!box) return;
+
+  box.innerHTML = "";
+
+  if (selectedPlayerDetailIndex === null) return;
+
+  const playerIndex = selectedPlayerDetailIndex;
+  const player = state.players[playerIndex];
+  const course = getCourse();
+  const calc = calculateRound();
+
+  if (!player) return;
+
+  let html = "";
+
+  const stats = {
+    eagle: 0,
+    birdie: 0,
+    par: 0,
+    bogey: 0,
+    doublebogey: 0,
+    triplebogey: 0
+  };
+
+  const rows = [];
+
+  for (const h of getCourseHoles()) {
+    const key = String(h.hole);
+    const data = state.holes[key];
+    if (!data || !data.confirmed || data.gross[playerIndex] === null) continue;
+
+    const gross = data.gross[playerIndex];
+    const result = calc.holeResults[key];
+    const strokes = result.strokes[playerIndex];
+    const netto = result.netto[playerIndex];
+    const points = result.complete ? result.points[playerIndex] : null;
+
+    let scoreName = "";
+    let scoreClass = "";
+
+    if (course.hasPar && h.par !== null && h.par !== undefined) {
+      const delta = Number(gross) - Number(h.par);
+      scoreName = getScoreNameForDelta(delta);
+      scoreClass = getScoreClassForDelta(delta);
+
+      if (delta <= -2) stats.eagle++;
+      else if (delta === -1) stats.birdie++;
+      else if (delta === 0) stats.par++;
+      else if (delta === 1) stats.bogey++;
+      else if (delta === 2) stats.doublebogey++;
+      else stats.triplebogey++;
+    }
+
+    rows.push({
+      hole: h.hole,
+      par: h.par,
+      gross,
+      strokes,
+      netto,
+      points,
+      scoreName,
+      scoreClass
+    });
+  }
+
+  html += "<div class='player-detail'>";
+  html += "<div class='player-detail-head'>" + escapeHtml(player.name || ("Spieler " + (playerIndex + 1))) + "</div>";
+
+  if (course.hasPar) {
+    html += "<div class='player-detail-stats'>";
+
+    html += "<div class='player-detail-stats-row'>";
+    html += "<span class='mini-pill'>Eagle+: " + stats.eagle + "</span>";
+    html += "<span class='mini-pill'>Birdies: " + stats.birdie + "</span>";
+    html += "<span class='mini-pill'>Pars: " + stats.par + "</span>";
+    html += "</div>";
+
+    html += "<div class='player-detail-stats-row'>";
+    html += "<span class='mini-pill'>Bogeys: " + stats.bogey + "</span>";
+    html += "<span class='mini-pill'>D-Bogeys: " + stats.doublebogey + "</span>";
+    html += "<span class='mini-pill'>T-Bogeys+: " + stats.triplebogey + "</span>";
+    html += "</div>";
+
+    html += "</div>";
+  }
+
+  html += "<table class='player-detail-table'>";
+  html += "<thead><tr><th>Loch</th>";
+
+  if (course.hasPar) html += "<th>PAR</th>";
+
+  html += "<th>Score</th><th>V</th><th>Netto</th><th>Punkte</th>";
+
+  if (course.hasPar) html += "<th>Wertung</th>";
+
+  html += "</tr></thead><tbody>";
+
+  for (const r of rows) {
+    html += "<tr>";
+    html += "<td>" + r.hole + "</td>";
+
+    if (course.hasPar) html += "<td>" + r.par + "</td>";
+
+    html += "<td><span class='score-symbol " + r.scoreClass + "'>" + r.gross + "</span></td>";
+    html += "<td>" + r.strokes + "</td>";
+    html += "<td>" + r.netto + "</td>";
+    html += "<td>" + (r.points === null ? "–" : formatNum(r.points)) + "</td>";
+
+    if (course.hasPar) html += "<td>" + r.scoreName + "</td>";
+
+    html += "</tr>";
+  }
+
+  html += "</tbody></table>";
+  html += "</div>";
+
+  box.innerHTML = html;
+}
+
+function formatPar(delta) {
+  if (delta > 0) return "+" + delta;
+  if (delta < 0) return String(delta);
+  return "±0";
+}
+
+function getRankingSignature() {
+  const calc = calculateRound();
+  return calc.sortedTotals.map(p => p.index).join("-");
+}
+
+function getRankingPositions() {
+  const calc = calculateRound();
+  const positions = {};
+
+  calc.sortedTotals.forEach((p, idx) => {
+    positions[p.index] = idx + 1;
+  });
+
+  return positions;
+}
+
+function updateRankMoves(oldPositions) {
+  const calc = calculateRound();
+
+  lastRankMoveByPlayer = {};
+
+  if (calc.playedHoles < 2) return;
+
+  const newPositions = getRankingPositions();
+
+  for (const playerIndex in newPositions) {
+    const oldPos = oldPositions[playerIndex];
+    const newPos = newPositions[playerIndex];
+
+    if (!oldPos || oldPos === newPos) continue;
+
+    lastRankMoveByPlayer[playerIndex] = oldPos - newPos;
+  }
+}
+
+function playRankingChangeSound() {
+
+  const AudioContext = window.AudioContext || window.webkitAudioContext;
+
+  if (!AudioContext) return;
+
+  const ctx = new AudioContext();
+
+  const notes = [
+    { freq: 523.25, start: 0.00, dur: 0.22 }, // C5
+    { freq: 659.25, start: 0.18, dur: 0.22 }, // E5
+    { freq: 783.99, start: 0.36, dur: 0.30 }, // G5
+    { freq: 1046.50, start: 0.62, dur: 0.55 } // C6
+  ];
+
+  notes.forEach(note => {
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = "sawtooth";
+
+    osc.frequency.value = note.freq;
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    const start = ctx.currentTime + note.start;
+    const end = start + note.dur;
+
+    gain.gain.setValueAtTime(0.0001, start);
+
+    gain.gain.exponentialRampToValueAtTime(0.45, start + 0.03);
+
+    gain.gain.exponentialRampToValueAtTime(0.18, end - 0.05);
+
+    gain.gain.exponentialRampToValueAtTime(0.0001, end);
+
+    osc.start(start);
+    osc.stop(end);
+  });
+
+  setTimeout(() => {
+    ctx.close();
+  }, 2000);
+}
+
+function checkRankingChangeAndPlaySound(oldSignature) {
+  const calc = calculateRound();
+  const newSignature = getRankingSignature();
+
+  if (
+    calc.playedHoles >= 2 &&
+    state.soundOnRankingChange !== false &&
+    oldSignature &&
+    newSignature !== oldSignature
+  ) {
+    playRankingChangeSound();
+  }
+
+  lastRankingSignature = newSignature;
+}
+
+function getHoleDefByKey(holeKey) {
+  const num = Number(holeKey);
+  for (const h of getCourseHoles()) {
+    if (h.hole === num) return h;
+  }
+  return null;
+}
+
+function getDefaultScoreForHole(h) {
+  const course = getCourse();
+  if (course.hasPar && h && h.par !== null && h.par !== undefined) return Number(h.par);
+  return 5;
+}
+
+function ensureHoleEntry(holeKey) {
+  if (!state.holes[holeKey] || typeof state.holes[holeKey] !== "object") {
+    state.holes[holeKey] = { gross: Array(state.playerCount).fill(null), confirmed: false };
+  }
+  if (!Array.isArray(state.holes[holeKey].gross)) {
+    state.holes[holeKey].gross = Array(state.playerCount).fill(null);
+  }
+  while (state.holes[holeKey].gross.length < state.playerCount) {
+    state.holes[holeKey].gross.push(null);
+  }
+}
+
+// Beim ersten Anfassen eines Lochs: alle noch leeren Felder mit dem
+// Par-Vorschlag (bzw. 5 ohne Platzdaten) füllen.
+function ensureHoleStarted(holeKey) {
+  ensureHoleEntry(holeKey);
+  const def = getDefaultScoreForHole(getHoleDefByKey(holeKey));
+  const gross = state.holes[holeKey].gross;
+  for (let i = 0; i < state.playerCount; i++) {
+    if (gross[i] === null || gross[i] === undefined || gross[i] === "") {
+      gross[i] = def;
+    }
+  }
+}
+
+function clampScore(n) {
+  if (!Number.isFinite(n)) return null;
+  return Math.max(1, Math.min(15, Math.trunc(n)));
+}
+
+function isHoleComplete(holeKey) {
+  ensureHoleEntry(holeKey);
+  const gross = state.holes[holeKey].gross;
+  for (let i = 0; i < state.playerCount; i++) {
+    const v = gross[i];
+    if (v === null || v === undefined || v === "") return false;
+  }
+  return true;
+}
+
+function rerenderEntryAndSummary() {
+  buildTable();
+  renderMobileCards();
+  renderSummary();
+}
+
+// +/- an einem Spieler eines Lochs.
+function stepScore(holeKey, playerIndex, delta) {
+  ensureHoleStarted(holeKey);
+  const gross = state.holes[holeKey].gross;
+  const current = clampScore(Number(gross[playerIndex]));
+  const base = current === null ? getDefaultScoreForHole(getHoleDefByKey(holeKey)) : current;
+  gross[playerIndex] = clampScore(base + delta);
+  state.holes[holeKey].confirmed = false; // Änderung => wieder unbestätigt
+  saveState(false);
+  rerenderEntryAndSummary();
+}
+
+// Direkte Zahleneingabe (wird beim Verlassen des Feldes übernommen).
+function commitTypedScore(holeKey, playerIndex, rawValue) {
+  ensureHoleEntry(holeKey);
+  const typed = toNullableInt(rawValue);
+  if (typed === null) {
+    state.holes[holeKey].gross[playerIndex] = null;
+  } else {
+    ensureHoleStarted(holeKey); // erstes Anfassen füllt übrige leere Felder mit Par
+    state.holes[holeKey].gross[playerIndex] = clampScore(typed);
+  }
+  state.holes[holeKey].confirmed = false;
+  saveState(false);
+  rerenderEntryAndSummary();
+}
+
+function confirmHole(holeKey) {
+  if (!isHoleComplete(holeKey)) {
+    showToast("Bitte für alle Spieler einen Score eingeben");
+    return;
+  }
+  const oldRankingSignature = getRankingSignature();
+  const oldRankingPositions = getRankingPositions();
+
+  ensureHoleEntry(holeKey);
+  state.holes[holeKey].confirmed = true;
+  saveState(false);
+
+  buildTable();
+  renderMobileCards();
+  updateRankMoves(oldRankingPositions);
+  renderSummary();
+
+  checkRankingChangeAndPlaySound(oldRankingSignature);
+  showToast("Loch " + holeKey + " bestätigt");
+}
+
+function editHole(holeKey) {
+  ensureHoleEntry(holeKey);
+  state.holes[holeKey].confirmed = false;
+  saveState(false);
+  rerenderEntryAndSummary();
+}
+
+function readSetupInputs() {
+  const newCount = Number(document.getElementById("playerCount").value) === 3 ? 3 : 4;
+  const newPlayers = [];
+
+  for (let i = 0; i < newCount; i++) {
+    const inp = document.getElementById("playerName_" + i);
+    const allowance = document.getElementById("allowance_" + i);
+    newPlayers.push({
+      name: (inp && inp.value.trim()) ? inp.value.trim() : ("Spieler " + (i + 1)),
+      allowance: allowance ? Math.max(0, toIntOrZero(allowance.value)) : 0
+    });
+  }
+
+  return {
+    playerCount: newCount,
+    players: newPlayers
+  };
+}
+
+function applySetup() {
+  const setup = readSetupInputs();
+
+  state.playerCount = setup.playerCount;
+  state.players = setup.players;
+  state = normalizeState(state);
+
+  saveState(true);
+
+
+  buildSetup();
+  buildTable();
+  renderMobileCards();
+  renderSummary();
+
+  const details = document.getElementById("setupDetails");
+  if (details && window.innerWidth <= 700) details.open = false;
+}
+
+function onPlayerCountChange() {
+  const setup = readSetupInputs();
+  state.playerCount = setup.playerCount;
+  state.players = setup.players;
+  state = normalizeState(state);
+
+  buildSetup();
+  buildTable();
+  renderMobileCards();
+  renderSummary();
+  saveState(false);
+}
+
+function changeCourse(courseId) {
+  if (!courses[courseId]) return;
+
+  const oldHoles = state.holes || {};
+  const oldOverrides = state.handicapOverrides || {};
+  state.courseId = courseId;
+  state = normalizeState(state);
+
+  // Scores und Overrides nach Lochnummer übernehmen, soweit möglich.
+  for (const h of getCourseHoles()) {
+    const key = String(h.hole);
+    if (oldHoles[key] && Array.isArray(oldHoles[key].gross)) {
+      state.holes[key].gross = oldHoles[key].gross.slice(0, state.playerCount);
+      while (state.holes[key].gross.length < state.playerCount) state.holes[key].gross.push(null);
+    }
+    if (oldOverrides[key] && Array.isArray(oldOverrides[key])) {
+      state.handicapOverrides[key] = oldOverrides[key].slice(0, state.playerCount);
+      while (state.handicapOverrides[key].length < state.playerCount) state.handicapOverrides[key].push(null);
+    }
+  }
+
+  saveState(false);
+  buildSetup();
+  buildTable();
+  renderMobileCards();
+  renderSummary();
+}
+
+function clearScores() {
+  if (!confirm("Alle Brutto-Schläge löschen? Vorgaben bleiben erhalten.")) return;
+  for (const h of getCourseHoles()) {
+    const key = String(h.hole);
+    state.holes[key].gross = Array(state.playerCount).fill(null);
+    state.holes[key].confirmed = false;
+  }
+  saveState(true);
+  buildTable();
+  renderMobileCards();
+  renderSummary();
+}
+
+function resetRound() {
+  if (!confirm("Neue Runde starten und alle aktuellen Daten löschen?")) return;
+  state = buildEmptyState(cloneDefault());
+  state = normalizeState(state);
+  saveState(true);
+  buildSetup();
+  buildTable();
+  renderMobileCards();
+  renderSummary();
+
+  const details = document.getElementById("setupDetails");
+  if (details) details.open = true;
+}
+
+function createShareLink() {
+  const shareState = {
+    c: state.courseId,
+    n: state.playerCount,
+    p: state.players.slice(0, state.playerCount).map(p => [
+      p.name,
+      p.allowance
+    ]),
+    h: {},
+    o: {},
+    f: []
+  };
+
+  for (const holeKey in state.holes) {
+    const gross = state.holes[holeKey].gross;
+
+    if (!Array.isArray(gross)) continue;
+
+    const hasScore = gross
+      .slice(0, state.playerCount)
+      .some(v => v !== null && v !== undefined && v !== "");
+
+    if (hasScore) {
+      shareState.h[holeKey] = gross.slice(0, state.playerCount);
+    }
+
+    if (state.holes[holeKey].confirmed) {
+      shareState.f.push(holeKey);
+    }
+  }
+
+  for (const holeKey in state.handicapOverrides) {
+    const overrides = state.handicapOverrides[holeKey];
+
+    if (!Array.isArray(overrides)) continue;
+
+    const hasOverride = overrides
+      .slice(0, state.playerCount)
+      .some(v => v !== null && v !== undefined && v !== "");
+
+    if (hasOverride) {
+      shareState.o[holeKey] = overrides.slice(0, state.playerCount);
+    }
+  }
+
+  const json = JSON.stringify(shareState);
+
+  const encoded = encodeURIComponent(
+    btoa(unescape(encodeURIComponent(json)))
+  );
+
+  return window.location.origin +
+    window.location.pathname +
+    "#s=" +
+    encoded;
+}
+function loadStateFromUrl() {
+  const hash = window.location.hash || "";
+
+  if (!hash.startsWith("#s=")) return;
+
+  const data = hash.substring(3);
+
+  try {
+    const json = decodeURIComponent(
+      escape(atob(decodeURIComponent(data)))
+    );
+
+    const shared = JSON.parse(json);
+
+    const imported = cloneDefault();
+
+    imported.courseId = courses[shared.c] ? shared.c : "velte";
+    imported.playerCount = Number(shared.n) === 3 ? 3 : 4;
+
+    imported.players = [];
+
+    if (Array.isArray(shared.p)) {
+      for (let i = 0; i < imported.playerCount; i++) {
+        const p = shared.p[i] || [];
+        imported.players.push({
+          name: p[0] || ("Spieler " + (i + 1)),
+          allowance: Math.max(0, toIntOrZero(p[1]))
+        });
+      }
+    }
+
+    imported.holes = {};
+    imported.handicapOverrides = {};
+
+    const courseHoles = courses[imported.courseId].holes;
+    const confirmedSet = new Set(Array.isArray(shared.f) ? shared.f.map(String) : []);
+
+    for (const h of courseHoles) {
+      const key = String(h.hole);
+
+      imported.holes[key] = {
+        gross: Array(imported.playerCount).fill(null),
+        confirmed: confirmedSet.has(key)
+      };
+
+      imported.handicapOverrides[key] =
+        Array(imported.playerCount).fill(null);
+
+      if (shared.h && Array.isArray(shared.h[key])) {
+        imported.holes[key].gross =
+          shared.h[key]
+            .slice(0, imported.playerCount)
+            .map(toNullableInt);
+      }
+
+      if (shared.o && Array.isArray(shared.o[key])) {
+        imported.handicapOverrides[key] =
+          shared.o[key]
+            .slice(0, imported.playerCount)
+            .map(v => {
+              if (v === null || v === undefined || v === "") return null;
+              return Math.max(0, toIntOrZero(v));
+            });
+      }
+    }
+
+    state = normalizeState(imported);
+    saveState(false);
+
+    window.history.replaceState(
+      {},
+      document.title,
+      window.location.origin + window.location.pathname
+    );
+
+    showToast("Geteilte Runde geladen");
+
+  } catch (e) {
+    console.error("Share-Link konnte nicht geladen werden", e);
+  }
+}
+
+function createRoundCsv() {
+  const calc = calculateRound();
+  const course = getCourse();
+
+  const now = new Date();
+  const dateTimeText = now.toLocaleString("de-DE", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+
+  let csv = "";
+
+  csv += "KOPENHAGEN GOLFRUNDE\n";
+  csv += "Datum;" + csvEscape(dateTimeText) + "\n";
+  csv += "Golfplatz;" + csvEscape(course.name) + "\n";
+  csv += "Spieleranzahl;" + state.playerCount + "\n";
+  csv += "\n";
+
+  csv += "GESAMTWERTUNG\n";
+  csv += "Platz;Spieler;Punkte;Brutto-Schläge";
+
+  if (course.hasPar) {
+    csv += ";+/- PAR";
+  }
+
+  csv += ";Gespielte Löcher\n";
+
+  calc.sortedTotals.forEach((p, idx) => {
+    const line = [
+      idx + 1,
+      p.name,
+      formatNum(p.points),
+      p.gross
+    ];
+
+    if (course.hasPar) {
+      line.push(formatPar(p.parDelta));
+    }
+
+    line.push(p.holesPlayed);
+
+    csv += line.map(csvEscape).join(";") + "\n";
+  });
+
+  csv += "\n";
+
+  if (course.hasPar) {
+    csv += "SPIELERSTATISTIK\n";
+    csv += "Spieler;Eagle+;Birdies;Pars;Bogeys;D-Bogeys;T-Bogey+\n";
+
+    for (let i = 0; i < state.playerCount; i++) {
+      const stats = getPlayerParStats(i);
+
+      const line = [
+        state.players[i].name,
+        stats.eagle,
+        stats.birdie,
+        stats.par,
+        stats.bogey,
+        stats.doublebogey,
+        stats.triplebogey
+      ];
+
+      csv += line.map(csvEscape).join(";") + "\n";
+    }
+
+    csv += "\n";
+  }
+
+  csv += "LOCHÜBERSICHT\n";
+
+  const header = ["Loch"];
+
+  if (course.hasPar) {
+    header.push("PAR");
+  }
+
+  for (let i = 0; i < state.playerCount; i++) {
+    header.push(state.players[i].name + " Brutto");
+    header.push(state.players[i].name + " Punkte");
+  }
+
+  csv += header.map(csvEscape).join(";") + "\n";
+
+  for (const h of getCourseHoles()) {
+    const key = String(h.hole);
+    const data = state.holes[key];
+    const result = calc.holeResults[key];
+
+    if (!data || !data.confirmed) continue;
+
+    const hasAnyScore = data.gross
+      .slice(0, state.playerCount)
+      .some(v => v !== null && v !== undefined && v !== "");
+
+    if (!hasAnyScore) continue;
+
+    const line = [h.hole];
+
+    if (course.hasPar) {
+      line.push(h.par);
+    }
+
+    for (let i = 0; i < state.playerCount; i++) {
+      const gross = data.gross[i];
+
+      line.push(gross === null ? "" : gross);
+      line.push(result.complete ? formatNum(result.points[i]) : "");
+    }
+
+    csv += line.map(csvEscape).join(";") + "\n";
+  }
+
+  return csv;
+}
+
+function csvEscape(value) {
+  const text = String(value ?? "");
+
+  if (
+    text.includes(";") ||
+    text.includes('"') ||
+    text.includes("\n")
+  ) {
+    return '"' + text.replaceAll('"', '""') + '"';
+  }
+
+  return text;
+}
+
+function downloadFile(content, filename, type) {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+
+  URL.revokeObjectURL(url);
+}
+
+
+function shareRound() {
+  const link = createShareLink();
+
+  if (navigator.share) {
+    navigator.share({
+      title: "Kopenhagen Golfrunde",
+      text: "Hier ist der aktuelle Spielstand der Kopenhagen-Runde:",
+      url: link
+    }).catch(() => {});
+  } else {
+    navigator.clipboard.writeText(link)
+      .then(() => showToast("Runden-Link kopiert"))
+      .catch(() => {
+        prompt("Runden-Link kopieren:", link);
+      });
+  }
+}
+
+
+async function exportRound() {
+
+  const csv = "\uFEFF" + createRoundCsv();
+  const json = JSON.stringify(state, null, 2);
+
+  const csvFile = new File(
+    [csv],
+    "kopenhagen-ergebnis.csv",
+    { type: "text/csv;charset=utf-8" }
+  );
+
+  const jsonFile = new File(
+    [json],
+    "kopenhagen-daten.json",
+    { type: "application/json;charset=utf-8" }
+  );
+
+  if (
+    navigator.canShare &&
+    navigator.canShare({ files: [csvFile, jsonFile] })
+  ) {
+
+    await navigator.share({
+      title: "Kopenhagen Ergebnis",
+      text: "Kopenhagen Ergebnis als CSV und JSON",
+      files: [csvFile, jsonFile]
+    });
+
+  } else {
+
+    downloadFile(
+      csv,
+      "kopenhagen-ergebnis.csv",
+      "text/csv;charset=utf-8"
+    );
+
+    downloadFile(
+      json,
+      "kopenhagen-daten.json",
+      "application/json;charset=utf-8"
+    );
+  }
+}
+
+
+function escapeHtml(str) {
+  return String(str)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+let toastTimer = null;
+function showToast(msg) {
+  const toast = document.getElementById("toast");
+  toast.textContent = msg;
+  toast.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove("show"), 1800);
+}
+
+function setBuildInfo() {
+  const el = document.getElementById("appBuildInfo");
+  if (!el) return;
+
+  const d = new Date(document.lastModified);
+
+  if (isNaN(d.getTime())) {
+    el.textContent = "Build: unbekannt";
+    return;
+  }
+
+  const text = d.toLocaleString("de-DE", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+
+  el.textContent = "Build: " + text;
+}
+
+function scrollToSummary() {
+  const summary = document.querySelector(".summary-card");
+  if (!summary) return;
+
+  lastScoreScrollY = window.pageYOffset;
+  jumpMode = "tabelle";
+  updateJumpButton();
+
+  const header = document.querySelector("header");
+  const headerHeight = header ? header.offsetHeight : 0;
+
+  const y = summary.getBoundingClientRect().top + window.pageYOffset - headerHeight - 8;
+
+  window.scrollTo({
+    top: Math.max(0, y),
+    behavior: "smooth"
+  });
+}
+
+function scrollBackToTable() {
+  jumpMode = "stand";
+  updateJumpButton();
+
+  window.scrollTo({
+    top: lastScoreScrollY,
+    behavior: "smooth"
+  });
+}
+
+function updateJumpButton() {
+  const btn = document.getElementById("summaryJumpBtn");
+  if (!btn) return;
+
+  btn.textContent = jumpMode === "stand" ? "🏆 Stand" : "⛳ Tabelle";
+}
+
+function toggleSummaryJump() {
+  if (jumpMode === "stand") {
+    scrollToSummary();
+  } else {
+    scrollBackToTable();
+  }
+}
+
+
+function getSpeechApi() {
+  return window.SpeechRecognition || window.webkitSpeechRecognition || null;
+}
+
+function initSpeechInput() {
+  const btn = document.getElementById("voiceBtn");
+  const status = document.getElementById("voiceStatus");
+
+  if (!btn) return;
+
+  const SpeechApi = getSpeechApi();
+
+  if (!SpeechApi) {
+    btn.disabled = true;
+    btn.textContent = "🎙️ Sprache nicht verfügbar";
+    if (status) {
+      status.textContent = "Spracherkennung wird von diesem Browser nicht unterstützt.";
+    }
+    return;
+  }
+
+  speechRecognition = new SpeechApi();
+  speechRecognition.lang = "de-DE";
+  speechRecognition.interimResults = false;
+  speechRecognition.continuous = false;
+  speechRecognition.maxAlternatives = 1;
+
+  speechRecognition.onstart = function() {
+    speechIsRunning = true;
+    btn.textContent = "🎤 Höre...";
+    if (status) {
+      status.textContent = "Bitte Score sprechen, z. B.: Loch 3 Thomas 5 Dirk 6 Frank 4 Olaf 7";
+    }
+  };
+
+  speechRecognition.onend = function() {
+    speechIsRunning = false;
+    btn.textContent = "🎤 Score";
+  };
+  speechRecognition.onerror = function(e) {
+    speechIsRunning = false;
+    btn.textContent = "🎤 Score";
+    if (status) {
+      status.textContent = "Spracherkennung abgebrochen oder fehlgeschlagen: " + e.error;
+    }
+  };
+
+  speechRecognition.onresult = function(event) {
+
+  speechRecognition.stop();
+
+  const text = event.results[0][0].transcript;
+  processVoiceScore(text);
+};
+
+  btn.addEventListener("click", function(e) {
+
+  e.preventDefault();
+  e.stopPropagation();
+
+  if (!speechRecognition) return;
+
+  if (speechIsRunning) {
+    speechRecognition.stop();
+    return;
+  }
+
+  try {
+    speechRecognition.start();
+  } catch (e) {
+    if (status) {
+      status.textContent = "Spracherkennung konnte nicht gestartet werden: " + e.message;
+    }
+  }
+});
+}
+
+function normalizeSpeechText(text) {
+  return String(text || "")
+    .toLowerCase()
+    .replaceAll("ä", "ae")
+    .replaceAll("ö", "oe")
+    .replaceAll("ü", "ue")
+    .replaceAll("ß", "ss")
+    .replace(/[^a-z0-9 ]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function speechTokenToNumber(token) {
+  if (/^\d+$/.test(token)) return Number(token);
+  if (speechNumberWords[token] !== undefined) return speechNumberWords[token];
+  return null;
+}
+
+function getNextIncompleteHoleNumber() {
+  for (const h of getCourseHoles()) {
+    const key = String(h.hole);
+    const data = state.holes[key];
+    if (!data || !Array.isArray(data.gross)) return h.hole;
+
+    for (let i = 0; i < state.playerCount; i++) {
+      if (data.gross[i] === null || data.gross[i] === undefined || data.gross[i] === "") {
+        return h.hole;
+      }
+    }
+  }
+
+  return 18;
+}
+
+function findSpokenHole(tokens) {
+
+  const holeWords = [
+    "loch",
+    "noch",
+    "lok",
+    "lock",
+    "lochh",
+    "luch",
+    "bahn",
+    "hole",
+    "whole"
+  ];
+
+  for (let i = 0; i < tokens.length; i++) {
+
+    if (holeWords.includes(tokens[i])) {
+
+      if (i + 1 < tokens.length) {
+        const n = speechTokenToNumber(tokens[i + 1]);
+
+        if (n >= 1 && n <= 18) {
+          return n;
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
+function getAliasesForPlayer(playerName) {
+  const normalizedName = normalizeSpeechText(playerName);
+  const firstName = normalizedName.split(" ")[0];
+
+  let aliases = [normalizedName, firstName];
+
+  if (speechPlayerAliases[firstName]) {
+    aliases = aliases.concat(speechPlayerAliases[firstName]);
+  }
+
+  aliases = aliases
+    .map(normalizeSpeechText)
+    .filter(Boolean);
+
+  return Array.from(new Set(aliases));
+}
+
+function findNumberAfterPlayer(tokens, playerName) {
+  const aliases = getAliasesForPlayer(playerName);
+
+  for (const alias of aliases) {
+    const nameTokens = alias.split(" ").filter(Boolean);
+    if (nameTokens.length === 0) continue;
+
+    for (let i = 0; i <= tokens.length - nameTokens.length; i++) {
+      let matches = true;
+
+      for (let j = 0; j < nameTokens.length; j++) {
+        const token = tokens[i + j];
+        const aliasToken = nameTokens[j];
+
+        if (
+          token !== aliasToken &&
+          !token.startsWith(aliasToken) &&
+          !aliasToken.startsWith(token)
+        ) {
+          matches = false;
+          break;
+        }
+      }
+
+      if (!matches) continue;
+
+      const start = i + nameTokens.length;
+      const end = Math.min(tokens.length, start + 5);
+
+      for (let k = start; k < end; k++) {
+        const n = speechTokenToNumber(tokens[k]);
+        if (n !== null && n >= 1 && n <= 20) return n;
+      }
+    }
+  }
+
+  return null;
+}
+
+function extractScoreNumbers(tokens) {
+  const numbers = [];
+
+  for (let i = 0; i < tokens.length; i++) {
+    if ((tokens[i] === "loch" || tokens[i] === "bahn") && i + 1 < tokens.length) {
+      i++;
+      continue;
+    }
+
+    const n = speechTokenToNumber(tokens[i]);
+    if (n !== null && n >= 1 && n <= 20) {
+      numbers.push(n);
+    }
+  }
+
+  return numbers;
+}
+
+function processVoiceScore(rawText) {
+
+  const status = document.getElementById("voiceStatus");
+  const text = normalizeSpeechText(rawText);
+  const tokens = text.split(" ").filter(Boolean);
+
+  if (tokens.length === 0) {
+    if (status) {
+      status.textContent = "Nichts erkannt.";
+    }
+    return;
+  }
+
+  const spokenHole = findSpokenHole(tokens);
+  const holeNumber = spokenHole || getNextIncompleteHoleNumber();
+  const holeKey = String(holeNumber);
+
+  if (!state.holes[holeKey]) {
+    state.holes[holeKey] = {
+      gross: Array(state.playerCount).fill(null)
+    };
+  }
+
+  const oldRankingSignature = getRankingSignature();
+  const oldRankingPositions = getRankingPositions();
+
+  let newScores = Array(state.playerCount).fill(null);
+  let namedHits = 0;
+
+  for (let i = 0; i < state.playerCount; i++) {
+
+    const n = findNumberAfterPlayer(
+      tokens,
+      state.players[i].name
+    );
+
+    if (n !== null) {
+      newScores[i] = n;
+      namedHits++;
+    }
+  }
+
+  if (namedHits === 0) {
+
+    const numbers = extractScoreNumbers(tokens);
+
+    if (numbers.length < state.playerCount) {
+
+      if (status) {
+        status.textContent =
+          "Erkannt: „" + rawText + "“. Es wurden zu wenige Scores erkannt.";
+      }
+
+      return;
+    }
+
+    for (let i = 0; i < state.playerCount; i++) {
+      newScores[i] = numbers[i];
+    }
+  }
+
+  for (let i = 0; i < state.playerCount; i++) {
+
+    if (newScores[i] !== null) {
+      state.holes[holeKey].gross[i] = newScores[i];
+    }
+  }
+
+  // Sprache trägt nur ein – bestätigt wird bewusst per Knopf.
+  state.holes[holeKey].confirmed = false;
+
+  saveState(false);
+  rerenderEntryAndSummary();
+
+  const recognized = [];
+
+  for (let i = 0; i < state.playerCount; i++) {
+    recognized.push(
+      state.players[i].name +
+      " " +
+      state.holes[holeKey].gross[i]
+    );
+  }
+
+  if (status) {
+    status.textContent =
+      "Übernommen für Loch " +
+      holeNumber +
+      ": " +
+      recognized.join(", ");
+  }
+
+  showToast("Score per Sprache eingetragen – bitte bestätigen");
+}
+
+function toggleShareMenu(e) {
+  e.stopPropagation();
+
+  const menu = document.getElementById("shareMenu");
+  if (!menu) return;
+
+  menu.classList.toggle("show");
+}
+
+function closeShareMenu() {
+  const menu = document.getElementById("shareMenu");
+  if (!menu) return;
+
+  menu.classList.remove("show");
+}
+
+function closeShareMenuOnOutsideClick(e) {
+  const menu = document.getElementById("shareMenu");
+  const btn = document.getElementById("shareMenuBtn");
+
+  if (!menu || !btn) return;
+
+  if (
+    menu.contains(e.target) ||
+    btn.contains(e.target)
+  ) {
+    return;
+  }
+
+  menu.classList.remove("show");
+}
+
+function toggleLoch19Menu(e) {
+  e.stopPropagation();
+  const menu = document.getElementById("loch19Menu");
+  if (!menu) return;
+  menu.classList.toggle("show");
+}
+
+function closeLoch19Menu() {
+  const menu = document.getElementById("loch19Menu");
+  if (!menu) return;
+  menu.classList.remove("show");
+}
+
+function getRaceHistory() {
+  const playerCount = state.playerCount;
+
+  const totals = state.players.slice(0, playerCount).map((p, index) => ({
+    index,
+    name: p.name || ("Spieler " + (index + 1)),
+    points: 0,
+    gross: 0
+  }));
+
+  const history = [];
+
+    history.push({
+    hole: 0,
+    ranking: totals.map((p, rankIndex) => ({
+      index: p.index,
+      name: p.name,
+      points: 0,
+      gross: 0,
+      rank: rankIndex + 1
+    }))
+  });
+
+  for (const h of getCourseHoles()) {
+    const key = String(h.hole);
+    const data = state.holes[key];
+
+    if (!data || !Array.isArray(data.gross)) continue;
+    if (!data.confirmed) continue;
+
+    const result = calculateHole(h, data.gross, playerCount);
+    if (!result.complete) continue;
+
+    for (let i = 0; i < playerCount; i++) {
+      totals[i].points += result.points[i];
+      totals[i].gross += Number(data.gross[i]);
+    }
+
+    const ranking = totals.slice().sort((a, b) => {
+      if (b.points !== a.points) return b.points - a.points;
+      if (a.gross !== b.gross) return a.gross - b.gross;
+      return a.index - b.index;
+    });
+
+    history.push({
+      hole: h.hole,
+      ranking: ranking.map((p, rankIndex) => ({
+        index: p.index,
+        name: p.name,
+        points: p.points,
+        gross: p.gross,
+        rank: rankIndex + 1
+      }))
+    });
+  }
+
+  return history;
+}
+
+function getRaceMedal(rank) {
+  if (rank === 1) return "🥇";
+  if (rank === 2) return "🥈";
+  if (rank === 3) return "🥉";
+  return String(rank);
+}
+
+function getRaceRunnerHtml(playerIndex, name, points) {
+  const color = racePlayerColors[playerIndex] || "#555";
+
+  return (
+    "<span class='race-snail'>🐌</span>" +
+    "<span class='race-dot' style='background:" +
+    color +
+    "'></span><span class='race-runner-name'>" +
+    escapeHtml(name) +
+    (points === null ? "" : " (" + formatNum(points) + ")") +
+    "</span>"
+  );
+}
+
+function openRaceReplay() {
+  closeLoch19Menu();
+
+  const history = getRaceHistory();
+
+  if (history.length === 0) {
+    showToast("Noch keine vollständigen Löcher für Replay");
+    return;
+  }
+
+  const overlay = document.getElementById("raceOverlay");
+  const track = document.getElementById("raceTrack");
+  const labels = document.getElementById("raceHoleLabels");
+  const analysis = document.getElementById("analysisContent");
+  const controls = document.querySelector(".race-controls");
+  const counter = document.getElementById("raceHoleCounter");
+  const speed = document.getElementById("raceSpeedSelect");
+
+  if (!overlay || !track || !labels) return;
+
+  clearInterval(raceTimer);
+
+  if (analysis) {
+    analysis.style.display = "none";
+    analysis.innerHTML = "";
+  }
+
+  track.style.display = "block";
+  track.innerHTML = "<div class='race-hole-labels' id='raceHoleLabels'></div>";
+
+  if (controls) controls.style.display = "flex";
+  if (counter) counter.style.display = "flex";
+  if (speed) speed.style.display = "";
+
+  const startLabel = document.createElement("div");
+startLabel.className = "race-marker-label race-marker-label-start";
+startLabel.textContent = "Start";
+track.appendChild(startLabel);
+
+const halfLabel = document.createElement("div");
+halfLabel.className = "race-marker-label race-marker-label-half";
+halfLabel.textContent = "Loch 9";
+track.appendChild(halfLabel);
+
+const finishLabel = document.createElement("div");
+finishLabel.className = "race-marker-label race-marker-label-finish";
+finishLabel.textContent = "🏁 Ziel";
+track.appendChild(finishLabel);
+
+const startMarker = document.createElement("div");
+startMarker.className = "race-marker race-marker-start";
+track.appendChild(startMarker);
+
+const halfMarker = document.createElement("div");
+halfMarker.className = "race-marker race-marker-half";
+track.appendChild(halfMarker);
+
+const finishMarker = document.createElement("div");
+finishMarker.className = "race-marker race-marker-finish";
+track.appendChild(finishMarker);
+
+
+  
+  for (let i = 0; i < state.playerCount; i++) {
+    const top = getRaceTopForPlayer(i);
+
+    const lane = document.createElement("div");
+    lane.className = "race-lane";
+    lane.style.top = top + "%";
+    lane.style.left = getRaceStartX() + "px";
+    lane.style.right = getRaceFinishRight() + "px";
+    track.appendChild(lane);
+
+   
+
+    const runner = document.createElement("div");
+    runner.className = "race-runner";
+    runner.id = "raceRunner_" + i;
+    runner.innerHTML = getRaceRunnerHtml(
+      i,
+      state.players[i].name || ("Spieler " + (i + 1)),
+      0
+    );
+
+    runner.style.left = getRaceStartX() + "px";
+    runner.style.top = top + "%";
+
+    track.appendChild(runner);
+  }
+
+  overlay.classList.add("show");
+
+  const head = overlay.querySelector(".race-head strong");
+  if (head) head.textContent = "🐌 Kopenhagen Replay";
+
+  const timeline = document.getElementById("raceTimeline");
+  if (timeline) {
+    timeline.min = "0";
+    timeline.max = String(history.length - 1);
+    timeline.value = "0";
+  }
+
+  showRaceStep(history, 0);
+}
+
+function getRaceTopForPlayer(playerIndex) {
+  const count = state.playerCount;
+  return 24 + (playerIndex * (62 / Math.max(1, count - 1)));
+}
+
+function showRaceStep(history, stepIndex) {
+  const step = history[stepIndex];
+  if (!step) return;
+
+  const counter = document.getElementById("raceHoleCounter");
+  if (counter) {
+    counter.style.display = "flex";
+    counter.textContent = "⛳ Loch " + step.hole;
+  }
+
+  const byPlayer = {};
+  for (const p of step.ranking) {
+    byPlayer[p.index] = p;
+  }
+
+
+  const winnerPoints = Math.max(
+    1,
+    ...history[history.length - 1].ranking.map(p => Number(p.points) || 0)
+  );
+
+for (let i = 0; i < state.playerCount; i++) {
+  const p = byPlayer[i];
+  const runner = document.getElementById("raceRunner_" + i);
+  if (!runner || !p) continue;
+
+  const points = Math.max(0, Number(p.points) || 0);
+  const track = document.getElementById("raceTrack");
+  const trackWidth = track ? track.clientWidth : window.innerWidth;
+  const startX = getRaceStartX();
+  const finishRight = getRaceFinishRight();
+
+  const maxLeft = trackWidth - finishRight;
+
+  const left =
+    startX +
+    (points / winnerPoints) *
+    (maxLeft - startX);
+
+  runner.innerHTML = getRaceRunnerHtml(
+    i,
+    p.name,
+    p.points
+  );
+
+  runner.style.left = left + "px";
+  runner.style.top = getRaceTopForPlayer(i) + "%";
+}
+
+  const timeline = document.getElementById("raceTimeline");
+  if (timeline) timeline.value = String(stepIndex);
+}
+
+function startRaceReplay() {
+  const history = getRaceHistory();
+
+  if (history.length === 0) {
+    showToast("Noch keine vollständigen Löcher für Replay");
+    return;
+  }
+
+  clearInterval(raceTimer);
+
+  let step = 0;
+  showRaceStep(history, step);
+
+  const delay = Math.max(300, (raceReplaySeconds * 1000) / Math.max(1, history.length - 1));
+
+  raceTimer = setInterval(() => {
+    step++;
+
+    if (step >= history.length) {
+      clearInterval(raceTimer);
+      return;
+    }
+
+    showRaceStep(history, step);
+  }, delay);
+}
+
+function closeRaceReplay() {
+  clearInterval(raceTimer);
+  const overlay = document.getElementById("raceOverlay");
+  if (overlay) overlay.classList.remove("show");
+}
+
+function openAnalysisOverlay(title, html) {
+  closeLoch19Menu();
+  clearInterval(raceTimer);
+
+  const overlay = document.getElementById("raceOverlay");
+  const track = document.getElementById("raceTrack");
+  const analysis = document.getElementById("analysisContent");
+  const controls = document.querySelector(".race-controls");
+  const counter = document.getElementById("raceHoleCounter");
+  const speed = document.getElementById("raceSpeedSelect");
+
+
+
+  if (!overlay || !track || !analysis) return;
+
+  track.style.display = "none";
+  analysis.style.display = "block";
+  analysis.innerHTML = html;
+
+  if (controls) controls.style.display = "none";
+  if (counter) counter.style.display = "none";
+  if (speed) speed.style.display = "none";
+
+  overlay.classList.add("show");
+
+  const head = overlay.querySelector(".race-head strong");
+  if (head) head.textContent = title;
+}
+
+function onRaceTimelineInput() {
+  const history = getRaceHistory();
+  const timeline = document.getElementById("raceTimeline");
+
+  if (!timeline || history.length === 0) return;
+
+  clearInterval(raceTimer);
+
+  const step = Number(timeline.value);
+  showRaceStep(history, step);
+}
+
+function openRankingChart() {
+  const history = getRaceHistory();
+
+  if (history.length === 0) {
+    showToast("Noch keine vollständigen Löcher für Ranking-Verlauf");
+    return;
+  }
+
+  let html = "<div style='padding:14px; height:100%; overflow:auto;'>";
+  html += "<h3>📈 Ranking-Verlauf</h3>";
+  html += "<table class='player-detail-table'>";
+  html += "<thead><tr><th>Loch</th>";
+
+  for (let i = 0; i < state.playerCount; i++) {
+    html += "<th>" + escapeHtml(state.players[i].name || ("Spieler " + (i + 1))) + "</th>";
+  }
+
+  html += "</tr></thead><tbody>";
+
+  for (const step of history) {
+    const byPlayer = {};
+
+    for (const p of step.ranking) {
+      byPlayer[p.index] = p.rank;
+    }
+
+    html += "<tr>";
+    html += "<td>" + step.hole + "</td>";
+
+    for (let i = 0; i < state.playerCount; i++) {
+      html += "<td>" + getRaceMedal(byPlayer[i]) + "</td>";
+    }
+
+    html += "</tr>";
+  }
+
+  html += "</tbody></table>";
+  html += "</div>";
+
+  openAnalysisOverlay("📈 Ranking-Verlauf", html);
+}
+
+function openHighlights() {
+  const history = getRaceHistory();
+
+  if (history.length === 0) {
+    showToast("Noch keine vollständigen Löcher für Highlights");
+    return;
+  }
+
+  const leadCount = {};
+  const bestRank = {};
+  const worstRank = {};
+  const biggestJump = { name: "", value: 0, hole: 0 };
+  const biggestDrop = { name: "", value: 0, hole: 0 };
+
+  let previousRanks = null;
+
+  for (const step of history) {
+    const ranks = {};
+
+    for (const p of step.ranking) {
+      ranks[p.index] = p.rank;
+
+      if (p.rank === 1) {
+        leadCount[p.index] = (leadCount[p.index] || 0) + 1;
+      }
+
+      bestRank[p.index] = bestRank[p.index] === undefined
+        ? p.rank
+        : Math.min(bestRank[p.index], p.rank);
+
+      worstRank[p.index] = worstRank[p.index] === undefined
+        ? p.rank
+        : Math.max(worstRank[p.index], p.rank);
+    }
+
+    if (previousRanks) {
+      for (const p of step.ranking) {
+        const diff = previousRanks[p.index] - p.rank;
+
+        if (diff > biggestJump.value) {
+          biggestJump.name = p.name;
+          biggestJump.value = diff;
+          biggestJump.hole = step.hole;
+        }
+
+        if (-diff > biggestDrop.value) {
+          biggestDrop.name = p.name;
+          biggestDrop.value = -diff;
+          biggestDrop.hole = step.hole;
+        }
+      }
+    }
+
+    previousRanks = ranks;
+  }
+
+  let leaderName = "niemand";
+  let leaderCount = 0;
+
+  for (let i = 0; i < state.playerCount; i++) {
+    if ((leadCount[i] || 0) > leaderCount) {
+      leaderName = state.players[i].name || ("Spieler " + (i + 1));
+      leaderCount = leadCount[i] || 0;
+    }
+  }
+
+  let html = "<div style='padding:14px; height:100%; overflow:auto;'>";
+  html += "<h3>🏆 Highlights</h3>";
+
+  html += "<p class='mini-pill'>👑 Längste Führung: " +
+    escapeHtml(leaderName) + " (" + leaderCount + " Löcher)</p>";
+
+  html += "<p class='mini-pill'>🚀 Größter Aufstieg: " +
+    (biggestJump.value > 0
+      ? escapeHtml(biggestJump.name) + " ▲" + biggestJump.value + " an Loch " + biggestJump.hole
+      : "keine Veränderung") +
+    "</p>";
+
+  html += "<p class='mini-pill'>📉 Größter Absturz: " +
+    (biggestDrop.value > 0
+      ? escapeHtml(biggestDrop.name) + " ▼" + biggestDrop.value + " an Loch " + biggestDrop.hole
+      : "keine Veränderung") +
+    "</p>";
+
+  html += "<table class='player-detail-table' style='margin-top:12px;'>";
+  html += "<thead><tr><th>Spieler</th><th>Beste Platzierung</th><th>Schlechteste Platzierung</th><th>Führung nach Löchern</th></tr></thead><tbody>";
+
+  for (let i = 0; i < state.playerCount; i++) {
+    html += "<tr>";
+    html += "<td>" + escapeHtml(state.players[i].name || ("Spieler " + (i + 1))) + "</td>";
+    html += "<td>" + getRaceMedal(bestRank[i]) + "</td>";
+    html += "<td>" + getRaceMedal(worstRank[i]) + "</td>";
+    html += "<td>" + (leadCount[i] || 0) + "</td>";
+    html += "</tr>";
+  }
+
+  html += "</tbody></table>";
+  html += "</div>";
+
+  openAnalysisOverlay("🏆 Highlights", html);
+}
+
+
+function init() {
+  state = normalizeState(state);
+  loadStateFromUrl();
+  document.getElementById("summaryJumpBtn").addEventListener("click", toggleSummaryJump);
+  document.getElementById("resetBtn").addEventListener("click", resetRound);
+  document.getElementById("applySetupBtn").addEventListener("click", applySetup);
+  document.getElementById("clearScoresBtn").addEventListener("click", clearScores);
+  document.getElementById("shareMenuBtn").addEventListener("click", toggleShareMenu);
+  document.getElementById("shareRoundBtn").addEventListener("click", () => {
+  closeShareMenu();
+  shareRound();
+});
+  document.getElementById("exportRoundBtn").addEventListener("click", () => {
+  closeShareMenu();
+  exportRound();
+});
+
+  document.addEventListener("click", closeShareMenuOnOutsideClick);
+  document.getElementById("playerCount").addEventListener("change", onPlayerCountChange);
+
+  document.getElementById("raceReplayBtn").addEventListener("click", openRaceReplay);
+  document.getElementById("startRaceBtn").addEventListener("click", startRaceReplay);
+  document.getElementById("resetRaceBtn").addEventListener("click", openRaceReplay);
+  document
+  .getElementById("closeLoch19Btn")
+  .addEventListener("click", closeLoch19Menu);
+  document.getElementById("raceTimeline").addEventListener("input", onRaceTimelineInput);
+  document.getElementById("closeRaceBtn").addEventListener("click", closeRaceReplay);
+
+  document.getElementById("rankingChartBtn").addEventListener("click", openRankingChart);
+  document.getElementById("highlightsBtn").addEventListener("click", openHighlights);
+
+  document.addEventListener("click", closeLoch19Menu);
+
+  document.getElementById("closeHoleStandBtn").addEventListener("click", closeHoleStandPopup);
+
+  document.getElementById("raceSpeedSelect").addEventListener("change", function() {
+  raceReplaySeconds = Number(this.value) || 20;
+  });
+
+  const details = document.getElementById("setupDetails");
+  if (details) details.open = window.innerWidth > 700;
+
+  buildKnownPlayerNamesList();
+  buildSetup();
+  buildTable();
+  renderMobileCards();
+  renderSummary();
+  initSpeechInput();
+  saveState(false);
+}
+
+setBuildInfo();
+init();
+</script>
+</body>
+</html>
