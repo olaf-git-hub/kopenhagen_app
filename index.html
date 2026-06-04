@@ -3863,14 +3863,15 @@ function loadStateFromUrl() {
     imported.handicapOverrides = {};
 
     const courseHoles = courses[imported.courseId].holes;
-    const confirmedSet = new Set(Array.isArray(shared.f) ? shared.f.map(String) : []);
+    const hasConfirmedInfo = Array.isArray(shared.f);
+    const confirmedSet = new Set(hasConfirmedInfo ? shared.f.map(String) : []);
 
     for (const h of courseHoles) {
       const key = String(h.hole);
 
       imported.holes[key] = {
         gross: Array(imported.playerCount).fill(null),
-        confirmed: confirmedSet.has(key)
+        confirmed: false
       };
 
       imported.handicapOverrides[key] =
@@ -3882,6 +3883,14 @@ function loadStateFromUrl() {
             .slice(0, imported.playerCount)
             .map(toNullableInt);
       }
+
+      // Bestätigt-Status: neue Links bringen eine Liste (shared.f) mit.
+      // Ältere Links (ohne f) -> komplett ausgefüllte Löcher als bestätigt werten,
+      // damit der Gesamtstand wie früher sofort erscheint.
+      const filled = imported.holes[key].gross
+        .slice(0, imported.playerCount)
+        .every(v => v !== null && v !== undefined && v !== "");
+      imported.holes[key].confirmed = hasConfirmedInfo ? confirmedSet.has(key) : filled;
 
       if (shared.o && Array.isArray(shared.o[key])) {
         imported.handicapOverrides[key] =
