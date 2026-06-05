@@ -4745,6 +4745,11 @@ function closeLoch19Menu() {
   menu.classList.remove("show");
 }
 
+function openLoch19Menu() {
+  const menu = document.getElementById("loch19Menu");
+  if (menu) menu.classList.add("show");
+}
+
 function getRaceHistory() {
   const playerCount = state.playerCount;
 
@@ -5079,6 +5084,9 @@ function closeRaceReplay() {
   clearInterval(raceTimer);
   const overlay = document.getElementById("raceOverlay");
   if (overlay) overlay.classList.remove("show");
+  // Zurück zur Loch-19-Auswahl (verzögert, damit der globale Klick-Listener
+  // das gerade geöffnete Menü nicht im selben Klick wieder schließt).
+  setTimeout(openLoch19Menu, 0);
 }
 
 function openAnalysisOverlay(title, html) {
