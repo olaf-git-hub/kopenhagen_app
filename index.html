@@ -1501,6 +1501,17 @@ input.score-triplebogey {
   font-size: 12px;
 }
 
+.hole-reset-btn {
+  width: auto;
+  margin-top: 8px;
+  background: #fff;
+  color: #8a8f8a;
+  border: 1px solid var(--line);
+  min-height: 30px;
+  padding: 4px 12px;
+  font-size: 12px;
+}
+
 .hole-card.hole-confirmed {
   outline: 2px solid #bfe6cb;
   outline-offset: -2px;
@@ -2915,11 +2926,13 @@ function buildScoreStepper(holeKey, playerIndex, holeDef, grossVal) {
   return wrap;
 }
 
-// Bestätigen-/Bearbeiten-Button für ein Loch.
+// Bestätigen-/Bearbeiten-Button für ein Loch (plus ggf. „zurücksetzen").
 function buildConfirmButton(holeKey) {
   const data = state.holes[holeKey];
   const confirmed = !!(data && data.confirmed);
   const complete = isHoleComplete(holeKey);
+
+  const frag = document.createDocumentFragment();
 
   const btn = document.createElement("button");
   btn.type = "button";
@@ -2929,12 +2942,24 @@ function buildConfirmButton(holeKey) {
     btn.classList.add("confirmed");
     btn.textContent = "✓ bestätigt – bearbeiten";
     btn.addEventListener("click", (e) => { e.stopPropagation(); editHole(holeKey); });
+    frag.appendChild(btn);
   } else {
     btn.textContent = "✓ Loch bestätigen";
     btn.disabled = !complete;
     btn.addEventListener("click", (e) => { e.stopPropagation(); confirmHole(holeKey); });
+    frag.appendChild(btn);
+
+    // Ausweg bei versehentlicher Eingabe: nur zeigen, wenn schon Scores da sind.
+    if (holeHasAnyScore(holeKey)) {
+      const reset = document.createElement("button");
+      reset.type = "button";
+      reset.className = "hole-reset-btn";
+      reset.textContent = "↩︎ Loch zurücksetzen";
+      reset.addEventListener("click", (e) => { e.stopPropagation(); resetHole(holeKey); });
+      frag.appendChild(reset);
+    }
   }
-  return btn;
+  return frag;
 }
 
 function buildTable() {
@@ -3648,6 +3673,28 @@ function isHoleComplete(holeKey) {
     if (v === null || v === undefined || v === "") return false;
   }
   return true;
+}
+
+// Hat das Loch bei mindestens einem Spieler schon einen Score?
+function holeHasAnyScore(holeKey) {
+  ensureHoleEntry(holeKey);
+  const gross = state.holes[holeKey].gross;
+  for (let i = 0; i < state.playerCount; i++) {
+    const v = gross[i];
+    if (v !== null && v !== undefined && v !== "") return true;
+  }
+  return false;
+}
+
+// Loch wieder leeren: alle Felder zurück auf leer/grau, Loch unbestätigt.
+// Ausweg, falls man versehentlich Scores gesetzt hat.
+function resetHole(holeKey) {
+  ensureHoleEntry(holeKey);
+  const gross = state.holes[holeKey].gross;
+  for (let i = 0; i < state.playerCount; i++) gross[i] = null;
+  state.holes[holeKey].confirmed = false;
+  saveState(false);
+  rerenderEntryAndSummary();
 }
 
 function rerenderEntryAndSummary() {
