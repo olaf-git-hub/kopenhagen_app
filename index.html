@@ -55,6 +55,26 @@
       justify-content: space-between;
     }
 
+    .season-top-btn {
+      position: absolute;
+      top: calc(env(safe-area-inset-top) + 8px);
+      right: 8px;
+      width: 40px;
+      height: 40px;
+      min-height: 40px;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: none;
+      box-shadow: none;
+      font-size: 26px;
+      line-height: 1;
+      z-index: 31;
+      cursor: pointer;
+    }
+
     h1 {
       margin: 0;
       font-size: 20px;
@@ -1897,6 +1917,7 @@ tr.hole-confirmed td:first-child {
     <button class="danger small" id="resetBtn" type="button">Neue Runde</button>
   </div>
   </div>
+  <button type="button" id="seasonTopBtn" class="season-top-btn" title="Saison-Tabelle" aria-label="Saison-Tabelle">🏆</button>
 </header>
 
 <main>
@@ -2165,6 +2186,10 @@ let state = loadState();
 // Schnappschuss der bestätigten Scores beim Bearbeiten eines Lochs,
 // damit „Bearbeiten abbrechen" den alten Stand wiederherstellen kann.
 let holeEditSnapshots = {};
+
+// Wurde das Analyse-/Replay-Overlay aus der Loch-19-Karte geöffnet?
+// (Dann nach dem Schließen wieder zur Loch-19-Auswahl zurück.)
+let overlayFromLoch19 = false;
 
 let lastScoreScrollY = 0;
 let jumpMode = "stand";
@@ -5241,9 +5266,10 @@ function closeRaceReplay() {
   clearInterval(raceTimer);
   const overlay = document.getElementById("raceOverlay");
   if (overlay) overlay.classList.remove("show");
-  // Zurück zur Loch-19-Auswahl (verzögert, damit der globale Klick-Listener
-  // das gerade geöffnete Menü nicht im selben Klick wieder schließt).
-  setTimeout(openLoch19Menu, 0);
+  // Nur zur Loch-19-Auswahl zurück, wenn das Overlay von dort geöffnet wurde
+  // (verzögert, damit der globale Klick-Listener das Menü nicht sofort schließt).
+  if (overlayFromLoch19) setTimeout(openLoch19Menu, 0);
+  overlayFromLoch19 = false;
 }
 
 function openAnalysisOverlay(title, html) {
@@ -6252,7 +6278,7 @@ function init() {
   document.addEventListener("click", closeShareMenuOnOutsideClick);
   document.getElementById("playerCount").addEventListener("change", onPlayerCountChange);
 
-  document.getElementById("raceReplayBtn").addEventListener("click", openRaceReplay);
+  document.getElementById("raceReplayBtn").addEventListener("click", () => { overlayFromLoch19 = true; openRaceReplay(); });
   document.getElementById("startRaceBtn").addEventListener("click", onRaceStartButton);
   document
   .getElementById("closeLoch19Btn")
@@ -6261,7 +6287,8 @@ function init() {
   document.getElementById("closeRaceBtn").addEventListener("click", closeRaceReplay);
 
   document.getElementById("addRoundToSeasonBtn").addEventListener("click", addCurrentRoundToSeason);
-  document.getElementById("seasonTableBtn").addEventListener("click", openSeasonTable);
+  document.getElementById("seasonTableBtn").addEventListener("click", () => { overlayFromLoch19 = true; openSeasonTable(); });
+  document.getElementById("seasonTopBtn").addEventListener("click", () => { overlayFromLoch19 = false; openSeasonTable(); });
 
   const suggestBtn = document.getElementById("suggestAllowanceBtn");
   if (suggestBtn) suggestBtn.addEventListener("click", openSuggestModal);
@@ -6281,7 +6308,7 @@ function init() {
   document.getElementById("suggestPopup").addEventListener("click", function(e) {
     if (e.target === this) closeSuggestModal();
   });
-  document.getElementById("highlightsBtn").addEventListener("click", openHighlights);
+  document.getElementById("highlightsBtn").addEventListener("click", () => { overlayFromLoch19 = true; openHighlights(); });
 
   document.addEventListener("click", closeLoch19Menu);
 
