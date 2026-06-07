@@ -1526,15 +1526,28 @@ input.score-triplebogey {
   transition: width 600ms linear;
 }
 
-.hole-reset-btn {
-  width: auto;
-  margin-top: 8px;
+/* Wrapper, damit das Abbrechen-✕ in der Ecke des Bestätigen-Buttons sitzt. */
+.hole-confirm-stack {
+  position: relative;
+}
+
+.hole-cancel-x {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  width: 26px;
+  height: 26px;
+  min-height: 26px;
+  padding: 0;
+  border-radius: 999px;
   background: #fff;
-  color: #8a8f8a;
-  border: 1px solid var(--line);
-  min-height: 30px;
-  padding: 4px 12px;
-  font-size: 12px;
+  color: #b04a4a;
+  border: 1px solid #e0bcbc;
+  font-size: 14px;
+  font-weight: 950;
+  line-height: 1;
+  box-shadow: 0 1px 4px rgba(0,0,0,.2);
+  z-index: 2;
 }
 
 .hole-card.hole-confirmed {
@@ -2148,6 +2161,10 @@ const defaultState = {
 
 
 let state = loadState();
+
+// Schnappschuss der bestätigten Scores beim Bearbeiten eines Lochs,
+// damit „Bearbeiten abbrechen" den alten Stand wiederherstellen kann.
+let holeEditSnapshots = {};
 
 let lastScoreScrollY = 0;
 let jumpMode = "stand";
@@ -3002,16 +3019,32 @@ function buildConfirmButton(holeKey) {
     btn.textContent = "✓ Loch bestätigen";
     btn.disabled = !complete;
     btn.addEventListener("click", (e) => { e.stopPropagation(); confirmHole(holeKey); });
-    frag.appendChild(btn);
 
-    // Ausweg bei versehentlicher Eingabe: nur zeigen, wenn schon Scores da sind.
-    if (holeHasAnyScore(holeKey)) {
-      const reset = document.createElement("button");
-      reset.type = "button";
-      reset.className = "hole-reset-btn";
-      reset.textContent = "↩︎ Loch zurücksetzen";
-      reset.addEventListener("click", (e) => { e.stopPropagation(); resetHole(holeKey); });
-      frag.appendChild(reset);
+    // Kleines ✕ oben rechts am Button zum Abbrechen.
+    // - Bearbeiten läuft (Schnappschuss da): alten Stand wiederherstellen.
+    // - Frische Eingabe: Loch wieder leeren.
+    const editing = !!holeEditSnapshots[holeKey];
+    if (editing || holeHasAnyScore(holeKey)) {
+      const stack = document.createElement("div");
+      stack.className = "hole-confirm-stack";
+      stack.appendChild(btn);
+
+      const cancelX = document.createElement("button");
+      cancelX.type = "button";
+      cancelX.className = "hole-cancel-x";
+      cancelX.textContent = "✕";
+      cancelX.title = editing ? "Bearbeiten abbrechen" : "Eingabe abbrechen";
+      cancelX.setAttribute("aria-label", cancelX.title);
+      cancelX.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (holeEditSnapshots[holeKey]) cancelHoleEdit(holeKey);
+        else resetHole(holeKey);
+      });
+      stack.appendChild(cancelX);
+
+      frag.appendChild(stack);
+    } else {
+      frag.appendChild(btn);
     }
   }
   return frag;
@@ -3748,6 +3781,7 @@ function resetHole(holeKey) {
   const gross = state.holes[holeKey].gross;
   for (let i = 0; i < state.playerCount; i++) gross[i] = null;
   state.holes[holeKey].confirmed = false;
+  delete holeEditSnapshots[holeKey];
   saveState(false);
   rerenderEntryAndSummary();
 }
@@ -3795,6 +3829,7 @@ function confirmHole(holeKey) {
 
   ensureHoleEntry(holeKey);
   state.holes[holeKey].confirmed = true;
+  delete holeEditSnapshots[holeKey]; // Bearbeiten abgeschlossen
   saveState(false);
 
   buildTable();
@@ -3808,9 +3843,24 @@ function confirmHole(holeKey) {
 
 function editHole(holeKey) {
   ensureHoleEntry(holeKey);
+  // Stand vor dem Bearbeiten merken (zum Abbrechen).
+  holeEditSnapshots[holeKey] = { gross: state.holes[holeKey].gross.slice() };
   state.holes[holeKey].confirmed = false;
   saveState(false);
   rerenderEntryAndSummary();
+}
+
+// Bearbeiten abbrechen: alten (bestätigten) Stand wiederherstellen.
+function cancelHoleEdit(holeKey) {
+  const snap = holeEditSnapshots[holeKey];
+  if (!snap) return;
+  ensureHoleEntry(holeKey);
+  state.holes[holeKey].gross = snap.gross.slice();
+  state.holes[holeKey].confirmed = true;
+  delete holeEditSnapshots[holeKey];
+  saveState(false);
+  rerenderEntryAndSummary();
+  showToast("Bearbeiten abgebrochen");
 }
 
 function readSetupInputs() {
