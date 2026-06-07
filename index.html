@@ -1494,6 +1494,8 @@ input.score-triplebogey {
 }
 
 .hole-confirm-btn.confirmed {
+  position: relative;
+  overflow: hidden;
   background: #e3f5e8;
   color: var(--good);
   border: 1px solid #b6e0c2;
@@ -1501,6 +1503,27 @@ input.score-triplebogey {
   min-height: 30px;
   padding: 4px 12px;
   font-size: 12px;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+}
+
+/* Fortschritts-Füllung beim Gedrückthalten (zum Bearbeiten). */
+.hole-confirm-btn.confirmed::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  background: rgba(53,140,80,.22);
+  pointer-events: none;
+}
+
+.hole-confirm-btn.confirmed.holding::after {
+  width: 100%;
+  transition: width 600ms linear;
 }
 
 .hole-reset-btn {
@@ -2928,6 +2951,36 @@ function buildScoreStepper(holeKey, playerIndex, holeDef, grossVal) {
   return wrap;
 }
 
+// Bestätigtes Loch nur nach längerem Gedrückthalten zum Bearbeiten öffnen
+// (verhindert versehentliches Entsperren). ~600 ms, mit Fortschritts-Füllung.
+function attachLongPressEdit(btn, holeKey) {
+  const LONG_PRESS_MS = 600;
+  let timer = null;
+
+  const start = (e) => {
+    e.stopPropagation();
+    if (timer) clearTimeout(timer);
+    btn.classList.add("holding");
+    timer = setTimeout(() => {
+      timer = null;
+      btn.classList.remove("holding");
+      editHole(holeKey);
+    }, LONG_PRESS_MS);
+  };
+  const cancel = () => {
+    if (timer) { clearTimeout(timer); timer = null; }
+    btn.classList.remove("holding");
+  };
+
+  btn.addEventListener("pointerdown", start);
+  btn.addEventListener("pointerup", cancel);
+  btn.addEventListener("pointerleave", cancel);
+  btn.addEventListener("pointercancel", cancel);
+  // Kurzer Tipp darf nichts auslösen; Kontextmenü beim Halten unterdrücken.
+  btn.addEventListener("click", (e) => { e.stopPropagation(); e.preventDefault(); });
+  btn.addEventListener("contextmenu", (e) => { e.preventDefault(); });
+}
+
 // Bestätigen-/Bearbeiten-Button für ein Loch (plus ggf. „zurücksetzen").
 function buildConfirmButton(holeKey) {
   const data = state.holes[holeKey];
@@ -2942,8 +2995,8 @@ function buildConfirmButton(holeKey) {
 
   if (confirmed) {
     btn.classList.add("confirmed");
-    btn.textContent = "✓ bestätigt – bearbeiten";
-    btn.addEventListener("click", (e) => { e.stopPropagation(); editHole(holeKey); });
+    btn.textContent = "✓ bestätigt 🔒 hold to edit";
+    attachLongPressEdit(btn, holeKey);
     frag.appendChild(btn);
   } else {
     btn.textContent = "✓ Loch bestätigen";
