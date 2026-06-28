@@ -1,0 +1,33 @@
+# Kopenhagen Golf – Projekt-Leitfaden für Claude
+
+Deutschsprachige Golf-Wertungs-App für die Spielrunde „Kopenhagen". Reine Single-File-Web-App (HTML + CSS + JS in einer Datei), **kein Build-Schritt**, kein Backend. Läuft als GitHub Pages und als Home-Screen-App auf dem iPhone.
+
+## Dateien
+- **`index.html`** = Produktion (live).
+- **`test.html`** = Sandbox zum gefahrlosen Ausprobieren. Inhaltlich identisch zu `index.html`, **außer**: andere localStorage-Schlüssel (TEST) und im Titel/H1 als „TEST" markiert.
+- **Wichtig: Code-Änderungen immer in BEIDE Dateien übernehmen** (gleiche Stelle, gleiche Logik). Zuerst gern in `test.html` testen, dann nach `index.html` spiegeln.
+
+Speicher-Schlüssel (localStorage):
+- Produktion (`index.html`): `kopenhagen-golf-rechner-v5`, `kopenhagen-saison-v1`, `kopenhagen-weightfactor-v1`
+- Sandbox (`test.html`): `kopenhagen-golf-rechner-TEST-eingabe`, `kopenhagen-saison-TEST-v1`, `kopenhagen-weightfactor-TEST-v1`
+
+## Arbeitsweise / Workflow
+- **Claude editiert nur die Dateien.** Commit + Push macht der User (Olaf) selbst in GitHub Desktop. **Claude committet/pusht nicht.** Remote: `olaf-git-hub/kopenhagen_app`, Branch `main`.
+- Vor dem Übergeben: JS-Syntax prüfen (z. B. Script-Block extrahieren und mit `new Function(...)` testen) und – wenn möglich – im Browser/Preview verifizieren.
+- **Datenschutz:** Spielergebnisse/Saison-Daten sind privat und liegen **außerhalb** dieses (öffentlichen) Repos. **Niemals Spieldaten-JSON (z. B. `kopenhagen-saison.json`) ins Repo committen.**
+- UI-Texte sind deutsch; neuen Code im Stil des umgebenden Codes schreiben (Namen, Kommentare, Formatierung).
+
+## Domänen-Regeln (Wertung)
+- **Kopenhagen-Punkte** je Loch nach Netto: `pointVector(3) = [2,1,0]`, `pointVector(4) = [3,2,1,0]`. Bei echtem Gleichstand (gleiche Punkte UND gleiche Schläge) werden die Punkte gemittelt.
+- **Vorgaben (Netto):** automatische Schläge nach HCP des Lochs aus der Gesamtvorgabe, pro Loch überschreibbar (18-Loch-Matrix). Anzeige als „V<n>".
+- **2-Spieler-Modus = Lochwettspiel (Matchplay), KEINE Kopenhagen-Punkte.** Pro Loch gewinnt der niedrigere Netto-Score; Anzeige mit US-Begriffen (`2 up`, `All Square`, `dormie`, `wins 3 & 2`). Replay/Punkteprüfung/Bild-Teilen/Rundenrückblick sind im 2er ausgeblendet.
+- **Order of Merit:** Ranking nach Ø Meritpunkten pro **Kopenhagen**-Runde (offizielle Wertung ab ⌈Kopenhagen-Runden/3⌉). **Lochspiel-Runden** zählen NICHT ins Punkte-Ranking, aber in den **Ø Brutto** (nur volle 18-Loch-Runden, Brutto – nicht Netto). Rundenzahl-Hinweis: „N (+M Lochspiel)".
+
+## Code-Orientierung (wichtige Funktionen)
+- Wertung: `calculateRound`, `calculateHole`, `calculateMatch`, `formatMatchStatus`.
+- Anzeige: `renderSummary` / `renderMatchSummary`, `buildTable`, `renderMobileCards`, `renderPlayerDetail`, `buildConfirmButton`.
+- Saison/OoM: `buildRoundSnapshot`, `computeOrderOfMerit`, `openSeasonTable`, `renderRoundStandingsHtml`, `openPlayerProfile`.
+- Teilen/Links: `createShareLink` (`#s=`), `createSeasonShareLink` (`#oom=`), `shareRound`, `shareSeason`.
+- Eingabe: `stepScore`, `commitTypedScore`, `confirmHole`, `editHole`/`cancelHoleEdit`, `resetHole`.
+
+Spieleranzahl: 2 (Lochspiel), 3 oder 4. `state.playerCount === 2` ⇒ `isMatchPlay()`.
