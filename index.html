@@ -2803,12 +2803,12 @@ function matchNetStroke(result, i) {
   const o = i === 0 ? 1 : 0;
   return (result.strokes[i] || 0) - (result.strokes[o] || 0);
 }
-// Farbiges Lochergebnis-Label im 2er (gewonnen/verloren/halved).
-function holeOutcomeBadge(outcome) {
-  if (outcome === "win") return "<span class='hole-outcome win'>✓ gewonnen</span>";
-  if (outcome === "loss") return "<span class='hole-outcome loss'>✗ verloren</span>";
-  if (outcome === "halved") return "<span class='hole-outcome halved'>= halved</span>";
-  return "";
+// Loch-Ausgang im 2er: { winner: 0|1|null, halved: bool } – null außerhalb Matchplay.
+function matchHoleOutcome(result) {
+  if (!isMatchPlay() || !result || !result.complete) return null;
+  if (result.netto[0] < result.netto[1]) return { winner: 0, halved: false };
+  if (result.netto[1] < result.netto[0]) return { winner: 1, halved: false };
+  return { winner: null, halved: true };
 }
 
 function buildKnownPlayerNamesList() {
@@ -3225,9 +3225,12 @@ function buildTable() {
 
     const metaTop = document.createElement("div");
     metaTop.className = "clickable-hole";
+    const matchOutcome = matchHoleOutcome(result);
+    const halvedChip = (data.confirmed && matchOutcome && matchOutcome.halved)
+      ? " <span class='hole-outcome halved'>= geteilt</span>" : "";
     metaTop.innerHTML =
       "Loch " + h.hole + " <span class='hole-info'>ⓘ</span>" +
-      (data.confirmed ? " <span class='hole-state ok'>✓</span>" : "") +
+      (data.confirmed ? " <span class='hole-state ok'>✓</span>" : "") + halvedChip +
       (details.length ? "<div class='hole-small'>" + details.join(" · ") + "</div>" : "");
     metaTop.addEventListener("click", () => openHoleStandPopup(h.hole));
     tdHole.appendChild(metaTop);
@@ -3243,13 +3246,15 @@ function buildTable() {
       points.className = "points-cell";
 
       if (data.confirmed && result.complete && isMatchPlay()) {
-        const oc = holeOutcomeForPlayer(result, i);
+        const won = holeOutcomeForPlayer(result, i) === "win";
         const net = matchNetStroke(result, i);
-        const nettoLine = "<div class='points-detail'>" + data.gross[i] + " → " + result.netto[i] + "</div>";
-        const strokeText = net > 0
-          ? "<div class='points-detail'><span class='stroke-note'>V" + net + "</span></div>"
+        const badge = won ? "<span class='hole-outcome win'>✓ gewonnen</span>" : "";
+        // Netto + Vorgabe nur zeigen, wo der Spieler tatsächlich einen Schlag vor hat.
+        const strokeDetail = net > 0
+          ? "<div class='points-detail'>" + data.gross[i] + " → " + result.netto[i] +
+            " <span class='stroke-note'>V" + net + "</span></div>"
           : "";
-        points.innerHTML = holeOutcomeBadge(oc) + nettoLine + strokeText;
+        points.innerHTML = badge + strokeDetail;
       } else if (data.confirmed && result.complete) {
         const scoreDetail = hasStroke
           ? "<div class='points-detail'>" + data.gross[i] + " → " + result.netto[i] + "</div>"
@@ -3299,7 +3304,10 @@ function renderMobileCards() {
     head.addEventListener("click", () => openHoleStandPopup(h.hole));
 
     const title = document.createElement("div");
-    title.innerHTML = "Loch " + h.hole + " <span class='hole-info'>ⓘ</span>";
+    const matchOutcome = matchHoleOutcome(result);
+    const halvedChip = (data.confirmed && matchOutcome && matchOutcome.halved)
+      ? " <span class='hole-outcome halved'>= geteilt</span>" : "";
+    title.innerHTML = "Loch " + h.hole + " <span class='hole-info'>ⓘ</span>" + halvedChip;
 
     const meta = document.createElement("div");
     meta.className = "hole-card-meta";
@@ -3333,14 +3341,19 @@ function renderMobileCards() {
       const hasStroke = result.strokes[i] > 0;
 
       if (data.confirmed && result.complete && isMatchPlay()) {
-        const sub = document.createElement("div");
-        sub.className = "mobile-player-detail";
-        const oc = holeOutcomeForPlayer(result, i);
+        const won = holeOutcomeForPlayer(result, i) === "win";
         const net = matchNetStroke(result, i);
-        let rest = " " + data.gross[i] + "→" + result.netto[i];
-        if (net > 0) rest += " · V" + net;
-        sub.innerHTML = holeOutcomeBadge(oc) + "<span class='detail-rest'>" + rest + "</span>";
-        nameWrap.appendChild(sub);
+        const badge = won ? "<span class='hole-outcome win'>✓ gewonnen</span>" : "";
+        // Netto + Vorgabe nur beim Spieler mit echtem Schlagvorteil.
+        const strokeDetail = net > 0
+          ? "<span class='detail-rest'>" + data.gross[i] + "→" + result.netto[i] + " · V" + net + "</span>"
+          : "";
+        if (badge || strokeDetail) {
+          const sub = document.createElement("div");
+          sub.className = "mobile-player-detail";
+          sub.innerHTML = badge + strokeDetail;
+          nameWrap.appendChild(sub);
+        }
       } else if (data.confirmed && result.complete) {
         const sub = document.createElement("div");
         sub.className = "mobile-player-detail";
