@@ -75,6 +75,18 @@
       cursor: pointer;
     }
 
+    .match-status-banner {
+      margin-bottom: 10px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: #e3f5e8;
+      border: 1px solid #b6e0c2;
+      color: var(--accent-dark);
+      font-weight: 950;
+      font-size: 17px;
+      text-align: center;
+    }
+
     h1 {
       margin: 0;
       font-size: 20px;
@@ -1939,6 +1951,7 @@ tr.hole-confirmed td:first-child {
             <select id="playerCount">
               <option value="4">4 Spieler</option>
               <option value="3">3 Spieler</option>
+              <option value="2">2 Spieler (Lochspiel)</option>
             </select>
           </div>
           <div></div>
@@ -2398,7 +2411,8 @@ function normalizeState(s) {
   const base = cloneDefault();
   if (!s || typeof s !== "object") return buildEmptyState(base);
 
-  const playerCount = Number(s.playerCount) === 3 ? 3 : 4;
+  const pcNum = Number(s.playerCount);
+  const playerCount = pcNum === 3 ? 3 : (pcNum === 2 ? 2 : 4);
   const courseId = courses[s.courseId] ? s.courseId : "velte";
   const courseHoles = courses[courseId].holes;
 
@@ -2701,6 +2715,73 @@ function calculateRound() {
     totalExpected,
     totalGiven
   };
+}
+
+// ---- 2-Spieler-Lochwettspiel (Netto-Matchplay, US-Begriffe) ----
+function isMatchPlay() {
+  return state.playerCount === 2;
+}
+
+// Matchstand aus Sicht von Spieler 0 (positiv = Spieler 0 führt).
+function calculateMatch(calc) {
+  calc = calc || calculateRound();
+  const totalHoles = getCourseHoles().length || 18;
+  let lead = 0, played = 0, decidedAt = null, halved = 0;
+  const won = [0, 0];
+  const perHole = {};
+  for (const h of getCourseHoles()) {
+    const key = String(h.hole);
+    const data = state.holes[key];
+    const res = calc.holeResults[key];
+    if (!(data && data.confirmed && res && res.complete)) { perHole[key] = null; continue; }
+    played++;
+    const n0 = res.netto[0], n1 = res.netto[1];
+    if (n0 < n1) { lead++; won[0]++; perHole[key] = 0; }
+    else if (n1 < n0) { lead--; won[1]++; perHole[key] = 1; }
+    else { halved++; perHole[key] = "halved"; }
+    if (decidedAt === null && Math.abs(lead) > (totalHoles - played)) {
+      decidedAt = { lead, remainingAfter: totalHoles - played };
+    }
+  }
+  return { calc, lead, played, totalHoles, decidedAt, perHole, won, halved };
+}
+
+function matchLeaderName(lead) {
+  if (lead > 0) return state.players[0].name || "Spieler 1";
+  if (lead < 0) return state.players[1].name || "Spieler 2";
+  return null;
+}
+
+// US-Matchplay-Status als Text.
+function formatMatchStatus(m) {
+  m = m || calculateMatch();
+  if (m.played === 0) return "All Square";
+  if (m.decidedAt) {
+    return matchLeaderName(m.decidedAt.lead) + " wins " + Math.abs(m.decidedAt.lead) + " & " + m.decidedAt.remainingAfter;
+  }
+  if (m.played >= m.totalHoles) {
+    if (m.lead === 0) return "All Square (halved)";
+    return matchLeaderName(m.lead) + " wins " + Math.abs(m.lead) + " up";
+  }
+  const remaining = m.totalHoles - m.played;
+  if (m.lead === 0) return "All Square · " + remaining + " to play";
+  const dormie = Math.abs(m.lead) === remaining;
+  return matchLeaderName(m.lead) + " " + Math.abs(m.lead) + " up" + (dormie ? " (dormie)" : "") + " · " + remaining + " to play";
+}
+
+// Loch-Ausgang für Spieler i (nur 2er): "win" | "loss" | "halved" | null
+function holeOutcomeForPlayer(result, i) {
+  if (!isMatchPlay() || !result || !result.complete) return null;
+  const o = i === 0 ? 1 : 0;
+  if (result.netto[i] < result.netto[o]) return "win";
+  if (result.netto[i] > result.netto[o]) return "loss";
+  return "halved";
+}
+function holeOutcomeSymbol(outcome) {
+  if (outcome === "win") return "✓";
+  if (outcome === "loss") return "✗";
+  if (outcome === "halved") return "=";
+  return "";
 }
 
 function buildKnownPlayerNamesList() {
@@ -3134,7 +3215,14 @@ function buildTable() {
       const points = document.createElement("div");
       points.className = "points-cell";
 
-      if (data.confirmed && result.complete) {
+      if (data.confirmed && result.complete && isMatchPlay()) {
+        const oc = holeOutcomeForPlayer(result, i);
+        const nettoLine = "<div class='points-detail'>" + data.gross[i] + " → " + result.netto[i] + "</div>";
+        const strokeText = hasStroke
+          ? "<div class='points-detail'><span class='stroke-note'>V" + result.strokes[i] + "</span></div>"
+          : "";
+        points.innerHTML = holeOutcomeSymbol(oc) + nettoLine + strokeText;
+      } else if (data.confirmed && result.complete) {
         const scoreDetail = hasStroke
           ? "<div class='points-detail'>" + data.gross[i] + " → " + result.netto[i] + "</div>"
           : "";
@@ -3215,7 +3303,16 @@ function renderMobileCards() {
 
       const hasStroke = result.strokes[i] > 0;
 
-      if (data.confirmed && result.complete) {
+      if (data.confirmed && result.complete && isMatchPlay()) {
+        const sub = document.createElement("div");
+        sub.className = "mobile-player-detail";
+        const oc = holeOutcomeForPlayer(result, i);
+        let txt = (oc === "win" ? "✓ gewonnen" : oc === "halved" ? "= halved" : "✗ verloren") +
+                  " · " + data.gross[i] + "→" + result.netto[i];
+        if (hasStroke) txt += " · V" + result.strokes[i];
+        sub.textContent = txt;
+        nameWrap.appendChild(sub);
+      } else if (data.confirmed && result.complete) {
         const sub = document.createElement("div");
         sub.className = "mobile-player-detail";
         let txt = formatNum(result.points[i]) + " P.";
@@ -3370,7 +3467,79 @@ function closeHoleStandPopup() {
 }
 
 
+// Gesamtstand im 2er-Lochspiel: Matchstand-Banner + Spielerzeilen (Lochgewinne).
+function renderMatchSummary() {
+  const calc = calculateRound();
+  const course = getCourse();
+  const m = calculateMatch(calc);
+  const box = document.getElementById("summaryBox");
+  box.innerHTML = "";
+
+  const banner = document.createElement("div");
+  banner.className = "match-status-banner";
+  banner.textContent = formatMatchStatus(m);
+  box.appendChild(banner);
+
+  const order = m.lead < 0 ? [1, 0] : [0, 1];
+  order.forEach((pi, rankIdx) => {
+    const p = calc.totals[pi];
+    const item = document.createElement("div");
+    item.className = "summary-item";
+
+    const rank = document.createElement("div");
+    rank.className = "rank";
+    rank.textContent = String(rankIdx + 1);
+
+    const name = document.createElement("div");
+    name.className = "summary-name clickable-player";
+    const isOpen = selectedPlayerDetailIndex === pi;
+    name.innerHTML =
+      "<span class='summary-pname' title='" + escapeHtml(p.name) + "'>" + escapeHtml(p.name) + "</span>" +
+      "<span class='summary-pts'>" + m.won[pi] + " Löcher</span>" +
+      "<span class='summary-actions'><span class='rank-move'></span><span class='summary-toggle'>" +
+      (isOpen ? "⊖" : "⊕") + "</span></span>";
+    name.addEventListener("click", () => {
+      selectedPlayerDetailIndex = (selectedPlayerDetailIndex === pi) ? null : pi;
+      renderSummary();
+    });
+
+    const sub = document.createElement("div");
+    sub.className = "summary-sub";
+    const parText = course.hasPar ? (" · " + formatPar(p.parDelta) + " PAR") : "";
+    sub.textContent = "Schläge " + p.gross + parText + " · " + p.holesPlayed + " Löcher";
+
+    item.appendChild(rank);
+    item.appendChild(name);
+    item.appendChild(sub);
+    box.appendChild(item);
+  });
+
+  const v = document.getElementById("validationBox");
+  v.innerHTML = "";
+  [["Golfplatz: " + course.shortName, ""], ["Löcher: " + calc.playedHoles, ""], ["🤝 Lochspiel", "ok"]].forEach(([txt, cls]) => {
+    const span = document.createElement("span");
+    span.className = "mini-pill " + cls;
+    span.textContent = txt;
+    v.appendChild(span);
+  });
+  const loch19 = document.createElement("span");
+  loch19.className = "mini-pill loch19-btn";
+  loch19.textContent = "⛳ Loch 19";
+  loch19.addEventListener("click", toggleLoch19Menu);
+  v.appendChild(loch19);
+
+  const pcBox = document.getElementById("pointsCheckBox");
+  if (pcBox) pcBox.innerHTML = "";
+
+  renderPlayerDetail();
+}
+
 function renderSummary() {
+  const rb = document.getElementById("raceReplayBtn");
+  if (rb) rb.style.display = isMatchPlay() ? "none" : "";
+
+  if (isMatchPlay()) { renderMatchSummary(); return; }
+
   const calc = calculateRound();
   const course = getCourse();
   const box = document.getElementById("summaryBox");
@@ -3571,10 +3740,13 @@ function renderPlayerDetail() {
       strokes,
       netto,
       points,
+      outcome: holeOutcomeForPlayer(result, playerIndex),
       scoreName,
       scoreClass
     });
   }
+
+  const matchMode = isMatchPlay();
 
   html += "<div class='player-detail'>";
   html += "<div class='player-detail-head'>" + escapeHtml(player.name || ("Spieler " + (playerIndex + 1))) + "</div>";
@@ -3602,7 +3774,7 @@ function renderPlayerDetail() {
 
   if (course.hasPar) html += "<th>PAR</th>";
 
-  html += "<th>Score</th><th>V</th><th>Netto</th><th>Punkte</th>";
+  html += "<th>Score</th><th>V</th><th>Netto</th><th>" + (matchMode ? "Match" : "Punkte") + "</th>";
 
   if (course.hasPar) html += "<th>Wertung</th>";
 
@@ -3617,7 +3789,11 @@ function renderPlayerDetail() {
     html += "<td><span class='score-symbol " + r.scoreClass + "'>" + r.gross + "</span></td>";
     html += "<td>" + r.strokes + "</td>";
     html += "<td>" + r.netto + "</td>";
-    html += "<td>" + (r.points === null ? "–" : formatNum(r.points)) + "</td>";
+    if (matchMode) {
+      html += "<td>" + (r.outcome ? holeOutcomeSymbol(r.outcome) : "–") + "</td>";
+    } else {
+      html += "<td>" + (r.points === null ? "–" : formatNum(r.points)) + "</td>";
+    }
 
     if (course.hasPar) html += "<td>" + r.scoreName + "</td>";
 
@@ -3889,7 +4065,8 @@ function cancelHoleEdit(holeKey) {
 }
 
 function readSetupInputs() {
-  const newCount = Number(document.getElementById("playerCount").value) === 3 ? 3 : 4;
+  const rawCount = Number(document.getElementById("playerCount").value);
+  const newCount = rawCount === 3 ? 3 : (rawCount === 2 ? 2 : 4);
   const newPlayers = [];
 
   for (let i = 0; i < newCount; i++) {
@@ -4401,6 +4578,10 @@ function buildResultImageBlob() {
 }
 
 async function shareRound() {
+  if (isMatchPlay()) {
+    showToast("Ergebnis-Bild gibt es nur im Kopenhagen-Modus");
+    return;
+  }
   const link = createShareLink();
   const text = "Aktueller Stand der Kopenhagen-Runde:\n" + link;
 
@@ -5314,6 +5495,10 @@ function onRaceTimelineInput() {
 }
 
 function openHighlights() {
+  if (isMatchPlay()) {
+    showToast("Rundenrückblick gibt es nur im Kopenhagen-Modus");
+    return;
+  }
   const calc = calculateRound();
   if (calc.playedHoles === 0) {
     showToast("Noch keine bestätigten Löcher für den Rückblick");
@@ -5536,6 +5721,36 @@ function buildRoundSnapshot(dateText) {
     holeDetails[k] = arr;
   }
 
+  // Gesamte Vorgabeschläge je Spieler mitspeichern (für die Rundenansicht/Share-Link).
+  const strokeTotals = Array(pc).fill(0);
+  for (const k in holeDetails) {
+    holeDetails[k].forEach((c, pi) => { if (c && typeof c.s === "number") strokeTotals[pi] += c.s; });
+  }
+  const snapPlayerNames = state.players.slice(0, pc).map(p => p.name);
+  results.forEach(r => {
+    const pi = snapPlayerNames.indexOf(r.name);
+    r.strokes = pi >= 0 ? strokeTotals[pi] : 0;
+  });
+
+  // 2er-Lochspiel: nach Lochgewinnen ordnen, Punkte/Merit neutralisieren,
+  // Matchergebnis (US) mitspeichern. Fließt in den Ø-Brutto, nicht ins Ranking.
+  let mode = "kopenhagen", matchResult = null, matchWinner = null;
+  if (isMatchPlay()) {
+    mode = "match";
+    const m = calculateMatch(calc);
+    matchResult = formatMatchStatus(m);
+    matchWinner = matchLeaderName(m.lead);
+    results.forEach(r => {
+      const pi = snapPlayerNames.indexOf(r.name);
+      r.holesWon = pi >= 0 ? m.won[pi] : 0;
+      r.points = null;
+      r.merit = 0;
+    });
+    results.sort((a, b) => b.holesWon - a.holesWon);
+    results.forEach((r, idx) => { r.position = idx + 1; });
+    if (m.lead === 0 && results.length === 2) { results[0].position = 1; results[1].position = 1; }
+  }
+
   return {
     id: newRoundId(),
     dateText: dateText,
@@ -5545,7 +5760,10 @@ function buildRoundSnapshot(dateText) {
     holesPlayed: calc.playedHoles,
     complete: calc.playedHoles === 18,
     hasPar: !!course.hasPar,
-    players: state.players.slice(0, pc).map(p => p.name),
+    mode: mode,
+    matchResult: matchResult,
+    matchWinner: matchWinner,
+    players: snapPlayerNames,
     results,
     holeDetails
   };
@@ -5580,17 +5798,24 @@ function addCurrentRoundToSeason() {
 function computeOrderOfMerit(season) {
   const map = {};
   for (const r of season.rounds) {
+    const isMatch = r.mode === "match";
     for (const res of r.results) {
       const key = res.name;
       if (!map[key]) {
-        map[key] = { name: res.name, merit: 0, rounds: 0, wins: 0, posSum: 0, grossSumFull: 0, fullRounds: 0, placements: {} };
+        map[key] = { name: res.name, merit: 0, rounds: 0, matchRounds: 0, wins: 0, posSum: 0, grossSumFull: 0, fullRounds: 0, placements: {} };
       }
       const a = map[key];
-      a.merit += Number(res.merit) || 0;
-      a.rounds += 1;
-      if (res.position === 1) a.wins += 1;
-      a.posSum += res.position;
-      a.placements[res.position] = (a.placements[res.position] || 0) + 1;
+      // Lochspiel zählt NICHT ins Punkte-Ranking (Merit/Siege/Platzierung),
+      // aber sehr wohl in den Ø-Brutto (volle Runden).
+      if (isMatch) {
+        a.matchRounds += 1;
+      } else {
+        a.merit += Number(res.merit) || 0;
+        a.rounds += 1;
+        if (res.position === 1) a.wins += 1;
+        a.posSum += res.position;
+        a.placements[res.position] = (a.placements[res.position] || 0) + 1;
+      }
       if (r.complete) {
         a.grossSumFull += Number(res.gross) || 0;
         a.fullRounds += 1;
@@ -5603,6 +5828,7 @@ function computeOrderOfMerit(season) {
       name: a.name,
       merit: a.merit,
       rounds: a.rounds,
+      matchRounds: a.matchRounds,
       wins: a.wins,
       avgMerit: a.rounds ? a.merit / a.rounds : 0,
       avgPos: a.rounds ? a.posSum / a.rounds : 0,
@@ -5673,6 +5899,9 @@ function createSeasonShareLink() {
       holesPlayed: r.holesPlayed,
       complete: r.complete,
       hasPar: r.hasPar,
+      mode: r.mode,
+      matchResult: r.matchResult,
+      matchWinner: r.matchWinner,
       players: r.players,
       results: r.results
     }))
@@ -5751,14 +5980,18 @@ function openSeasonTable() {
   const season = loadSeason();
   const oom = computeOrderOfMerit(season);
 
+  const matchCount = season.rounds.filter(r => r.mode === "match").length;
+
   let html = "<div style='padding:14px; height:100%; overflow:auto;'>";
   html += "<h3 style='margin:0 0 4px;'>🏅 Order of Merit</h3>";
-  html += "<div class='help' style='margin-bottom:10px;'>" + season.rounds.length + " Runde(n) gespeichert</div>";
+  html += "<div class='help' style='margin-bottom:10px;'>" + season.rounds.length + " Runde(n) gespeichert" +
+          (matchCount ? " (davon " + matchCount + " Lochspiel)" : "") + "</div>";
 
   if (oom.length === 0) {
     html += "<p class='help'>Noch keine Runden in der Saison. Über „⛳ Loch 19 → ➕ Runde zur Saison hinzufügen“ nimmst du die aktuelle Runde auf.</p>";
   } else {
-    const total = season.rounds.length;
+    // Wertungsgrenze nur über Kopenhagen-Runden (Lochspiele zählen nicht fürs Ranking).
+    const total = season.rounds.filter(r => r.mode !== "match").length;
     const threshold = Math.max(1, Math.ceil(total / 3));
     const ranked = oom.filter(p => p.rounds >= threshold);
     const unranked = oom.filter(p => p.rounds < threshold);
@@ -5770,7 +6003,7 @@ function openSeasonTable() {
       html += renderOomTable(unranked, false);
     }
 
-    html += "<div class='help' style='margin-top:8px;'>Gewertet nach Ø&nbsp;Punkten pro Runde. Offizielle Wertung ab " + threshold + " Runde(n) (ein Drittel der bisherigen Saison-Runden). Tippe auf einen Namen für das Spielerprofil. Ø&nbsp;Brutto nur aus 18-Loch-Runden.</div>";
+    html += "<div class='help' style='margin-top:8px;'>Gewertet nach Ø&nbsp;Punkten pro Kopenhagen-Runde. Offizielle Wertung ab " + threshold + " Runde(n) (ein Drittel der Kopenhagen-Runden). Ø&nbsp;Brutto aus allen vollen 18-Loch-Runden (auch Lochspiel). (+N) hinter den Runden = zusätzliche Lochspiele. Tippe auf einen Namen für das Spielerprofil.</div>";
   }
 
   if (season.rounds.length) {
@@ -5779,9 +6012,12 @@ function openSeasonTable() {
     const rounds = season.rounds.slice().reverse();
     for (const r of rounds) {
       const winner = r.results && r.results[0] ? r.results[0].name : "?";
+      const headLine = (r.mode === "match")
+        ? ("🤝 Lochspiel: " + escapeHtml(r.matchResult || "—"))
+        : ("Sieger: " + escapeHtml(winner));
       html += "<div class='season-round-row'>";
       html += "<div class='season-round-open' data-id='" + r.id + "'><strong>" + escapeHtml(r.dateText || "") + "</strong> · " + escapeHtml(r.courseName || "") +
-              "<div class='hole-small'>Sieger: " + escapeHtml(winner) + " · " + r.playerCount + " Spieler · " +
+              "<div class='hole-small'>" + headLine + " · " + r.playerCount + " Spieler · " +
               (r.complete ? "18 Löcher" : (r.holesPlayed + "/18 Löcher")) + " · tippen für Details</div></div>";
       html += "<button type='button' class='danger small season-del' data-id='" + r.id + "'>Löschen</button>";
       html += "</div>";
@@ -5889,7 +6125,7 @@ function renderOomTable(list, ranked) {
     h += "<td><strong>" + formatNum2(p.avgMerit) + "</strong></td>";
     h += "<td>" + (p.avgGross === null ? "–" : formatNum(p.avgGross)) + "</td>";
     h += "<td>" + p.wins + "</td>";
-    h += "<td>" + p.rounds + "</td>";
+    h += "<td>" + p.rounds + (p.matchRounds ? " <span class='hole-small'>(+" + p.matchRounds + ")</span>" : "") + "</td>";
     h += "</tr>";
   });
   h += "</tbody></table></div>";
@@ -5897,18 +6133,54 @@ function renderOomTable(list, ranked) {
 }
 
 // Endstand-Tabelle einer einzelnen Runde (optional einen Spieler hervorheben).
+// Platz-Symbol feldgrößen-gerecht (wie im Spielerprofil): Gold/Silber/Bronze,
+// der Letzte bekommt 😱 (kein Bronze für den Letzten im Dreierspiel).
+function placeSymbol(pos, pc) {
+  if (pos === 1) return "🥇";
+  if (pc > 1 && pos === pc) return "😱";
+  if (pos === 2) return "🥈";
+  if (pos === 3) return "🥉";
+  return "";
+}
+
+// Gesamte Vorgabeschläge eines Spielers in einer gespeicherten Runde.
+// Bevorzugt res.strokes (neuere Runden), sonst Summe aus den Loch-Details.
+function roundPlayerStrokes(round, res) {
+  if (res && typeof res.strokes === "number") return res.strokes;
+  if (round.holeDetails && Array.isArray(round.players)) {
+    const idx = round.players.indexOf(res.name);
+    if (idx >= 0) {
+      let tot = 0, found = false;
+      for (const k in round.holeDetails) {
+        const c = round.holeDetails[k][idx];
+        if (c && typeof c.s === "number") { tot += c.s; found = true; }
+      }
+      if (found) return tot;
+    }
+  }
+  return null;
+}
+
 function renderRoundStandingsHtml(round, highlightName) {
   const hasPar = !!round.hasPar;
-  let h = "<div style='overflow-x:auto;'><table class='player-detail-table'><thead><tr><th>#</th><th>Spieler</th><th>Punkte</th><th>Brutto</th>";
+  const matchMode = round.mode === "match";
+  let h = "";
+  if (matchMode) {
+    h += "<div class='match-status-banner' style='font-size:15px; margin-bottom:8px;'>🤝 " + escapeHtml(round.matchResult || "Lochspiel") + "</div>";
+  }
+  h += "<div style='overflow-x:auto;'><table class='player-detail-table'><thead><tr><th>#</th><th>Spieler</th><th>" +
+       (matchMode ? "Löcher" : "Punkte") + "</th><th>Brutto</th><th>Vorg.</th>";
   if (hasPar) h += "<th>+/-&nbsp;PAR</th>";
   h += "</tr></thead><tbody>";
   round.results.forEach((res, idx) => {
     const hi = (highlightName && res.name === highlightName) ? " class='hl-self'" : "";
+    const strokes = roundPlayerStrokes(round, res);
     h += "<tr" + hi + ">";
     h += "<td>" + (idx + 1) + "</td>";
     h += "<td style='text-align:left;'>" + escapeHtml(res.name) + "</td>";
-    h += "<td>" + formatNum(res.points) + "</td>";
+    h += "<td>" + (matchMode ? (res.holesWon === undefined || res.holesWon === null ? "–" : res.holesWon) : formatNum(res.points)) + "</td>";
     h += "<td>" + res.gross + "</td>";
+    h += "<td>" + (strokes && strokes > 0 ? ("V" + strokes) : "–") + "</td>";
     if (hasPar) h += "<td>" + formatPar(res.parDelta) + "</td>";
     h += "</tr>";
   });
@@ -6099,6 +6371,7 @@ function openPlayerProfile(name) {
       const myPos = me ? me.position : "?";
       const myGross = me ? me.gross : "?";
       const parTxt = (r.hasPar && me) ? (" · " + formatPar(me.parDelta) + " PAR") : "";
+      const sym = me ? placeSymbol(me.position, r.playerCount) : "";
 
       let tag = "";
       if (r.id === bestId) tag = " <span class='round-tag best'>Beste</span>";
@@ -6107,7 +6380,7 @@ function openPlayerProfile(name) {
       html += "<div class='profile-round'>";
       html += "<div class='profile-round-head' data-rid='" + r.id + "'>";
       html += "<div><strong>" + escapeHtml(r.dateText || "") + "</strong> · " + escapeHtml(r.courseName || "") + tag +
-              "<div class='hole-small'>Platz " + myPos + " von " + r.playerCount + " · Brutto " + myGross + parTxt + "</div></div>";
+              "<div class='hole-small'>" + (sym ? sym + " " : "") + "Platz " + myPos + " von " + r.playerCount + " · Brutto " + myGross + parTxt + "</div></div>";
       html += "<span class='summary-toggle'>⊕</span>";
       html += "</div>";
       html += "<div class='profile-round-body' style='display:none;'>" + renderPlayerRoundCardHtml(r, name) + "</div>";
