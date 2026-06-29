@@ -2293,6 +2293,7 @@ const speechNumberWords = {
   "one": 1,
 
   "zwei": 2,
+  "zwo": 2,
   "two": 2,
   "to": 2,
   "too": 2,
@@ -2315,6 +2316,8 @@ const speechNumberWords = {
   "seven": 7,
 
   "acht": 8,
+  "achte": 8,
+  "nacht": 8,
   "eight": 8,
   "ate": 8,
 
@@ -4863,7 +4866,7 @@ function initSpeechInput() {
   speechRecognition.lang = "de-DE";
   speechRecognition.interimResults = false;
   speechRecognition.continuous = false;
-  speechRecognition.maxAlternatives = 1;
+  speechRecognition.maxAlternatives = 5;
 
   speechRecognition.onstart = function() {
     speechIsRunning = true;
@@ -4889,8 +4892,14 @@ function initSpeechInput() {
 
   speechRecognition.stop();
 
-  const text = event.results[0][0].transcript;
-  processVoiceScore(text);
+  const alternatives = event.results[0];
+  const transcripts = [];
+  for (let k = 0; k < alternatives.length; k++) {
+    if (alternatives[k] && alternatives[k].transcript) {
+      transcripts.push(alternatives[k].transcript);
+    }
+  }
+  processVoiceScore(transcripts);
 };
 
   btn.addEventListener("click", function(e) {
@@ -5054,18 +5063,44 @@ function extractScoreNumbers(tokens) {
   return numbers;
 }
 
-function processVoiceScore(rawText) {
+function parsePlayerScores(tokens) {
+  const scores = Array(state.playerCount).fill(null);
+  let hits = 0;
+  for (let i = 0; i < state.playerCount; i++) {
+    const n = findNumberAfterPlayer(tokens, state.players[i].name);
+    if (n !== null) {
+      scores[i] = n;
+      hits++;
+    }
+  }
+  return { scores: scores, hits: hits };
+}
+
+function processVoiceScore(rawInput) {
 
   const status = document.getElementById("voiceStatus");
-  const text = normalizeSpeechText(rawText);
-  const tokens = text.split(" ").filter(Boolean);
+  const transcripts = Array.isArray(rawInput) ? rawInput : [rawInput];
 
-  if (tokens.length === 0) {
+  // Aus allen Erkennungs-Alternativen die mit den meisten erkannten Spieler-Scores wählen.
+  let best = null;
+  for (const rawText of transcripts) {
+    const tokens = normalizeSpeechText(rawText).split(" ").filter(Boolean);
+    if (tokens.length === 0) continue;
+    const parsed = parsePlayerScores(tokens);
+    if (!best || parsed.hits > best.hits) {
+      best = { rawText: rawText, tokens: tokens, scores: parsed.scores, hits: parsed.hits };
+    }
+  }
+
+  if (!best) {
     if (status) {
       status.textContent = "Nichts erkannt.";
     }
     return;
   }
+
+  const rawText = best.rawText;
+  const tokens = best.tokens;
 
   const spokenHole = findSpokenHole(tokens);
   const holeNumber = spokenHole || getNextIncompleteHoleNumber();
@@ -5080,21 +5115,8 @@ function processVoiceScore(rawText) {
   const oldRankingSignature = getRankingSignature();
   const oldRankingPositions = getRankingPositions();
 
-  let newScores = Array(state.playerCount).fill(null);
-  let namedHits = 0;
-
-  for (let i = 0; i < state.playerCount; i++) {
-
-    const n = findNumberAfterPlayer(
-      tokens,
-      state.players[i].name
-    );
-
-    if (n !== null) {
-      newScores[i] = n;
-      namedHits++;
-    }
-  }
+  let newScores = best.scores;
+  let namedHits = best.hits;
 
   if (namedHits === 0) {
 
@@ -5881,12 +5903,21 @@ function addCurrentRoundToSeason() {
   showToast("Runde zur Saison hinzugefügt");
 }
 
+// Saison-Namensschlüssel: tolerant gegen Groß-/Kleinschreibung und Leerzeichen
+// (Anzeige bleibt wie eingegeben; nur die Zuordnung über Runden hinweg ist tolerant).
+function seasonNameKey(name) {
+  return String(name === undefined || name === null ? "" : name).trim().toLowerCase();
+}
+function sameSeasonName(a, b) {
+  return seasonNameKey(a) === seasonNameKey(b);
+}
+
 function computeOrderOfMerit(season) {
   const map = {};
   for (const r of season.rounds) {
     const isMatch = r.mode === "match";
     for (const res of r.results) {
-      const key = res.name;
+      const key = seasonNameKey(res.name);
       if (!map[key]) {
         map[key] = { name: res.name, merit: 0, rounds: 0, matchRounds: 0, wins: 0, posSum: 0, grossSumFull: 0, fullRounds: 0, placements: {} };
       }
@@ -6259,7 +6290,7 @@ function renderRoundStandingsHtml(round, highlightName) {
   if (hasPar) h += "<th>+/-&nbsp;PAR</th>";
   h += "</tr></thead><tbody>";
   round.results.forEach((res, idx) => {
-    const hi = (highlightName && res.name === highlightName) ? " class='hl-self'" : "";
+    const hi = (highlightName && sameSeasonName(res.name, highlightName)) ? " class='hl-self'" : "";
     const strokes = roundPlayerStrokes(round, res);
     h += "<tr" + hi + ">";
     h += "<td>" + (idx + 1) + "</td>";
@@ -6390,9 +6421,9 @@ function closeRoundDetail() {
 
 function openPlayerProfile(name) {
   const season = loadSeason();
-  const agg = computeOrderOfMerit(season).find(p => p.name === name);
+  const agg = computeOrderOfMerit(season).find(p => sameSeasonName(p.name, name));
   const rounds = season.rounds
-    .filter(r => r.results.some(x => x.name === name))
+    .filter(r => r.results.some(x => sameSeasonName(x.name, name)))
     .slice()
     .reverse();
 
@@ -6417,7 +6448,7 @@ function openPlayerProfile(name) {
     // (kein Bronze für den Letzten im Dreierspiel).
     const medals = { gold: 0, silver: 0, bronze: 0, last: 0 };
     for (const r of rounds) {
-      const me = r.results.find(x => x.name === name);
+      const me = r.results.find(x => sameSeasonName(x.name, name));
       if (!me) continue;
       const pos = me.position, pc = r.playerCount;
       if (pos === 1) medals.gold++;
@@ -6438,7 +6469,7 @@ function openPlayerProfile(name) {
   // Beste/schlechteste Runde nach Brutto (nur bei ≥2 unterschiedlichen Runden).
   let bestId = null, worstId = null;
   const gl = rounds
-    .map(r => { const me = r.results.find(x => x.name === name); return { id: r.id, gross: me ? Number(me.gross) : null }; })
+    .map(r => { const me = r.results.find(x => sameSeasonName(x.name, name)); return { id: r.id, gross: me ? Number(me.gross) : null }; })
     .filter(x => x.gross !== null);
   if (gl.length >= 2) {
     let bg = gl[0], wg = gl[0];
@@ -6453,7 +6484,7 @@ function openPlayerProfile(name) {
     html += "<p class='help'>Keine Runden gefunden.</p>";
   } else {
     for (const r of rounds) {
-      const me = r.results.find(x => x.name === name);
+      const me = r.results.find(x => sameSeasonName(x.name, name));
       const myPos = me ? me.position : "?";
       const myGross = me ? me.gross : "?";
       const parTxt = (r.hasPar && me) ? (" · " + formatPar(me.parDelta) + " PAR") : "";
@@ -6501,7 +6532,7 @@ function weightedGrossForName(season, name, factor) {
   const grosses = [];
   for (const r of season.rounds) {
     if (!r.complete) continue;
-    const res = (r.results || []).find(x => x.name === name);
+    const res = (r.results || []).find(x => sameSeasonName(x.name, name));
     if (res && res.gross !== null && res.gross !== undefined) grosses.push(Number(res.gross));
   }
   if (grosses.length === 0) return null;
@@ -6521,7 +6552,7 @@ function computeSuggestion(names, factor) {
   const rows = names.map(name => {
     let n = 0;
     for (const r of season.rounds) {
-      if (r.complete && (r.results || []).some(x => x.name === name)) n++;
+      if (r.complete && (r.results || []).some(x => sameSeasonName(x.name, name))) n++;
     }
     const wg = weightedGrossForName(season, name, factor);
     return { name, n, wg, allow: null };

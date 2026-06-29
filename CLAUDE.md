@@ -27,8 +27,10 @@ Speicher-Schlüssel (localStorage):
 ## Code-Orientierung (wichtige Funktionen)
 - Wertung: `calculateRound`, `calculateHole`, `calculateMatch`, `formatMatchStatus`, `holeOutcomeForPlayer`, `matchNetStroke` (Netto-Vorgabe-Differenz), `matchHoleSymbol` (🟢/⚪).
 - Anzeige: `renderSummary` / `renderMatchSummary`, `buildTable`, `renderMobileCards`, `renderPlayerDetail`, `buildConfirmButton`.
-- Saison/OoM: `buildRoundSnapshot`, `computeOrderOfMerit`, `openSeasonTable`, `renderRoundStandingsHtml`, `openPlayerProfile`.
+- Saison/OoM: `buildRoundSnapshot`, `computeOrderOfMerit`, `openSeasonTable`, `renderRoundStandingsHtml`, `openPlayerProfile`. Spieler werden über Runden hinweg **tolerant per Name** zusammengefasst: `seasonNameKey` (`trim()` + Kleinschreibung) und `sameSeasonName` – Anzeige bleibt wie eingegeben, nur die Zuordnung ist tolerant. Gespeicherte Saison-Daten werden dabei nicht verändert.
+- Spracheingabe (Scores): `processVoiceScore` (wertet alle Erkennungs-Alternativen aus, nimmt die mit den meisten Treffern), `parsePlayerScores`, `findNumberAfterPlayer`, `extractScoreNumbers`; Wörterbücher `speechNumberWords`, `speechPlayerAliases`.
+- Springen Stand/Tabelle: `toggleSummaryJump`, `syncJumpButtonToScroll` (Scroll-Listener hält Label/Modus an der echten Position), `scrollToSummary`, `scrollBackToTable`.
 - Teilen/Links: `createShareLink` (`#s=`), `createSeasonShareLink` (`#oom=`), `shareRound`, `shareSeason`.
 - Eingabe: `stepScore`, `commitTypedScore`, `confirmHole`, `editHole`/`cancelHoleEdit`, `resetHole`.
 
-Spieleranzahl: 2 (Lochspiel), 3 oder 4. `state.playerCount === 2` ⇒ `isMatchPlay()`.
+Spieleranzahl: 2 (Matchplay), 3 oder 4. `state.playerCount === 2` ⇒ `isMatchPlay()`.
