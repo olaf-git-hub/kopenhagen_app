@@ -2232,6 +2232,7 @@ let overlayFromLoch19 = false;
 
 let lastScoreScrollY = 0;
 let jumpMode = "stand";
+let jumpScrollLockUntil = 0;
 let lastRankingSignature = "";
 
 let speechRecognition = null;
@@ -3567,7 +3568,7 @@ function renderMatchSummary() {
 
   const v = document.getElementById("validationBox");
   v.innerHTML = "";
-  [["Golfplatz: " + course.shortName, ""], ["Löcher: " + calc.playedHoles, ""], ["Matchplay", "ok"]].forEach(([txt, cls]) => {
+  [["Golfplatz: " + course.shortName, ""], ["Löcher: " + calc.playedHoles, ""]].forEach(([txt, cls]) => {
     const span = document.createElement("span");
     span.className = "mini-pill " + cls;
     span.textContent = txt;
@@ -4758,6 +4759,24 @@ function setBuildInfo() {
   el.textContent = "Build: " + text;
 }
 
+function summaryInView() {
+  const summary = document.querySelector(".summary-card");
+  if (!summary) return true;
+  const header = document.querySelector("header");
+  const headerHeight = header ? header.offsetHeight : 0;
+  // "Oben" = das untere Ende der Gesamtstand-Karte ragt noch unter die Kopfzeile.
+  return summary.getBoundingClientRect().bottom > headerHeight + 24;
+}
+
+// Sinnvolles Ziel beim Sprung nach unten, falls noch keine echte Eingabeposition gemerkt ist.
+function scoreCardTargetY() {
+  const card = document.querySelector(".score-card");
+  if (!card) return 0;
+  const header = document.querySelector("header");
+  const headerHeight = header ? header.offsetHeight : 0;
+  return Math.max(0, card.getBoundingClientRect().top + window.pageYOffset - headerHeight - 8);
+}
+
 function scrollToSummary() {
   const summary = document.querySelector(".summary-card");
   if (!summary) return;
@@ -4765,6 +4784,7 @@ function scrollToSummary() {
   lastScoreScrollY = window.pageYOffset;
   jumpMode = "tabelle";
   updateJumpButton();
+  jumpScrollLockUntil = Date.now() + 800; // eigene Animation nicht vom Scroll-Sync stören lassen
 
   const header = document.querySelector("header");
   const headerHeight = header ? header.offsetHeight : 0;
@@ -4780,9 +4800,13 @@ function scrollToSummary() {
 function scrollBackToTable() {
   jumpMode = "stand";
   updateJumpButton();
+  jumpScrollLockUntil = Date.now() + 800;
+
+  const cardY = scoreCardTargetY();
+  const target = lastScoreScrollY > cardY ? lastScoreScrollY : cardY;
 
   window.scrollTo({
-    top: lastScoreScrollY,
+    top: target,
     behavior: "smooth"
   });
 }
@@ -4799,6 +4823,17 @@ function toggleSummaryJump() {
     scrollToSummary();
   } else {
     scrollBackToTable();
+  }
+}
+
+// Hält Button-Label/-Modus an der tatsächlichen Scrollposition – auch bei freiem Scrollen.
+function syncJumpButtonToScroll() {
+  if (Date.now() < jumpScrollLockUntil) return; // während eigener Sprung-Animation nicht eingreifen
+  if (summaryInView()) {
+    if (jumpMode !== "tabelle") { jumpMode = "tabelle"; updateJumpButton(); }
+  } else {
+    lastScoreScrollY = window.pageYOffset; // laufend die letzte Position in der Tabelle merken
+    if (jumpMode !== "stand") { jumpMode = "stand"; updateJumpButton(); }
   }
 }
 
@@ -6586,6 +6621,8 @@ function init() {
   state = normalizeState(state);
   loadStateFromUrl();
   document.getElementById("summaryJumpBtn").addEventListener("click", toggleSummaryJump);
+  window.addEventListener("scroll", syncJumpButtonToScroll, { passive: true });
+  syncJumpButtonToScroll();
   document.getElementById("resetBtn").addEventListener("click", resetRound);
   document.getElementById("applySetupBtn").addEventListener("click", applySetup);
   document.getElementById("clearScoresBtn").addEventListener("click", clearScores);
