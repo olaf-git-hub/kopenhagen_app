@@ -550,19 +550,13 @@
       font-weight: 900;
     }
 
-    /* Lochergebnis im 2er-Lochwettspiel – farbig hervorgehoben. */
-    .hole-outcome {
+    /* Loch-Ausgang im 2er-Lochwettspiel – kleines Symbol neben Name/Score. */
+    .hole-symbol {
       display: inline-block;
-      border-radius: 999px;
-      padding: 2px 8px;
-      font-size: 11px;
-      font-weight: 900;
-      letter-spacing: 0.2px;
+      font-size: 15px;
+      line-height: 1;
+      vertical-align: middle;
     }
-    .hole-outcome.win { color: #fff; background: var(--good); }
-    .hole-outcome.loss { color: var(--bad); background: rgba(176, 0, 32, 0.10); }
-    .hole-outcome.halved { color: var(--muted); background: var(--soft); }
-    .detail-rest { margin-left: 4px; }
 
     .mobile-hint {
       display: none;
@@ -1965,7 +1959,7 @@ tr.hole-confirmed td:first-child {
             <select id="playerCount">
               <option value="4">4 Spieler</option>
               <option value="3">3 Spieler</option>
-              <option value="2">2 Spieler (Lochspiel)</option>
+              <option value="2">2 Spieler (Matchplay)</option>
             </select>
           </div>
           <div></div>
@@ -2800,12 +2794,12 @@ function matchNetStroke(result, i) {
   const o = i === 0 ? 1 : 0;
   return (result.strokes[i] || 0) - (result.strokes[o] || 0);
 }
-// Loch-Ausgang im 2er: { winner: 0|1|null, halved: bool } – null außerhalb Matchplay.
-function matchHoleOutcome(result) {
-  if (!isMatchPlay() || !result || !result.complete) return null;
-  if (result.netto[0] < result.netto[1]) return { winner: 0, halved: false };
-  if (result.netto[1] < result.netto[0]) return { winner: 1, halved: false };
-  return { winner: null, halved: true };
+// 2er-Lochsymbol neben dem Namen: 🟢 = Loch gewonnen, ⚪ = geteilt, "" = verloren/kein Match.
+function matchHoleSymbol(result, i) {
+  const oc = holeOutcomeForPlayer(result, i);
+  if (oc === "win") return "🟢";
+  if (oc === "halved") return "⚪";
+  return "";
 }
 
 function buildKnownPlayerNamesList() {
@@ -3222,12 +3216,9 @@ function buildTable() {
 
     const metaTop = document.createElement("div");
     metaTop.className = "clickable-hole";
-    const matchOutcome = matchHoleOutcome(result);
-    const halvedChip = (data.confirmed && matchOutcome && matchOutcome.halved)
-      ? " <span class='hole-outcome halved'>= geteilt</span>" : "";
     metaTop.innerHTML =
       "Loch " + h.hole + " <span class='hole-info'>ⓘ</span>" +
-      (data.confirmed ? " <span class='hole-state ok'>✓</span>" : "") + halvedChip +
+      (data.confirmed ? " <span class='hole-state ok'>✓</span>" : "") +
       (details.length ? "<div class='hole-small'>" + details.join(" · ") + "</div>" : "");
     metaTop.addEventListener("click", () => openHoleStandPopup(h.hole));
     tdHole.appendChild(metaTop);
@@ -3243,15 +3234,15 @@ function buildTable() {
       points.className = "points-cell";
 
       if (data.confirmed && result.complete && isMatchPlay()) {
-        const won = holeOutcomeForPlayer(result, i) === "win";
+        const sym = matchHoleSymbol(result, i);
         const net = matchNetStroke(result, i);
-        const badge = won ? "<span class='hole-outcome win'>✓ gewonnen</span>" : "";
+        const symLine = sym ? "<div class='hole-symbol'>" + sym + "</div>" : "";
         // Netto + Vorgabe nur zeigen, wo der Spieler tatsächlich einen Schlag vor hat.
         const strokeDetail = net > 0
           ? "<div class='points-detail'>" + data.gross[i] + " → " + result.netto[i] +
             " <span class='stroke-note'>V" + net + "</span></div>"
           : "";
-        points.innerHTML = badge + strokeDetail;
+        points.innerHTML = symLine + strokeDetail;
       } else if (data.confirmed && result.complete) {
         const scoreDetail = hasStroke
           ? "<div class='points-detail'>" + data.gross[i] + " → " + result.netto[i] + "</div>"
@@ -3301,10 +3292,7 @@ function renderMobileCards() {
     head.addEventListener("click", () => openHoleStandPopup(h.hole));
 
     const title = document.createElement("div");
-    const matchOutcome = matchHoleOutcome(result);
-    const halvedChip = (data.confirmed && matchOutcome && matchOutcome.halved)
-      ? " <span class='hole-outcome halved'>= geteilt</span>" : "";
-    title.innerHTML = "Loch " + h.hole + " <span class='hole-info'>ⓘ</span>" + halvedChip;
+    title.innerHTML = "Loch " + h.hole + " <span class='hole-info'>ⓘ</span>";
 
     const meta = document.createElement("div");
     meta.className = "hole-card-meta";
@@ -3330,25 +3318,26 @@ function renderMobileCards() {
       const nameWrap = document.createElement("div");
       nameWrap.className = "mobile-name-wrap";
 
+      const playerName = state.players[i].name || ("Spieler " + (i + 1));
       const name = document.createElement("div");
       name.className = "mobile-player-name";
-      name.textContent = state.players[i].name || ("Spieler " + (i + 1));
+      if (data.confirmed && result.complete && isMatchPlay()) {
+        const sym = matchHoleSymbol(result, i);
+        name.innerHTML = escapeHtml(playerName) + (sym ? " <span class='hole-symbol'>" + sym + "</span>" : "");
+      } else {
+        name.textContent = playerName;
+      }
       nameWrap.appendChild(name);
 
       const hasStroke = result.strokes[i] > 0;
 
       if (data.confirmed && result.complete && isMatchPlay()) {
-        const won = holeOutcomeForPlayer(result, i) === "win";
         const net = matchNetStroke(result, i);
-        const badge = won ? "<span class='hole-outcome win'>✓ gewonnen</span>" : "";
         // Netto + Vorgabe nur beim Spieler mit echtem Schlagvorteil.
-        const strokeDetail = net > 0
-          ? "<span class='detail-rest'>" + data.gross[i] + "→" + result.netto[i] + " · V" + net + "</span>"
-          : "";
-        if (badge || strokeDetail) {
+        if (net > 0) {
           const sub = document.createElement("div");
           sub.className = "mobile-player-detail";
-          sub.innerHTML = badge + strokeDetail;
+          sub.textContent = data.gross[i] + "→" + result.netto[i] + " · V" + net;
           nameWrap.appendChild(sub);
         }
       } else if (data.confirmed && result.complete) {
@@ -3558,7 +3547,7 @@ function renderMatchSummary() {
 
   const v = document.getElementById("validationBox");
   v.innerHTML = "";
-  [["Golfplatz: " + course.shortName, ""], ["Löcher: " + calc.playedHoles, ""], ["🤝 Lochspiel", "ok"]].forEach(([txt, cls]) => {
+  [["Golfplatz: " + course.shortName, ""], ["Löcher: " + calc.playedHoles, ""], ["Matchplay", "ok"]].forEach(([txt, cls]) => {
     const span = document.createElement("span");
     span.className = "mini-pill " + cls;
     span.textContent = txt;
@@ -6027,7 +6016,7 @@ function openSeasonTable() {
   let html = "<div style='padding:14px; height:100%; overflow:auto;'>";
   html += "<h3 style='margin:0 0 4px;'>🏅 Order of Merit</h3>";
   html += "<div class='help' style='margin-bottom:10px;'>" + season.rounds.length + " Runde(n) gespeichert" +
-          (matchCount ? " (davon " + matchCount + " Lochspiel)" : "") + "</div>";
+          (matchCount ? " (davon " + matchCount + " Matchplay)" : "") + "</div>";
 
   if (oom.length === 0) {
     html += "<p class='help'>Noch keine Runden in der Saison. Über „⛳ Loch 19 → ➕ Runde zur Saison hinzufügen“ nimmst du die aktuelle Runde auf.</p>";
@@ -6045,7 +6034,7 @@ function openSeasonTable() {
       html += renderOomTable(unranked, false);
     }
 
-    html += "<div class='help' style='margin-top:8px;'>Gewertet nach Ø&nbsp;Punkten pro Kopenhagen-Runde. Offizielle Wertung ab " + threshold + " Runde(n) (ein Drittel der Kopenhagen-Runden). Ø&nbsp;Brutto aus allen vollen 18-Loch-Runden (auch Lochspiel). (+N) hinter den Runden = zusätzliche Lochspiele. Tippe auf einen Namen für das Spielerprofil.</div>";
+    html += "<div class='help' style='margin-top:8px;'>Gewertet nach Ø&nbsp;Punkten pro Kopenhagen-Runde. Offizielle Wertung ab " + threshold + " Runde(n) (ein Drittel der Kopenhagen-Runden). Ø&nbsp;Brutto aus allen vollen 18-Loch-Runden (auch Matchplay). (+N) hinter den Runden = zusätzliche Matchplay-Runden. Tippe auf einen Namen für das Spielerprofil.</div>";
   }
 
   if (season.rounds.length) {
@@ -6055,7 +6044,7 @@ function openSeasonTable() {
     for (const r of rounds) {
       const winner = r.results && r.results[0] ? r.results[0].name : "?";
       const headLine = (r.mode === "match")
-        ? ("🤝 Lochspiel: " + escapeHtml(r.matchResult || "—"))
+        ? ("🤝 Matchplay: " + escapeHtml(r.matchResult || "—"))
         : ("Sieger: " + escapeHtml(winner));
       html += "<div class='season-round-row'>";
       html += "<div class='season-round-open' data-id='" + r.id + "'><strong>" + escapeHtml(r.dateText || "") + "</strong> · " + escapeHtml(r.courseName || "") +
@@ -6208,7 +6197,7 @@ function renderRoundStandingsHtml(round, highlightName) {
   const matchMode = round.mode === "match";
   let h = "";
   if (matchMode) {
-    h += "<div class='match-status-banner' style='font-size:15px; margin-bottom:8px;'>🤝 " + escapeHtml(round.matchResult || "Lochspiel") + "</div>";
+    h += "<div class='match-status-banner' style='font-size:15px; margin-bottom:8px;'>🤝 " + escapeHtml(round.matchResult || "Matchplay") + "</div>";
   }
   h += "<div style='overflow-x:auto;'><table class='player-detail-table'><thead><tr><th>#</th><th>Spieler</th><th>" +
        (matchMode ? "Löcher" : "Punkte") + "</th><th>Brutto</th><th>Vorg.</th>";

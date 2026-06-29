@@ -20,11 +20,12 @@ Speicher-Schlüssel (localStorage):
 ## Domänen-Regeln (Wertung)
 - **Kopenhagen-Punkte** je Loch nach Netto: `pointVector(3) = [2,1,0]`, `pointVector(4) = [3,2,1,0]`. Bei echtem Gleichstand (gleiche Punkte UND gleiche Schläge) werden die Punkte gemittelt.
 - **Vorgaben (Netto):** automatische Schläge nach HCP des Lochs aus der Gesamtvorgabe, pro Loch überschreibbar (18-Loch-Matrix). Anzeige als „V<n>".
-- **2-Spieler-Modus = Lochwettspiel (Matchplay), KEINE Kopenhagen-Punkte.** Pro Loch gewinnt der niedrigere Netto-Score; Anzeige mit US-Begriffen (`2 up`, `All Square`, `dormie`, `wins 3 & 2`). Replay/Punkteprüfung/Bild-Teilen/Rundenrückblick sind im 2er ausgeblendet.
-- **Order of Merit:** Ranking nach Ø Meritpunkten pro **Kopenhagen**-Runde (offizielle Wertung ab ⌈Kopenhagen-Runden/3⌉). **Lochspiel-Runden** zählen NICHT ins Punkte-Ranking, aber in den **Ø Brutto** (nur volle 18-Loch-Runden, Brutto – nicht Netto). Rundenzahl-Hinweis: „N (+M Lochspiel)".
+- **2-Spieler-Modus = Matchplay** (deutscher Fachbegriff: Lochwettspiel), **KEINE Kopenhagen-Punkte.** Pro Loch gewinnt der niedrigere Netto-Score; Anzeige mit US-Begriffen (`2 up`, `All Square`, `dormie`, `wins 3 & 2`). Replay/Punkteprüfung/Bild-Teilen/Rundenrückblick sind im 2er ausgeblendet. **UI-Label heißt überall „Matchplay"** – der intern gespeicherte Modus-Schlüssel bleibt aber `r.mode === "match"`.
+- **Matchplay-Anzeige (Lochtabelle/Karten):** Vorgaben werden nur als **Netto-Differenz** gezeigt (`V<n>` nur beim Spieler mit echtem Schlagvorteil; haben beide gleich viele Schläge ⇒ kein V). Loch-Ausgang als kleines **Symbol neben dem Namen/Score**: 🟢 = Loch gewonnen, ⚪ = geteilt (bei beiden Spielern), Verlierer ohne Symbol. Kein „gewonnen/verloren/geteilt"-Text mehr.
+- **Order of Merit:** Ranking nach Ø Meritpunkten pro **Kopenhagen**-Runde (offizielle Wertung ab ⌈Kopenhagen-Runden/3⌉). **Matchplay-Runden** zählen NICHT ins Punkte-Ranking, aber in den **Ø Brutto** (nur volle 18-Loch-Runden, Brutto – nicht Netto). Rundenzahl-Hinweis: „N (+M)" (M = zusätzliche Matchplay-Runden).
 
 ## Code-Orientierung (wichtige Funktionen)
-- Wertung: `calculateRound`, `calculateHole`, `calculateMatch`, `formatMatchStatus`.
+- Wertung: `calculateRound`, `calculateHole`, `calculateMatch`, `formatMatchStatus`, `holeOutcomeForPlayer`, `matchNetStroke` (Netto-Vorgabe-Differenz), `matchHoleSymbol` (🟢/⚪).
 - Anzeige: `renderSummary` / `renderMatchSummary`, `buildTable`, `renderMobileCards`, `renderPlayerDetail`, `buildConfirmButton`.
 - Saison/OoM: `buildRoundSnapshot`, `computeOrderOfMerit`, `openSeasonTable`, `renderRoundStandingsHtml`, `openPlayerProfile`.
 - Teilen/Links: `createShareLink` (`#s=`), `createSeasonShareLink` (`#oom=`), `shareRound`, `shareSeason`.
