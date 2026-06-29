@@ -553,9 +553,27 @@
     /* Loch-Ausgang im 2er-Lochwettspiel – kleines Symbol neben Name/Score. */
     .hole-symbol {
       display: inline-block;
-      font-size: 15px;
+      font-size: 13px;
       line-height: 1;
       vertical-align: middle;
+    }
+    /* Mobile: Symbol in fester Spalte links vom Namen → gleiche Position unabhängig von der Namenslänge. */
+    .mobile-player-name.with-symbol {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .mobile-player-name.with-symbol .hole-symbol {
+      flex: 0 0 16px;
+      width: 16px;
+      text-align: center;
+      font-size: 12px;
+    }
+    .mobile-player-name.with-symbol .pname {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 0;
     }
 
     .mobile-hint {
@@ -3323,7 +3341,9 @@ function renderMobileCards() {
       name.className = "mobile-player-name";
       if (data.confirmed && result.complete && isMatchPlay()) {
         const sym = matchHoleSymbol(result, i);
-        name.innerHTML = escapeHtml(playerName) + (sym ? " <span class='hole-symbol'>" + sym + "</span>" : "");
+        name.classList.add("with-symbol");
+        name.innerHTML = "<span class='hole-symbol'>" + sym + "</span>" +
+                         "<span class='pname'>" + escapeHtml(playerName) + "</span>";
       } else {
         name.textContent = playerName;
       }
