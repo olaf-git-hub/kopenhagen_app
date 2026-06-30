@@ -4517,6 +4517,91 @@ function createRoundCsv() {
   return csv;
 }
 
+// CSV für das 2er-Matchplay: Lochgewinne + Netto + Loch-Ausgang statt Kopenhagen-Punkten.
+function createMatchCsv() {
+  const calc = calculateRound();
+  const course = getCourse();
+  const m = calculateMatch(calc);
+
+  const now = new Date();
+  const dateTimeText = now.toLocaleString("de-DE", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+
+  const p0 = state.players[0].name || "Spieler 1";
+  const p1 = state.players[1].name || "Spieler 2";
+
+  let csv = "";
+
+  csv += "MATCHPLAY (LOCHWETTSPIEL)\n";
+  csv += "Datum;" + csvEscape(dateTimeText) + "\n";
+  csv += "Golfplatz;" + csvEscape(course.name) + "\n";
+  csv += "Spieler;" + csvEscape(p0 + " vs " + p1) + "\n";
+  csv += "Ergebnis;" + csvEscape(formatMatchStatus(m)) + "\n";
+  csv += "\n";
+
+  csv += "GESAMT\n";
+  const totalHeader = ["Spieler", "Gewonnene Löcher", "Brutto-Schläge"];
+  if (course.hasPar) totalHeader.push("+/- PAR");
+  totalHeader.push("Gespielte Löcher");
+  csv += totalHeader.map(csvEscape).join(";") + "\n";
+
+  for (let i = 0; i < 2; i++) {
+    const p = calc.totals[i];
+    const line = [p.name, m.won[i], p.gross];
+    if (course.hasPar) line.push(formatPar(p.parDelta));
+    line.push(p.holesPlayed);
+    csv += line.map(csvEscape).join(";") + "\n";
+  }
+
+  csv += "\n";
+
+  csv += "LOCHÜBERSICHT\n";
+  const header = ["Loch"];
+  if (course.hasPar) header.push("PAR");
+  header.push(p0 + " Brutto", p0 + " Netto", p1 + " Brutto", p1 + " Netto", "Loch-Ausgang");
+  csv += header.map(csvEscape).join(";") + "\n";
+
+  for (const h of getCourseHoles()) {
+    const key = String(h.hole);
+    const data = state.holes[key];
+    const result = calc.holeResults[key];
+
+    if (!data || !data.confirmed) continue;
+
+    const hasAnyScore = data.gross
+      .slice(0, 2)
+      .some(v => v !== null && v !== undefined && v !== "");
+
+    if (!hasAnyScore) continue;
+
+    const line = [h.hole];
+    if (course.hasPar) line.push(h.par);
+
+    line.push(
+      data.gross[0] === null ? "" : data.gross[0],
+      result.complete ? result.netto[0] : "",
+      data.gross[1] === null ? "" : data.gross[1],
+      result.complete ? result.netto[1] : ""
+    );
+
+    let outcome = "";
+    if (result.complete) {
+      const oc = matchHoleOutcome(result);
+      if (oc) outcome = oc.halved ? "geteilt" : (oc.winner === 0 ? p0 : p1);
+    }
+    line.push(outcome);
+
+    csv += line.map(csvEscape).join(";") + "\n";
+  }
+
+  return csv;
+}
+
 function csvEscape(value) {
   const text = String(value ?? "");
 
@@ -4636,18 +4721,20 @@ function buildResultImageBlob() {
 }
 
 async function shareRound() {
-  if (isMatchPlay()) {
-    showToast("Ergebnis-Bild gibt es nur im Kopenhagen-Modus");
-    return;
-  }
   const link = createShareLink();
-  const text = "Aktueller Stand der Kopenhagen-Runde:\n" + link;
+  const match = isMatchPlay();
+  const text = (match
+    ? "Aktueller Stand des Matchplays:\n"
+    : "Aktueller Stand der Kopenhagen-Runde:\n") + link;
 
+  // Ergebnis-Bild gibt es nur im Kopenhagen-Modus.
   let file = null;
-  try {
-    const blob = await buildResultImageBlob();
-    if (blob) file = new File([blob], "kopenhagen-ergebnis.png", { type: "image/png" });
-  } catch (e) {}
+  if (!match) {
+    try {
+      const blob = await buildResultImageBlob();
+      if (blob) file = new File([blob], "kopenhagen-ergebnis.png", { type: "image/png" });
+    } catch (e) {}
+  }
 
   // Bevorzugt: Bild + Link gemeinsam teilen
   if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -4659,12 +4746,14 @@ async function shareRound() {
     }
   }
 
-  // Fallback ohne Bild: nur Link teilen
+  // Matchplay bzw. Fallback ohne Bild: nur Link teilen
   if (navigator.share) {
     try {
       await navigator.share({
-        title: "Kopenhagen Golfrunde",
-        text: "Hier ist der aktuelle Spielstand der Kopenhagen-Runde:",
+        title: match ? "Matchplay-Runde" : "Kopenhagen Golfrunde",
+        text: match
+          ? "Hier ist der aktuelle Stand des Matchplays:"
+          : "Hier ist der aktuelle Spielstand der Kopenhagen-Runde:",
         url: link
       });
       return;
@@ -4682,18 +4771,23 @@ async function shareRound() {
 
 async function exportRound() {
 
-  const csv = "\uFEFF" + createRoundCsv();
+  const match = isMatchPlay();
+  const csv = "\uFEFF" + (match ? createMatchCsv() : createRoundCsv());
   const json = JSON.stringify(state, null, 2);
+
+  const baseName = match ? "matchplay" : "kopenhagen";
+  const csvName = baseName + "-ergebnis.csv";
+  const jsonName = baseName + "-daten.json";
 
   const csvFile = new File(
     [csv],
-    "kopenhagen-ergebnis.csv",
+    csvName,
     { type: "text/csv;charset=utf-8" }
   );
 
   const jsonFile = new File(
     [json],
-    "kopenhagen-daten.json",
+    jsonName,
     { type: "application/json;charset=utf-8" }
   );
 
@@ -4703,8 +4797,8 @@ async function exportRound() {
   ) {
 
     await navigator.share({
-      title: "Kopenhagen Ergebnis",
-      text: "Kopenhagen Ergebnis als CSV und JSON",
+      title: match ? "Matchplay Ergebnis" : "Kopenhagen Ergebnis",
+      text: (match ? "Matchplay" : "Kopenhagen") + " Ergebnis als CSV und JSON",
       files: [csvFile, jsonFile]
     });
 
@@ -4712,13 +4806,13 @@ async function exportRound() {
 
     downloadFile(
       csv,
-      "kopenhagen-ergebnis.csv",
+      csvName,
       "text/csv;charset=utf-8"
     );
 
     downloadFile(
       json,
-      "kopenhagen-daten.json",
+      jsonName,
       "application/json;charset=utf-8"
     );
   }

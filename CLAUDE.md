@@ -30,7 +30,7 @@ Speicher-Schlüssel (localStorage):
 - Saison/OoM: `buildRoundSnapshot`, `computeOrderOfMerit`, `openSeasonTable`, `renderRoundStandingsHtml`, `openPlayerProfile`. Spieler werden über Runden hinweg **tolerant per Name** zusammengefasst: `seasonNameKey` (`trim()` + Kleinschreibung) und `sameSeasonName` – Anzeige bleibt wie eingegeben, nur die Zuordnung ist tolerant. Gespeicherte Saison-Daten werden dabei nicht verändert.
 - Spracheingabe (Scores): `processVoiceScore` (wertet alle Erkennungs-Alternativen aus, nimmt die mit den meisten Treffern), `parsePlayerScores`, `findNumberAfterPlayer`, `extractScoreNumbers`; Wörterbücher `speechNumberWords`, `speechPlayerAliases`.
 - Springen Stand/Tabelle: `toggleSummaryJump`, `syncJumpButtonToScroll` (Scroll-Listener hält Label/Modus an der echten Position), `scrollToSummary`, `scrollBackToTable`.
-- Teilen/Links: `createShareLink` (`#s=`), `createSeasonShareLink` (`#oom=`), `shareRound`, `shareSeason`.
+- Teilen/Links: `createShareLink` (`#s=`), `createSeasonShareLink` (`#oom=`), `shareRound`, `shareSeason`, Export `exportRound` mit `createRoundCsv` (Kopenhagen) bzw. `createMatchCsv` (Matchplay). Im Matchplay teilt „Runde teilen" nur den Link (kein Ergebnis-Bild); der Share-Link kodiert nur Rohdaten und wird vom Empfänger automatisch als Matchplay erkannt. Export erzeugt `matchplay-…`-Dateien (Lochgewinne/Netto/Loch-Ausgang statt Punkten).
 - Eingabe: `stepScore`, `commitTypedScore`, `confirmHole`, `editHole`/`cancelHoleEdit`, `resetHole`.
 
 Spieleranzahl: 2 (Matchplay), 3 oder 4. `state.playerCount === 2` ⇒ `isMatchPlay()`.
