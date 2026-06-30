@@ -1820,6 +1820,11 @@ tr.hole-confirmed td:first-child {
   color: var(--bad);
 }
 
+.round-tag.match {
+  background: var(--soft);
+  color: var(--accent-dark);
+}
+
 .season-suggest {
   margin-top: 12px;
   display: grid;
@@ -6545,6 +6550,28 @@ function closeRoundDetail() {
   if (popup) popup.classList.remove("show");
 }
 
+// WHS-Methodik (Regel 5.2a): Anzahl der besten Runden je nach Datensatzgröße (ohne Minus-Anpassung).
+function whsBestCount(m) {
+  if (m < 3) return 0;
+  if (m <= 5) return 1;
+  if (m <= 8) return 2;
+  if (m <= 11) return 3;
+  if (m <= 14) return 4;
+  if (m <= 16) return 5;
+  if (m <= 18) return 6;
+  if (m === 19) return 7;
+  return 8;
+}
+
+// Ø der besten N der letzten max. 20 vollen Runden – WHS-Auswahl auf Brutto (ohne Slope/Course Rating).
+function whsGrossAverage(grossChrono) {
+  const recent = grossChrono.slice(Math.max(0, grossChrono.length - 20));
+  const n = whsBestCount(recent.length);
+  if (n === 0) return null;
+  const bestN = recent.slice().sort((a, b) => a - b).slice(0, n);
+  return { avg: bestN.reduce((a, b) => a + b, 0) / n, n: n, m: recent.length };
+}
+
 function openPlayerProfile(name) {
   const season = loadSeason();
   const agg = computeOrderOfMerit(season).find(p => sameSeasonName(p.name, name));
@@ -6603,9 +6630,13 @@ function openPlayerProfile(name) {
     const n = grossChrono.length;
     html += "<div class='profile-roundstat'>";
     html += "<div class='profile-roundstat-head'>📊 Rundenstatistik – Ø Brutto</div>";
-    html += "<div class='help' style='margin:0;'>Über die letzten <span id='prsCount'>" + n + "</span> von " + n + " vollen Runden</div>";
+    html += "<div class='help' id='prsDesc' style='margin:0;'></div>";
     html += "<input type='range' id='prsRange' min='1' max='" + n + "' value='" + n + "' step='1'>";
     html += "<div class='profile-roundstat-val'>Ø Brutto:<strong id='prsAvg'>–</strong></div>";
+    if (n >= 3) {
+      html += "<button type='button' id='prsWhsBtn' class='secondary small' style='margin-top:8px;'>🌍 WHS-Schnitt</button>";
+      html += "<div class='help' style='margin:6px 0 0; font-size:11px;'>WHS-Methodik (beste 8 der letzten 20) auf Brutto – ohne Slope/Course&nbsp;Rating, daher kein offizielles Handicap.</div>";
+    }
     html += "</div>";
   }
 
@@ -6635,14 +6666,21 @@ function openPlayerProfile(name) {
       const parTxt = (r.hasPar && me) ? (" · " + formatPar(me.parDelta) + " PAR") : "";
       const sym = me ? placeSymbol(me.position, r.playerCount) : "";
 
+      const isMatch = r.mode === "match";
+
       let tag = "";
-      if (r.id === bestId) tag = " <span class='round-tag best'>Beste</span>";
-      else if (r.id === worstId) tag = " <span class='round-tag worst'>Schlechteste</span>";
+      if (isMatch) tag += " <span class='round-tag match'>🤝 Matchplay</span>";
+      if (r.id === bestId) tag += " <span class='round-tag best'>Beste</span>";
+      else if (r.id === worstId) tag += " <span class='round-tag worst'>Schlechteste</span>";
+
+      const subLine = isMatch
+        ? ((r.matchResult ? escapeHtml(r.matchResult) : "Matchplay") + " · Brutto " + myGross + parTxt)
+        : ((sym ? sym + " " : "") + "Platz " + myPos + " von " + r.playerCount + " · Brutto " + myGross + parTxt);
 
       html += "<div class='profile-round'>";
       html += "<div class='profile-round-head' data-rid='" + r.id + "'>";
       html += "<div><strong>" + escapeHtml(r.dateText || "") + "</strong> · " + escapeHtml(r.courseName || "") + tag +
-              "<div class='hole-small'>" + (sym ? sym + " " : "") + "Platz " + myPos + " von " + r.playerCount + " · Brutto " + myGross + parTxt + "</div></div>";
+              "<div class='hole-small'>" + subLine + "</div></div>";
       html += "<span class='summary-toggle'>⊕</span>";
       html += "</div>";
       html += "<div class='profile-round-body' style='display:none;'>" + renderPlayerRoundCardHtml(r, name) + "</div>";
@@ -6663,20 +6701,40 @@ function openPlayerProfile(name) {
     });
   });
 
-  // Rundenstatistik: Ø Brutto über die letzten K vollen Runden (Schieberegler).
+  // Rundenstatistik: Ø Brutto über die letzten K Runden (Schieberegler) bzw. WHS-Schnitt.
   const prsRange = document.getElementById("prsRange");
   if (prsRange) {
-    const updatePrs = () => {
-      const k = Math.max(1, Math.min(grossChrono.length, Number(prsRange.value) || grossChrono.length));
-      const lastK = grossChrono.slice(grossChrono.length - k);
+    const desc = document.getElementById("prsDesc");
+    const out = document.getElementById("prsAvg");
+    const whsBtn = document.getElementById("prsWhsBtn");
+    const total = grossChrono.length;
+    let whsOn = false;
+
+    const showSlider = () => {
+      const k = Math.max(1, Math.min(total, Number(prsRange.value) || total));
+      const lastK = grossChrono.slice(total - k);
       const avg = lastK.reduce((a, b) => a + b, 0) / lastK.length;
-      const cnt = document.getElementById("prsCount");
-      const out = document.getElementById("prsAvg");
-      if (cnt) cnt.textContent = String(k);
+      if (desc) desc.textContent = "Über die letzten " + k + " von " + total + " vollen Runden";
       if (out) out.textContent = formatNum(avg);
     };
-    prsRange.addEventListener("input", updatePrs);
-    updatePrs();
+
+    const showWhs = () => {
+      const whs = whsGrossAverage(grossChrono);
+      if (!whs) { whsOn = false; showSlider(); return; }
+      if (desc) desc.textContent = "WHS-Schnitt: beste " + whs.n + " der letzten " + whs.m + " vollen Runden";
+      if (out) out.textContent = formatNum(whs.avg);
+    };
+
+    const render = () => {
+      prsRange.disabled = whsOn;
+      prsRange.style.opacity = whsOn ? "0.4" : "";
+      if (whsBtn) whsBtn.textContent = whsOn ? "↩︎ Zurück zum Regler" : "🌍 WHS-Schnitt";
+      if (whsOn) showWhs(); else showSlider();
+    };
+
+    prsRange.addEventListener("input", () => { if (!whsOn) showSlider(); });
+    if (whsBtn) whsBtn.addEventListener("click", () => { whsOn = !whsOn; render(); });
+    render();
   }
 
   popup.classList.add("show");
