@@ -1772,6 +1772,33 @@ tr.hole-confirmed td:first-child {
   font-weight: 800;
 }
 
+.profile-roundstat {
+  border: 1px solid var(--line);
+  background: var(--soft2);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin: 2px 0 14px;
+}
+.profile-roundstat-head {
+  font-weight: 900;
+  font-size: 14px;
+  margin-bottom: 2px;
+}
+.profile-roundstat input[type="range"] {
+  width: 100%;
+  margin: 6px 0;
+  accent-color: var(--accent);
+}
+.profile-roundstat-val {
+  font-size: 14px;
+  font-weight: 700;
+}
+.profile-roundstat-val strong {
+  font-size: 19px;
+  color: var(--accent-dark);
+  margin-left: 4px;
+}
+
 .round-tag {
   display: inline-block;
   font-size: 11px;
@@ -6526,6 +6553,15 @@ function openPlayerProfile(name) {
     .slice()
     .reverse();
 
+  // Brutto der vollen 18-Loch-Runden in chronologischer Reihenfolge (alt → neu) –
+  // gleiche Menge wie der Ø Brutto; Basis für den Rundenstatistik-Schieberegler.
+  const grossChrono = [];
+  for (const r of season.rounds) {
+    if (!r.complete) continue;
+    const me = r.results.find(x => sameSeasonName(x.name, name));
+    if (me && me.gross !== null && me.gross !== undefined) grossChrono.push(Number(me.gross));
+  }
+
   const title = document.getElementById("playerProfileTitle");
   const body = document.getElementById("playerProfileBody");
   const popup = document.getElementById("playerProfilePopup");
@@ -6561,6 +6597,16 @@ function openPlayerProfile(name) {
     if (medals.bronze) badges += "<span class='place-badge' title='3. Platz (nicht Letzter)'>🥉 <span class='cnt'>" + medals.bronze + "×</span></span>";
     if (medals.last)   badges += "<span class='place-badge' title='Letzter Platz'>😱 <span class='cnt'>" + medals.last + "×</span></span>";
     if (badges) html += "<div class='profile-placements'>" + badges + "</div>";
+  }
+
+  if (grossChrono.length >= 2) {
+    const n = grossChrono.length;
+    html += "<div class='profile-roundstat'>";
+    html += "<div class='profile-roundstat-head'>📊 Rundenstatistik – Ø Brutto</div>";
+    html += "<div class='help' style='margin:0;'>Über die letzten <span id='prsCount'>" + n + "</span> von " + n + " vollen Runden</div>";
+    html += "<input type='range' id='prsRange' min='1' max='" + n + "' value='" + n + "' step='1'>";
+    html += "<div class='profile-roundstat-val'>Ø Brutto:<strong id='prsAvg'>–</strong></div>";
+    html += "</div>";
   }
 
   html += "<h3 style='margin:6px 0 8px; font-size:15px;'>Runden (zum Aufklappen tippen)</h3>";
@@ -6616,6 +6662,22 @@ function openPlayerProfile(name) {
       if (tog) tog.textContent = open ? "⊕" : "⊖";
     });
   });
+
+  // Rundenstatistik: Ø Brutto über die letzten K vollen Runden (Schieberegler).
+  const prsRange = document.getElementById("prsRange");
+  if (prsRange) {
+    const updatePrs = () => {
+      const k = Math.max(1, Math.min(grossChrono.length, Number(prsRange.value) || grossChrono.length));
+      const lastK = grossChrono.slice(grossChrono.length - k);
+      const avg = lastK.reduce((a, b) => a + b, 0) / lastK.length;
+      const cnt = document.getElementById("prsCount");
+      const out = document.getElementById("prsAvg");
+      if (cnt) cnt.textContent = String(k);
+      if (out) out.textContent = formatNum(avg);
+    };
+    prsRange.addEventListener("input", updatePrs);
+    updatePrs();
+  }
 
   popup.classList.add("show");
 }
