@@ -4321,7 +4321,8 @@ function loadStateFromUrl() {
     const imported = cloneDefault();
 
     imported.courseId = courses[shared.c] ? shared.c : "velte";
-    imported.playerCount = Number(shared.n) === 3 ? 3 : 4;
+    const sharedCount = Number(shared.n);
+    imported.playerCount = (sharedCount === 2 || sharedCount === 3) ? sharedCount : 4;
 
     imported.players = [];
 
@@ -4588,8 +4589,9 @@ function createMatchCsv() {
 
     let outcome = "";
     if (result.complete) {
-      const oc = matchHoleOutcome(result);
-      if (oc) outcome = oc.halved ? "geteilt" : (oc.winner === 0 ? p0 : p1);
+      if (result.netto[0] < result.netto[1]) outcome = p0;
+      else if (result.netto[1] < result.netto[0]) outcome = p1;
+      else outcome = "geteilt";
     }
     line.push(outcome);
 
@@ -6754,11 +6756,11 @@ function init() {
   document.getElementById("shareMenuBtn").addEventListener("click", toggleShareMenu);
   document.getElementById("shareRoundBtn").addEventListener("click", () => {
   closeShareMenu();
-  shareRound();
+  Promise.resolve().then(shareRound).catch(e => showToast("Teilen fehlgeschlagen: " + (e && e.message ? e.message : e)));
 });
   document.getElementById("exportRoundBtn").addEventListener("click", () => {
   closeShareMenu();
-  exportRound();
+  Promise.resolve().then(exportRound).catch(e => showToast("Export fehlgeschlagen: " + (e && e.message ? e.message : e)));
 });
 
   document.addEventListener("click", closeShareMenuOnOutsideClick);
