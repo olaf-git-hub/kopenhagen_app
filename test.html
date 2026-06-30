@@ -1799,6 +1799,36 @@ tr.hole-confirmed td:first-child {
   margin-left: 4px;
 }
 
+.whs-info {
+  cursor: pointer;
+  color: var(--accent-dark);
+  font-weight: 900;
+  margin-left: 4px;
+}
+.whs-tee {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  font-size: 13px;
+}
+.whs-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 4px 0 2px;
+  font-size: 12px;
+}
+.whs-table td {
+  padding: 3px 6px;
+  border-bottom: 1px solid var(--line);
+}
+.whs-table tr.active td {
+  background: var(--soft);
+  font-weight: 900;
+  color: var(--accent-dark);
+}
+
 .round-tag {
   display: inline-block;
   font-size: 11px;
@@ -6560,13 +6590,47 @@ function whsBestCount(m) {
   return 8;
 }
 
-// Ø der besten N der letzten max. 20 vollen Runden – WHS-Auswahl auf Brutto (ohne Slope/Course Rating).
-function whsGrossAverage(grossChrono) {
-  const recent = grossChrono.slice(Math.max(0, grossChrono.length - 20));
+// Velte-Tees mit Course Rating / Slope (geschlechtsabhängig: Herren Tee 61, Damen Tee 52).
+const VELTE_TEES = [
+  { key: "herren", label: "Herren · Tee 61", cr: 71.3, slope: 124 },
+  { key: "damen", label: "Damen · Tee 52", cr: 71.7, slope: 120 }
+];
+// Bei uns spielen nur diese Namen von den Damen-Tees; alle anderen Herren.
+const WHS_FEMALE_NAMES = ["astrid", "caroline"];
+function defaultVelteTeeKey(name) {
+  return WHS_FEMALE_NAMES.indexOf(seasonNameKey(name)) >= 0 ? "damen" : "herren";
+}
+
+// Echter WHS-Index (Annäherung): Schnitt der besten N Score-Differentials der letzten max. 20 Runden.
+// Differential = (113 / Slope) × (Brutto − Course Rating).
+function whsIndexFromGross(grossList, cr, slope) {
+  const recent = grossList.slice(Math.max(0, grossList.length - 20));
   const n = whsBestCount(recent.length);
   if (n === 0) return null;
-  const bestN = recent.slice().sort((a, b) => a - b).slice(0, n);
-  return { avg: bestN.reduce((a, b) => a + b, 0) / n, n: n, m: recent.length };
+  const diffs = recent.map(g => (113 / slope) * (g - cr)).sort((a, b) => a - b);
+  const bestN = diffs.slice(0, n);
+  return { index: bestN.reduce((a, b) => a + b, 0) / n, n: n, m: recent.length };
+}
+
+// Dynamische Erklärbox: Formel + WHS-Tabelle 5.2a, Zeile der aktuellen Rundenzahl hervorgehoben.
+function buildWhsExplainHtml(m) {
+  const table = [
+    { lo: 3, hi: 5, n: 1 }, { lo: 6, hi: 8, n: 2 }, { lo: 9, hi: 11, n: 3 }, { lo: 12, hi: 14, n: 4 },
+    { lo: 15, hi: 16, n: 5 }, { lo: 17, hi: 18, n: 6 }, { lo: 19, hi: 19, n: 7 }, { lo: 20, hi: 9999, n: 8 }
+  ];
+  let h = "<div class='whs-explain'>";
+  h += "<p class='help' style='margin:8px 0 6px;'>Pro voller Velte-Runde wird ein <strong>Differential = (113 ÷ Slope) × (Brutto − Course&nbsp;Rating)</strong> gebildet. Der Index ist der Schnitt der <strong>besten</strong> Differentiale der letzten 20 Runden.</p>";
+  h += "<p class='help' style='margin:0 0 6px;'>Bei weniger als 20 Runden zählen entsprechend weniger „beste\" (offizielle WHS-Tabelle 5.2a):</p>";
+  h += "<table class='whs-table'><tbody>";
+  for (const row of table) {
+    const active = (m >= row.lo && m <= row.hi);
+    const label = row.hi >= 9999 ? "20+" : (row.lo === row.hi ? String(row.lo) : (row.lo + "–" + row.hi));
+    h += "<tr" + (active ? " class='active'" : "") + "><td>" + label + " Runden</td><td>beste " + row.n + (active ? " &nbsp;← du" : "") + "</td></tr>";
+  }
+  h += "</tbody></table>";
+  h += "<p class='help' style='margin:6px 0 0; font-size:11px;'>Annäherung: gerechnet mit dem Brutto (ohne offizielle Netto-Doppelbogey-Begrenzung) und nur für Velte-Runden vom gewählten Tee – methodisch nach WHS, aber kein offiziell geführtes Handicap.</p>";
+  h += "</div>";
+  return h;
 }
 
 function openPlayerProfile(name) {
@@ -6584,6 +6648,14 @@ function openPlayerProfile(name) {
     if (!r.complete) continue;
     const me = r.results.find(x => sameSeasonName(x.name, name));
     if (me && me.gross !== null && me.gross !== undefined) grossChrono.push(Number(me.gross));
+  }
+
+  // Nur volle Velte-Runden – Basis für den WHS-Index (CR/Slope gelten nur für Velte).
+  const velteGrossChrono = [];
+  for (const r of season.rounds) {
+    if (!r.complete || r.courseId !== "velte") continue;
+    const me = r.results.find(x => sameSeasonName(x.name, name));
+    if (me && me.gross !== null && me.gross !== undefined) velteGrossChrono.push(Number(me.gross));
   }
 
   const title = document.getElementById("playerProfileTitle");
@@ -6630,10 +6702,22 @@ function openPlayerProfile(name) {
     html += "<div class='help' id='prsDesc' style='margin:0;'></div>";
     html += "<input type='range' id='prsRange' min='1' max='" + n + "' value='" + n + "' step='1'>";
     html += "<div class='profile-roundstat-val'>Ø Brutto:<strong id='prsAvg'>–</strong></div>";
-    if (n >= 3) {
-      html += "<button type='button' id='prsWhsBtn' class='secondary small' style='margin-top:8px;'>🌍 WHS-Schnitt</button>";
-      html += "<div class='help' style='margin:6px 0 0; font-size:11px;'>WHS-Methodik (beste 8 der letzten 20) auf Brutto – ohne Slope/Course&nbsp;Rating, daher kein offizielles Handicap.</div>";
+    html += "</div>";
+  }
+
+  if (velteGrossChrono.length >= 3) {
+    const defKey = defaultVelteTeeKey(name);
+    html += "<div class='profile-roundstat'>";
+    html += "<div class='profile-roundstat-head'>🌍 WHS-Handicap-Index <span class='whs-info' id='whsInfoBtn' title='Erklärung anzeigen'>ⓘ</span></div>";
+    html += "<div class='help' style='margin:0 0 4px;'>Velte · Abschlag/Tee:</div>";
+    html += "<select id='whsTee' class='whs-tee'>";
+    for (const t of VELTE_TEES) {
+      html += "<option value='" + t.key + "'" + (t.key === defKey ? " selected" : "") + ">" + t.label + " (CR " + formatNum(t.cr) + " / Slope " + t.slope + ")</option>";
     }
+    html += "</select>";
+    html += "<div class='profile-roundstat-val' style='margin-top:8px;'>Index:<strong id='whsIdx'>–</strong></div>";
+    html += "<div class='help' id='whsSub' style='margin:2px 0 0;'></div>";
+    html += "<div id='whsExplain' style='display:none;'></div>";
     html += "</div>";
   }
 
@@ -6698,40 +6782,50 @@ function openPlayerProfile(name) {
     });
   });
 
-  // Rundenstatistik: Ø Brutto über die letzten K Runden (Schieberegler) bzw. WHS-Schnitt.
+  // Rundenstatistik: Ø Brutto über die letzten K vollen Runden (Schieberegler).
   const prsRange = document.getElementById("prsRange");
   if (prsRange) {
     const desc = document.getElementById("prsDesc");
     const out = document.getElementById("prsAvg");
-    const whsBtn = document.getElementById("prsWhsBtn");
     const total = grossChrono.length;
-    let whsOn = false;
-
-    const showSlider = () => {
+    const updatePrs = () => {
       const k = Math.max(1, Math.min(total, Number(prsRange.value) || total));
       const lastK = grossChrono.slice(total - k);
       const avg = lastK.reduce((a, b) => a + b, 0) / lastK.length;
       if (desc) desc.textContent = "Über die letzten " + k + " von " + total + " vollen Runden";
       if (out) out.textContent = formatNum(avg);
     };
+    prsRange.addEventListener("input", updatePrs);
+    updatePrs();
+  }
 
-    const showWhs = () => {
-      const whs = whsGrossAverage(grossChrono);
-      if (!whs) { whsOn = false; showSlider(); return; }
-      if (desc) desc.textContent = "WHS-Schnitt: beste " + whs.n + " der letzten " + whs.m + " vollen Runden";
-      if (out) out.textContent = formatNum(whs.avg);
+  // WHS-Handicap-Index (Velte): Tee-Auswahl + Erklärbox.
+  const whsTee = document.getElementById("whsTee");
+  if (whsTee) {
+    const idxOut = document.getElementById("whsIdx");
+    const sub = document.getElementById("whsSub");
+    const updateIdx = () => {
+      const tee = VELTE_TEES.find(t => t.key === whsTee.value) || VELTE_TEES[0];
+      const res = whsIndexFromGross(velteGrossChrono, tee.cr, tee.slope);
+      if (!res) { if (idxOut) idxOut.textContent = "–"; if (sub) sub.textContent = ""; return; }
+      if (idxOut) idxOut.textContent = formatNum(res.index);
+      if (sub) sub.textContent = "aus den besten " + res.n + " der letzten " + res.m + " Velte-Runden";
     };
+    whsTee.addEventListener("change", updateIdx);
+    updateIdx();
 
-    const render = () => {
-      prsRange.disabled = whsOn;
-      prsRange.style.opacity = whsOn ? "0.4" : "";
-      if (whsBtn) whsBtn.textContent = whsOn ? "↩︎ Zurück zum Regler" : "🌍 WHS-Schnitt";
-      if (whsOn) showWhs(); else showSlider();
-    };
-
-    prsRange.addEventListener("input", () => { if (!whsOn) showSlider(); });
-    if (whsBtn) whsBtn.addEventListener("click", () => { whsOn = !whsOn; render(); });
-    render();
+    const whsInfoBtn = document.getElementById("whsInfoBtn");
+    const whsExplain = document.getElementById("whsExplain");
+    if (whsInfoBtn && whsExplain) {
+      whsInfoBtn.addEventListener("click", () => {
+        if (whsExplain.style.display === "none") {
+          whsExplain.innerHTML = buildWhsExplainHtml(Math.min(20, velteGrossChrono.length));
+          whsExplain.style.display = "block";
+        } else {
+          whsExplain.style.display = "none";
+        }
+      });
+    }
   }
 
   popup.classList.add("show");
