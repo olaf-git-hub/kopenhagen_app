@@ -1690,6 +1690,10 @@ tr.hole-confirmed td:first-child {
   z-index: 230;
 }
 
+.whs-info-popup {
+  z-index: 260;
+}
+
 .season-popup .hole-stand-card {
   width: min(560px, 100%);
 }
@@ -1813,20 +1817,37 @@ tr.hole-confirmed td:first-child {
   background: #fff;
   font-size: 13px;
 }
-.whs-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 4px 0 2px;
-  font-size: 12px;
-}
-.whs-table td {
-  padding: 3px 6px;
-  border-bottom: 1px solid var(--line);
-}
-.whs-table tr.active td {
+.whs-explain { margin-top: 6px; }
+.whs-formula {
   background: var(--soft);
-  font-weight: 900;
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 11px;
+  line-height: 1.35;
+}
+.whs-mini {
+  color: var(--muted);
+  font-size: 10.5px;
+  line-height: 1.3;
+  margin: 5px 0;
+}
+.whs-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px 6px;
+  font-size: 11px;
+}
+.whs-grid span {
+  padding: 2px 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  white-space: nowrap;
+}
+.whs-grid span.active {
+  background: var(--soft);
+  border-color: var(--accent);
   color: var(--accent-dark);
+  font-weight: 900;
 }
 
 .round-tag {
@@ -2170,6 +2191,16 @@ tr.hole-confirmed td:first-child {
       <button class="secondary small" type="button" id="closePlayerProfileBtn">Schließen</button>
     </div>
     <div class="hole-stand-body" id="playerProfileBody"></div>
+  </div>
+</div>
+
+<div class="hole-stand-popup whs-info-popup" id="whsInfoPopup">
+  <div class="hole-stand-card">
+    <div class="hole-stand-head">
+      <span>🌍 WHS-Handicap-Index</span>
+      <button class="secondary small" type="button" id="closeWhsInfoBtn">Schließen</button>
+    </div>
+    <div class="hole-stand-body" id="whsInfoBody"></div>
   </div>
 </div>
 
@@ -6621,17 +6652,17 @@ function buildWhsExplainHtml(m) {
     { lo: 3, hi: 5, n: 1 }, { lo: 6, hi: 8, n: 2 }, { lo: 9, hi: 11, n: 3 }, { lo: 12, hi: 14, n: 4 },
     { lo: 15, hi: 16, n: 5 }, { lo: 17, hi: 18, n: 6 }, { lo: 19, hi: 19, n: 7 }, { lo: 20, hi: 9999, n: 8 }
   ];
-  let h = "<div class='whs-explain'>";
-  h += "<p class='help' style='margin:8px 0 6px;'>Pro voller Velte-Runde wird ein <strong>Differential = (113 ÷ Slope) × (Brutto − Course&nbsp;Rating)</strong> gebildet. Der Index ist der Schnitt der <strong>besten</strong> Differentiale der letzten 20 Runden.</p>";
-  h += "<p class='help' style='margin:0 0 6px;'>Bei weniger als 20 Runden zählen entsprechend weniger „beste\" (offizielle WHS-Tabelle 5.2a):</p>";
-  h += "<table class='whs-table'><tbody>";
+  let cells = "";
   for (const row of table) {
     const active = (m >= row.lo && m <= row.hi);
     const label = row.hi >= 9999 ? "20+" : (row.lo === row.hi ? String(row.lo) : (row.lo + "–" + row.hi));
-    h += "<tr" + (active ? " class='active'" : "") + "><td>" + label + " Runden</td><td>beste " + row.n + (active ? " &nbsp;← du" : "") + "</td></tr>";
+    cells += "<span" + (active ? " class='active'" : "") + ">" + label + " → beste " + row.n + "</span>";
   }
-  h += "</tbody></table>";
-  h += "<p class='help' style='margin:6px 0 0; font-size:11px;'>Annäherung: gerechnet mit dem Brutto (ohne offizielle Netto-Doppelbogey-Begrenzung) und nur für Velte-Runden vom gewählten Tee – methodisch nach WHS, aber kein offiziell geführtes Handicap.</p>";
+  let h = "<div class='whs-explain'>";
+  h += "<div class='whs-formula'>Differential = (113 ÷ Slope) × (Brutto − CR)<br>Index = Ø der <b>besten</b> Differentiale der letzten 20 Runden</div>";
+  h += "<div class='whs-mini'>Unter 20 Runden zählen weniger „beste\" (WHS-Tabelle 5.2a) – hervorgehoben: deine Stufe:</div>";
+  h += "<div class='whs-grid'>" + cells + "</div>";
+  h += "<div class='whs-mini'>Näherung auf Brutto (ohne Netto-Doppelbogey-Cap), nur Velte vom gewählten Tee – kein offiziell geführtes Handicap.</div>";
   h += "</div>";
   return h;
 }
@@ -6710,7 +6741,7 @@ function openPlayerProfile(name) {
 
   if (velteGrossChrono.length >= 3) {
     const defKey = defaultVelteTeeKey(name);
-    html += "<div class='profile-roundstat'>";
+    html += "<div class='profile-roundstat' id='whsCard'>";
     html += "<div class='profile-roundstat-head'>🌍 WHS-Handicap-Index <span class='whs-info' id='whsInfoBtn' title='Erklärung anzeigen'>ⓘ</span></div>";
     html += "<div class='help' style='margin:0 0 4px;'>Velte · Abschlag/Tee:</div>";
     html += "<select id='whsTee' class='whs-tee'>";
@@ -6720,7 +6751,6 @@ function openPlayerProfile(name) {
     html += "</select>";
     html += "<div class='profile-roundstat-val' style='margin-top:8px;'>Index:<strong id='whsIdx'>–</strong></div>";
     html += "<div class='help' id='whsSub' style='margin:2px 0 0;'></div>";
-    html += "<div id='whsExplain' style='display:none;'></div>";
     html += "</div>";
   }
 
@@ -6818,15 +6848,12 @@ function openPlayerProfile(name) {
     updateIdx();
 
     const whsInfoBtn = document.getElementById("whsInfoBtn");
-    const whsExplain = document.getElementById("whsExplain");
-    if (whsInfoBtn && whsExplain) {
+    if (whsInfoBtn) {
       whsInfoBtn.addEventListener("click", () => {
-        if (whsExplain.style.display === "none") {
-          whsExplain.innerHTML = buildWhsExplainHtml(Math.min(20, velteGrossChrono.length));
-          whsExplain.style.display = "block";
-        } else {
-          whsExplain.style.display = "none";
-        }
+        const body = document.getElementById("whsInfoBody");
+        const pop = document.getElementById("whsInfoPopup");
+        if (body) body.innerHTML = buildWhsExplainHtml(Math.min(20, velteGrossChrono.length));
+        if (pop) pop.classList.add("show");
       });
     }
   }
@@ -6836,6 +6863,11 @@ function openPlayerProfile(name) {
 
 function closePlayerProfile() {
   const popup = document.getElementById("playerProfilePopup");
+  if (popup) popup.classList.remove("show");
+}
+
+function closeWhsInfoPopup() {
+  const popup = document.getElementById("whsInfoPopup");
   if (popup) popup.classList.remove("show");
 }
 
@@ -7027,6 +7059,10 @@ function init() {
   });
   document.getElementById("playerProfilePopup").addEventListener("click", function(e) {
     if (e.target === this) closePlayerProfile();
+  });
+  document.getElementById("closeWhsInfoBtn").addEventListener("click", closeWhsInfoPopup);
+  document.getElementById("whsInfoPopup").addEventListener("click", function(e) {
+    if (e.target === this) closeWhsInfoPopup();
   });
 
   document.getElementById("closeShareHelpBtn").addEventListener("click", closeShareHelp);
