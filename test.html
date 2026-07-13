@@ -1740,9 +1740,12 @@ tr.hole-confirmed td:first-child {
   padding: 8px 10px;
 }
 
-/* WHS-Markierung: linker Balken – kräftig = zählt (beste N), blass = im 20er-Fenster. */
+/* WHS-Markierung: linker Balken – kräftig = zählt (beste N), blass = im 20er-Fenster.
+   Balken auf Karte UND Kopfzeile, damit er auch eingeklappt (Kopfzeile mit eigenem Hintergrund) sichtbar ist. */
 .profile-round.whs-count { box-shadow: inset 4px 0 0 var(--accent); }
 .profile-round.whs-window { box-shadow: inset 4px 0 0 #bfe0c8; }
+.profile-round.whs-count .profile-round-head { box-shadow: inset 4px 0 0 var(--accent); }
+.profile-round.whs-window .profile-round-head { box-shadow: inset 4px 0 0 #bfe0c8; }
 .whs-dot {
   display: inline-block;
   width: 10px;
