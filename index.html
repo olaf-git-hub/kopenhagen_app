@@ -1740,6 +1740,19 @@ tr.hole-confirmed td:first-child {
   padding: 8px 10px;
 }
 
+/* WHS-Markierung: linker Balken – kräftig = zählt (beste N), blass = im 20er-Fenster. */
+.profile-round.whs-count { box-shadow: inset 4px 0 0 var(--accent); }
+.profile-round.whs-window { box-shadow: inset 4px 0 0 #bfe0c8; }
+.whs-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  vertical-align: middle;
+}
+.whs-dot.count { background: var(--accent); }
+.whs-dot.window { background: #bfe0c8; }
+
 /* Zeilen-Hervorhebung in Detailtabellen (über die weißen Zellen-Hintergründe legen) */
 .player-detail-table tr.hl-best td { background: #e3f5e8; }
 .player-detail-table tr.hl-self td { background: #eef6eb; }
@@ -6770,6 +6783,23 @@ function openPlayerProfile(name) {
     html += "<div class='help' style='margin:-4px 0 8px;'>Markierung: beste/schlechteste Runde nach Brutto.</div>";
   }
 
+  // WHS-Markierung: welche Runden zählen (beste N) bzw. liegen im Fenster der letzten 20 wertbaren.
+  const whsMarking = velteGrossChrono.length >= 3;
+  const whsCountIds = new Set(), whsWindowIds = new Set();
+  if (whsMarking) {
+    const eligible = [];
+    for (const r of rounds) {
+      if (!r.complete || r.courseId !== "velte") continue;
+      const me = r.results.find(x => sameSeasonName(x.name, name));
+      if (me && me.gross !== null && me.gross !== undefined) eligible.push({ id: r.id, gross: Number(me.gross) });
+    }
+    const windowList = eligible.slice(0, 20);
+    windowList.forEach(x => whsWindowIds.add(x.id));
+    const nBest = whsBestCount(windowList.length);
+    windowList.slice().sort((a, b) => a.gross - b.gross).slice(0, nBest).forEach(x => whsCountIds.add(x.id));
+    html += "<div class='help' style='margin:-4px 0 8px;'>Linker Balken: <span class='whs-dot count'></span> zählt für den WHS-Index · <span class='whs-dot window'></span> in den letzten 20 wertbaren Runden.</div>";
+  }
+
   if (rounds.length === 0) {
     html += "<p class='help'>Keine Runden gefunden.</p>";
   } else {
@@ -6791,7 +6821,12 @@ function openPlayerProfile(name) {
         ? ((r.matchResult ? escapeHtml(r.matchResult) : "Matchplay") + " · Brutto " + myGross + parTxt)
         : ((sym ? sym + " " : "") + "Platz " + myPos + " von " + r.playerCount + " · Brutto " + myGross + parTxt);
 
-      html += "<div class='profile-round'>";
+      let whsClass = "";
+      if (whsMarking) {
+        if (whsCountIds.has(r.id)) whsClass = " whs-count";
+        else if (whsWindowIds.has(r.id)) whsClass = " whs-window";
+      }
+      html += "<div class='profile-round" + whsClass + "'>";
       html += "<div class='profile-round-head' data-rid='" + r.id + "'>";
       html += "<div><strong>" + escapeHtml(r.dateText || "") + "</strong> · " + escapeHtml(r.courseName || "") + tag +
               "<div class='hole-small'>" + subLine + "</div></div>";
