@@ -2223,7 +2223,7 @@ tr.hole-confirmed td:first-child {
 <div class="hole-stand-popup season-popup" id="suggestPopup">
   <div class="hole-stand-card">
     <div class="hole-stand-head">
-      <span>🏆 Vorgaben-Vorschlag</span>
+      <span>🏆 Vorgaben-Vorschlag <span class="whs-info" id="suggestInfoBtn" title="Erklärung anzeigen">ⓘ</span></span>
       <button class="loch19-close-btn" type="button" id="closeSuggestBtn">✕</button>
     </div>
     <div class="hole-stand-body">
@@ -2241,6 +2241,16 @@ tr.hole-confirmed td:first-child {
         <button type="button" id="applySuggestBtn">Übernehmen</button>
       </div>
     </div>
+  </div>
+</div>
+
+<div class="hole-stand-popup whs-info-popup" id="suggestInfoPopup">
+  <div class="hole-stand-card">
+    <div class="hole-stand-head">
+      <span>🏆 So wird die Vorgabe berechnet</span>
+      <button class="secondary small" type="button" id="closeSuggestInfoBtn">Schließen</button>
+    </div>
+    <div class="hole-stand-body" id="suggestInfoBody"></div>
   </div>
 </div>
 
@@ -6945,6 +6955,25 @@ function computeSuggestion(names, factor) {
   return { rows, best };
 }
 
+// Dynamische Erklärung des Vorgaben-Vorschlags – Text passt sich dem Regler (factor) an.
+function buildSuggestExplainHtml(factor) {
+  const f = (factor && factor > 0) ? factor : 0.7;
+  let weightLine;
+  if (f >= 0.999) {
+    weightLine = "Aktuell (1,00): alle vollen Runden zählen <b>gleich</b> – der einfache Ø&nbsp;Brutto über alle Runden.";
+  } else {
+    const parts = [];
+    for (let k = 0; k < 5; k++) parts.push(Math.round(Math.pow(f, k) * 100) + " %");
+    weightLine = "Aktuell (" + formatNum2(f) + "): Gewicht je Runde von der jüngsten zu älteren: <b>" + parts.join(" · ") + " · …</b><br>Je weiter zurück, desto weniger zählt die Runde.";
+  }
+  let h = "";
+  h += "<p class='help' style='margin:0 0 8px;'>Für jeden Spieler wird ein <b>form-gewichteter Ø&nbsp;Brutto</b> aus allen vollen 18-Loch-Runden gebildet – die <b>jüngste Runde zählt am stärksten</b>, jede ältere etwas weniger.</p>";
+  h += "<div style='background:var(--soft); border-radius:8px; padding:7px 9px; font-size:12px; line-height:1.4; margin-bottom:8px;'>" + weightLine + "</div>";
+  h += "<p class='help' style='margin:0 0 8px;'>Der Regler steuert diese Gewichtung: <b>0,50</b> = stark formlastig (ältere Runden fast egal), <b>1,00</b> = ganzer Schnitt (alle gleich).</p>";
+  h += "<p class='help' style='margin:0;'>Vorgaben: Der Spieler mit dem <b>besten (niedrigsten) Schnitt</b> bekommt <b>0</b>. Alle anderen erhalten die <b>auf ganze Schläge gerundete Differenz</b> zu diesem besten Schnitt. Spieler ohne Saison-Daten bleiben unverändert.</p>";
+  return h;
+}
+
 let suggestPlayers = [];
 
 function renderSuggestTable() {
@@ -6994,6 +7023,11 @@ function openSuggestModal() {
 
 function closeSuggestModal() {
   const popup = document.getElementById("suggestPopup");
+  if (popup) popup.classList.remove("show");
+}
+
+function closeSuggestInfoPopup() {
+  const popup = document.getElementById("suggestInfoPopup");
   if (popup) popup.classList.remove("show");
 }
 
@@ -7079,6 +7113,17 @@ function init() {
   document.getElementById("applySuggestBtn").addEventListener("click", applySuggestion);
   document.getElementById("suggestPopup").addEventListener("click", function(e) {
     if (e.target === this) closeSuggestModal();
+  });
+  document.getElementById("suggestInfoBtn").addEventListener("click", function() {
+    const slider = document.getElementById("suggestWeight");
+    const factor = slider ? (parseFloat(slider.value) || 0.7) : 0.7;
+    const body = document.getElementById("suggestInfoBody");
+    if (body) body.innerHTML = buildSuggestExplainHtml(factor);
+    document.getElementById("suggestInfoPopup").classList.add("show");
+  });
+  document.getElementById("closeSuggestInfoBtn").addEventListener("click", closeSuggestInfoPopup);
+  document.getElementById("suggestInfoPopup").addEventListener("click", function(e) {
+    if (e.target === this) closeSuggestInfoPopup();
   });
   document.getElementById("highlightsBtn").addEventListener("click", () => { overlayFromLoch19 = true; openHighlights(); });
 

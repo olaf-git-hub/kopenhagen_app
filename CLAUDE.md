@@ -31,6 +31,7 @@ Speicher-Schlüssel (localStorage):
 - Spracheingabe (Scores): `processVoiceScore` (wertet alle Erkennungs-Alternativen aus, nimmt die mit den meisten Treffern), `parsePlayerScores`, `findNumberAfterPlayer`, `extractScoreNumbers`; Wörterbücher `speechNumberWords`, `speechPlayerAliases`.
 - Springen Stand/Tabelle: `toggleSummaryJump`, `syncJumpButtonToScroll` (Scroll-Listener hält Label/Modus an der echten Position), `scrollToSummary`, `scrollBackToTable`.
 - Teilen/Links: `createShareLink` (`#s=`), `createSeasonShareLink` (`#oom=`), `shareRound`, `shareSeason`, Export `exportRound` mit `createRoundCsv` (Kopenhagen) bzw. `createMatchCsv` (Matchplay). Im Matchplay teilt „Runde teilen" nur den Link (kein Ergebnis-Bild); der Share-Link kodiert nur Rohdaten und wird vom Empfänger automatisch als Matchplay erkannt. Export erzeugt `matchplay-…`-Dateien (Lochgewinne/Netto/Loch-Ausgang statt Punkten).
+- Vorgaben-Vorschlag: `openSuggestModal`, `computeSuggestion`/`weightedGrossForName` (form-gewichteter Ø Brutto aus vollen Runden; Regler `suggestWeight` = `factor` 0,5–1,0, jüngste Runde Gewicht 1, jede ältere ×factor; bester Schnitt = 0 Vorgaben, Rest = gerundete Differenz), `renderSuggestTable`, `applySuggestion`. ⓘ im Titel öffnet `suggestInfoPopup` mit dynamischer Erklärung (`buildSuggestExplainHtml`, Text/Gewichte richten sich nach dem aktuellen Reglerwert).
 - Eingabe: `stepScore`, `commitTypedScore`, `confirmHole`, `editHole`/`cancelHoleEdit`, `resetHole`.
 
 Spieleranzahl: 2 (Matchplay), 3 oder 4. `state.playerCount === 2` ⇒ `isMatchPlay()`.
