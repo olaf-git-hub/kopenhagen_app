@@ -1881,6 +1881,42 @@ tr.hole-confirmed td:first-child {
   background: #fff;
 }
 
+/* Nur-Lesen-Ansicht einer gespeicherten Runde: Hinweis-Banner oben. */
+.view-only-banner {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 300;
+  background: var(--warn);
+  color: #fff;
+  font-weight: 900;
+  font-size: 13px;
+  padding: 8px 12px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.view-only-banner.show { display: flex; }
+.view-only-banner span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.view-only-banner button {
+  flex: 0 0 auto;
+  background: #fff;
+  color: var(--warn);
+  border: 0;
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-weight: 900;
+  font-size: 12px;
+}
+body.view-only { padding-top: 38px; }
+
 .round-tag {
   display: inline-block;
   font-size: 11px;
@@ -2147,6 +2183,11 @@ tr.hole-confirmed td:first-child {
 </main>
 
 <button class="floating-summary-btn" id="summaryJumpBtn" type="button">🏆 Stand</button>
+
+<div class="view-only-banner" id="viewOnlyBanner">
+  <span id="viewOnlyText">👁 Nur Lesen</span>
+  <button type="button" id="viewOnlyExitBtn">✕ Beenden</button>
+</div>
 
 <div class="toast" id="toast"></div>
 <div class="loch19-menu" id="loch19Menu">
@@ -2703,6 +2744,7 @@ function loadState() {
 }
 
 function saveState(show) {
+  if (viewOnlyRound) return; // Nur-Lesen-Ansicht darf den echten Spielstand nie überschreiben
   state = normalizeState(state);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   if (show) showToast("Runde gespeichert");
@@ -4178,6 +4220,7 @@ function holeHasAnyScore(holeKey) {
 // Loch wieder leeren: alle Felder zurück auf leer/grau, Loch unbestätigt.
 // Ausweg, falls man versehentlich Scores gesetzt hat.
 function resetHole(holeKey) {
+  if (blockIfViewOnly()) return;
   ensureHoleEntry(holeKey);
   const gross = state.holes[holeKey].gross;
   for (let i = 0; i < state.playerCount; i++) gross[i] = null;
@@ -4195,6 +4238,7 @@ function rerenderEntryAndSummary() {
 
 // +/- an einem Spieler eines Lochs.
 function stepScore(holeKey, playerIndex, delta) {
+  if (blockIfViewOnly()) return;
   ensureHoleStarted(holeKey);
   const gross = state.holes[holeKey].gross;
   const current = clampScore(Number(gross[playerIndex]));
@@ -4207,6 +4251,7 @@ function stepScore(holeKey, playerIndex, delta) {
 
 // Direkte Zahleneingabe (wird beim Verlassen des Feldes übernommen).
 function commitTypedScore(holeKey, playerIndex, rawValue) {
+  if (blockIfViewOnly()) return;
   ensureHoleEntry(holeKey);
   const typed = toNullableInt(rawValue);
   if (typed === null) {
@@ -4221,6 +4266,7 @@ function commitTypedScore(holeKey, playerIndex, rawValue) {
 }
 
 function confirmHole(holeKey) {
+  if (blockIfViewOnly()) return;
   if (!isHoleComplete(holeKey)) {
     showToast("Bitte für alle Spieler einen Score eingeben");
     return;
@@ -4243,6 +4289,7 @@ function confirmHole(holeKey) {
 }
 
 function editHole(holeKey) {
+  if (blockIfViewOnly()) return;
   ensureHoleEntry(holeKey);
   // Stand vor dem Bearbeiten merken (zum Abbrechen).
   holeEditSnapshots[holeKey] = { gross: state.holes[holeKey].gross.slice() };
@@ -4285,6 +4332,7 @@ function readSetupInputs() {
 }
 
 function applySetup() {
+  if (blockIfViewOnly()) return;
   const setup = readSetupInputs();
 
   state.playerCount = setup.playerCount;
@@ -4345,6 +4393,7 @@ function changeCourse(courseId) {
 }
 
 function clearScores() {
+  if (blockIfViewOnly()) return;
   if (!confirm("Alle Brutto-Schläge löschen? Vorgaben bleiben erhalten.")) return;
   for (const h of getCourseHoles()) {
     const key = String(h.hole);
@@ -4358,6 +4407,7 @@ function clearScores() {
 }
 
 function resetRound() {
+  if (blockIfViewOnly()) return;
   if (!confirm("Neue Runde starten und alle aktuellen Daten löschen?")) return;
   state = buildEmptyState(cloneDefault());
   state = normalizeState(state);
@@ -5318,6 +5368,7 @@ function parsePlayerScores(tokens) {
 }
 
 function processVoiceScore(rawInput) {
+  if (blockIfViewOnly()) return;
 
   const status = document.getElementById("voiceStatus");
   const transcripts = Array.isArray(rawInput) ? rawInput : [rawInput];
@@ -6283,6 +6334,7 @@ function buildRoundSnapshot(dateText) {
 }
 
 function addCurrentRoundToSeason() {
+  if (blockIfViewOnly()) return;
   closeLoch19Menu();
 
   const calc = calculateRound();
@@ -6696,6 +6748,85 @@ function renderPlayerRoundCardHtml(round, name) {
   return html;
 }
 
+// ---- Nur-Lesen-Ansicht einer gespeicherten Saison-Runde ----
+// Baut aus dem Saison-Schnappschuss einen temporären Spielzustand (Vorgaben je Loch als
+// Overrides), sichert den echten Zustand und stellt ihn beim Beenden wieder her.
+let viewOnlyRound = null;   // aktive Nur-Lesen-Runde ({dateText, courseName}) oder null
+let viewOnlyBackup = null;  // JSON des echten Zustands für die Rückkehr
+
+function blockIfViewOnly() {
+  if (!viewOnlyRound) return false;
+  showToast("👁 Nur-Lesen-Runde – Eingaben sind gesperrt");
+  return true;
+}
+
+function openRoundReadOnly(roundId) {
+  const season = loadSeason();
+  const r = season.rounds.find(x => Number(x.id) === Number(roundId));
+  if (!r) return;
+  if (!r.holeDetails) {
+    showToast("Für diese Runde sind keine Loch-Details gespeichert");
+    return;
+  }
+
+  if (!viewOnlyRound) viewOnlyBackup = JSON.stringify(state);
+  viewOnlyRound = { dateText: r.dateText || "", courseName: r.courseName || "" };
+
+  const st = cloneDefault();
+  st.courseId = courses[r.courseId] ? r.courseId : "velte";
+  st.playerCount = r.playerCount;
+  st.players = (r.players || []).map(n => ({ name: n, allowance: 0 }));
+  st.holes = {};
+  st.handicapOverrides = {};
+  const pc = r.playerCount;
+  for (const h of courses[st.courseId].holes) {
+    const key = String(h.hole);
+    const det = r.holeDetails[key];
+    const gross = Array(pc).fill(null);
+    const ov = Array(pc).fill(null);
+    if (det) {
+      for (let i = 0; i < pc; i++) {
+        const cell = det[i];
+        if (cell) {
+          gross[i] = (cell.g === null || cell.g === undefined) ? null : Number(cell.g);
+          ov[i] = (typeof cell.s === "number") ? cell.s : null;
+        }
+      }
+    }
+    st.holes[key] = { gross: gross, confirmed: gross.some(v => v !== null) };
+    st.handicapOverrides[key] = ov;
+  }
+  state = normalizeState(st);
+
+  closeRoundDetail();
+  closePlayerProfile();
+  const raceOverlay = document.getElementById("raceOverlay");
+  if (raceOverlay) raceOverlay.classList.remove("show");
+
+  const banner = document.getElementById("viewOnlyBanner");
+  const text = document.getElementById("viewOnlyText");
+  if (text) text.textContent = "👁 Nur Lesen – Runde vom " + (r.dateText || "?") + " · " + (r.courseName || "");
+  if (banner) banner.classList.add("show");
+  document.body.classList.add("view-only");
+
+  buildSetup();
+  rerenderEntryAndSummary();
+  window.scrollTo({ top: 0 });
+}
+
+function exitRoundReadOnly() {
+  if (!viewOnlyRound) return;
+  viewOnlyRound = null;
+  try { state = normalizeState(JSON.parse(viewOnlyBackup)); } catch (e) {}
+  viewOnlyBackup = null;
+  const banner = document.getElementById("viewOnlyBanner");
+  if (banner) banner.classList.remove("show");
+  document.body.classList.remove("view-only");
+  buildSetup();
+  rerenderEntryAndSummary();
+  showToast("Zurück zur aktuellen Runde");
+}
+
 function openRoundDetail(id) {
   const season = loadSeason();
   const round = season.rounds.find(r => Number(r.id) === Number(id));
@@ -6711,7 +6842,13 @@ function openRoundDetail(id) {
     round.playerCount + " Spieler · " +
     (round.complete ? "18 Löcher" : (round.holesPlayed + "/18 Löcher")) + "</div>";
   html += renderRoundStandingsHtml(round, null);
+  if (round.holeDetails) {
+    html += "<div class='actions' style='margin-top:12px;'><button type='button' id='roundViewBtn'>👁 Runde ansehen (nur lesen)</button></div>";
+  }
   body.innerHTML = html;
+
+  const viewBtn = body.querySelector("#roundViewBtn");
+  if (viewBtn) viewBtn.addEventListener("click", () => openRoundReadOnly(round.id));
 
   popup.classList.add("show");
 }
@@ -7119,6 +7256,7 @@ function closeSuggestInfoPopup() {
 }
 
 function applySuggestion() {
+  if (blockIfViewOnly()) return;
   const slider = document.getElementById("suggestWeight");
   const factor = slider ? (parseFloat(slider.value) || 0.7) : 0.7;
 
@@ -7306,6 +7444,7 @@ function init() {
     const status = document.getElementById("cloudSyncStatus");
     if (status) status.textContent = "Getrennt – es wird nur noch lokal gespeichert.";
   });
+  document.getElementById("viewOnlyExitBtn").addEventListener("click", exitRoundReadOnly);
 
   document.getElementById("raceSpeedSelect").addEventListener("change", function() {
   raceReplaySeconds = Number(this.value) || 20;
