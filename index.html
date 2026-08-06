@@ -2347,6 +2347,8 @@ const SEASON_KEY = "kopenhagen-saison-v1";
 const WEIGHT_KEY = "kopenhagen-weightfactor-v1";
 const CLOUD_KEY = "kopenhagen-cloudsync-v1";
 const CLOUD_FILE = "saison.json";
+const ADMIN_KEY = "kopenhagen-admin-v1";
+const ADMIN_HASH = 2904571301; // djb2-Hash des Admin-Passworts (das Passwort selbst steht nicht im Code)
 
 const courses = {
   velte: {
@@ -6038,6 +6040,7 @@ function loadSeason() {
     const season = { v: 1, name: s.name || "Saison", rounds: s.rounds };
     const ra = Number(s.resetAt) || 0;
     if (ra) season.resetAt = ra;
+    if (Array.isArray(s.deleted) && s.deleted.length) season.deleted = s.deleted.map(Number);
     return season;
   } catch (e) {
     return { v: 1, name: "Saison", rounds: [] };
@@ -6077,6 +6080,30 @@ function saveCloudConfig(cfg) {
   else localStorage.removeItem(CLOUD_KEY);
 }
 
+// ---- Admin-Schutz für destruktive Saison-Aktionen (Runde löschen, Neue Saison) ----
+// Im (öffentlichen) Code steht nur der Hash. Schutz gegen versehentliches Löschen –
+// das Sicherheitsnetz für alles bleibt die Git-History des Daten-Repos.
+function adminHash(s) {
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
+  return h;
+}
+function isAdminDevice() {
+  return localStorage.getItem(ADMIN_KEY) === "1";
+}
+function requireAdmin() {
+  if (isAdminDevice()) return true;
+  const pw = prompt("Admin-Passwort:");
+  if (pw === null) return false;
+  if (adminHash(pw) === ADMIN_HASH) {
+    localStorage.setItem(ADMIN_KEY, "1");
+    showToast("Admin-Funktionen auf diesem Gerät freigeschaltet");
+    return true;
+  }
+  showToast("Falsches Passwort");
+  return false;
+}
+
 function cloudApiUrl(cfg) {
   return "https://api.github.com/repos/" + cfg.repo + "/contents/" + CLOUD_FILE;
 }
@@ -6104,6 +6131,7 @@ async function cloudFetchSeason(cfg) {
       season = { v: 1, name: s.name || "Saison", rounds: s.rounds };
       const ra = Number(s.resetAt) || 0;
       if (ra) season.resetAt = ra;
+      if (Array.isArray(s.deleted) && s.deleted.length) season.deleted = s.deleted.map(Number);
     }
   } catch (e) {}
   return { season: season, sha: cloudSha };
@@ -6136,18 +6164,30 @@ async function cloudPushSeason(cfg, season, secondTry) {
 // damit ein Saison-Reset nicht durch den Abgleich alter Geräte rückgängig gemacht wird.
 function mergeSeasons(a, b) {
   const resetAt = Math.max(Number(a && a.resetAt) || 0, Number(b && b.resetAt) || 0);
+  // Lösch-Merkliste beider Seiten vereinigen (nur Einträge nach dem letzten Saison-Reset behalten):
+  // so wirkt eine bewusste Löschung dauerhaft und wird nicht vom Abgleich zurückgebracht.
+  const deletedSet = {};
+  for (const list of [(a && a.deleted) || [], (b && b.deleted) || []]) {
+    for (const id of list) {
+      const n = Number(id) || 0;
+      if (n && (!resetAt || n >= resetAt)) deletedSet[String(n)] = true;
+    }
+  }
   const byId = {};
   const ids = [];
   for (const list of [(a && a.rounds) || [], (b && b.rounds) || []]) {
     for (const r of list) {
       if (resetAt && Number(r.id) < resetAt) continue;
       const key = String(r.id);
+      if (deletedSet[key]) continue;
       if (!byId[key]) { byId[key] = r; ids.push(key); }
     }
   }
   ids.sort((x, y) => Number(x) - Number(y));
   const merged = { v: 1, name: (a && a.name) || (b && b.name) || "Saison", rounds: ids.map(k => byId[k]) };
   if (resetAt) merged.resetAt = resetAt;
+  const delIds = Object.keys(deletedSet).map(Number).sort((x, y) => x - y);
+  if (delIds.length) merged.deleted = delIds;
   return merged;
 }
 
@@ -6531,10 +6571,16 @@ function wireSeasonOverlayEvents() {
   root.querySelectorAll(".season-del").forEach(btn => {
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
+      if (!requireAdmin()) return;
       const id = Number(btn.dataset.id);
-      if (!confirm("Diese Runde aus der Saison löschen?")) return;
+      const cloudHinweis = loadCloudConfig() ? "\nDie Löschung wird über die Cloud auf alle Geräte übertragen." : "";
+      if (!confirm("Diese Runde aus der Saison löschen?" + cloudHinweis)) return;
       const season = loadSeason();
       season.rounds = season.rounds.filter(r => Number(r.id) !== id);
+      // Lösch-Merkliste: verhindert, dass der Cloud-Abgleich die Runde zurückbringt.
+      const del = (season.deleted || []).map(Number);
+      if (del.indexOf(id) < 0) del.push(id);
+      season.deleted = del;
       saveSeason(season);
       openSeasonTable();
     });
@@ -6560,6 +6606,7 @@ function wireSeasonOverlayEvents() {
 
   const newBtn = root.querySelector("#seasonNewBtn");
   if (newBtn) newBtn.addEventListener("click", () => {
+    if (!requireAdmin()) return;
     const cfg = loadCloudConfig();
     const frage = cfg
       ? "Neue Saison starten? Die aktuelle Saison wird gelöscht – auch in der Cloud, für ALLE Geräte! Vorher am besten sichern."
