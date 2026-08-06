@@ -2296,27 +2296,6 @@ tr.hole-confirmed td:first-child {
   </div>
 </div>
 
-<div class="hole-stand-popup season-popup" id="shareHelpPopup">
-  <div class="hole-stand-card">
-    <div class="hole-stand-head">
-      <span>📲 Order of Merit teilen</span>
-      <button class="loch19-close-btn" type="button" id="closeShareHelpBtn">✕</button>
-    </div>
-    <div class="hole-stand-body">
-      <button type="button" id="shareAsFileBtn" style="width:100%;">💾 Als Datei teilen (empfohlen)</button>
-      <div class="help" style="margin:6px 0 16px;">
-        Für Freunde, die die App auf dem <b>Home-Bildschirm</b> haben.<br>
-        So machen sie es: ihr <b>App-Icon öffnen → ⛳ Loch 19 → 🏅 Saison-Tabelle → 📥 Wiederherstellen</b> → die geschickte Datei auswählen.
-      </div>
-
-      <button type="button" class="secondary" id="shareAsLinkBtn" style="width:100%;">📲 Als Link teilen</button>
-      <div class="help" style="margin:6px 0 0;">
-        Bequem – aber <b>Achtung:</b> Tippt der Freund den Link in WhatsApp, landet die Tabelle im dortigen Browser, <b>nicht</b> in seiner Home-Bildschirm-App. Nur sinnvoll, wenn er die App in Safari nutzt.
-      </div>
-    </div>
-  </div>
-</div>
-
 <datalist id="knownPlayerNames"></datalist>
 
 <script>
@@ -6411,95 +6390,8 @@ function createSeasonCsv() {
   return csv;
 }
 
-// Saison als kompakten Link verpacken (ohne Loch-Details, damit der Link klein bleibt).
-function createSeasonShareLink() {
-  const season = loadSeason();
-  const slim = {
-    v: 1,
-    name: season.name || "Saison",
-    rounds: season.rounds.map(r => ({
-      id: r.id,
-      dateText: r.dateText,
-      courseId: r.courseId,
-      courseName: r.courseName,
-      playerCount: r.playerCount,
-      holesPlayed: r.holesPlayed,
-      complete: r.complete,
-      hasPar: r.hasPar,
-      mode: r.mode,
-      matchResult: r.matchResult,
-      matchWinner: r.matchWinner,
-      players: r.players,
-      results: r.results
-    }))
-  };
-  const json = JSON.stringify(slim);
-  const enc = encodeURIComponent(btoa(unescape(encodeURIComponent(json))));
-  return window.location.origin + window.location.pathname + "#oom=" + enc;
-}
-
-async function shareSeason() {
-  const season = loadSeason();
-  if (!season.rounds.length) {
-    showToast("Noch keine Runden in der Saison");
-    return;
-  }
-  const link = createSeasonShareLink();
-  const text = "Aktuelle Kopenhagen Order of Merit – zum Aktualisieren auf den Link tippen:\n" + link;
-
-  if (navigator.share) {
-    try {
-      await navigator.share({ title: "Kopenhagen Order of Merit", text: text });
-      return;
-    } catch (e) {
-      if (e && e.name === "AbortError") return;
-    }
-  }
-  navigator.clipboard.writeText(link)
-    .then(() => showToast("Saison-Link kopiert"))
-    .catch(() => prompt("Saison-Link kopieren:", link));
-}
-
-function openShareHelp() {
-  const season = loadSeason();
-  if (!season.rounds.length) {
-    showToast("Noch keine Runden in der Saison");
-    return;
-  }
-  const p = document.getElementById("shareHelpPopup");
-  if (p) p.classList.add("show");
-}
-
-function closeShareHelp() {
-  const p = document.getElementById("shareHelpPopup");
-  if (p) p.classList.remove("show");
-}
-
-// Saison als JSON-Datei teilen (vollständig, inkl. Loch-Details) – fürs Wiederherstellen.
-async function shareSeasonAsFile() {
-  const season = loadSeason();
-  if (!season.rounds.length) {
-    showToast("Noch keine Runden in der Saison");
-    return;
-  }
-  const json = JSON.stringify(season, null, 2);
-  const file = new File([json], "kopenhagen-saison.json", { type: "application/json" });
-
-  if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    try {
-      await navigator.share({
-        title: "Kopenhagen Order of Merit",
-        text: "Order of Merit – in der App über 🏅 Saison-Tabelle → 📥 Wiederherstellen einlesen.",
-        files: [file]
-      });
-      return;
-    } catch (e) {
-      if (e && e.name === "AbortError") return;
-    }
-  }
-  downloadFile(json, "kopenhagen-saison.json", "application/json;charset=utf-8");
-  showToast("Saison-Datei gespeichert");
-}
+// Hinweis: Das aktive Teilen der Saison (Link/Datei) wurde zugunsten des Cloud-Syncs entfernt.
+// Der Empfänger-Teil für alte "#oom="-Links in loadStateFromUrl bleibt bewusst erhalten.
 
 function openSeasonTable() {
   closeLoch19Menu();
@@ -6553,9 +6445,7 @@ function openSeasonTable() {
   }
 
   html += "<div class='actions' style='margin-top:14px;'>";
-  html += "<button type='button' class='small' id='seasonShareBtn'>📲 Order of Merit teilen</button>";
-  html += "<button type='button' class='secondary small' id='seasonBackupBtn'>💾 Sichern</button>";
-  html += "<button type='button' class='secondary small' id='seasonRestoreBtn'>📥 Wiederherstellen</button>";
+  html += "<button type='button' class='secondary small' id='seasonBackupBtn'>💾 Sichern lokal</button>";
   html += "<button type='button' class='secondary small' id='seasonCsvBtn'>📤 CSV</button>";
   html += "<button type='button' class='danger small' id='seasonNewBtn'>Neue Saison</button>";
   html += "</div>";
@@ -6590,9 +6480,6 @@ function wireSeasonOverlayEvents() {
     el.addEventListener("click", () => openRoundDetail(el.dataset.id));
   });
 
-  const shareBtn = root.querySelector("#seasonShareBtn");
-  if (shareBtn) shareBtn.addEventListener("click", openShareHelp);
-
   const backup = root.querySelector("#seasonBackupBtn");
   if (backup) backup.addEventListener("click", () => {
     downloadFile(JSON.stringify(loadSeason(), null, 2), "kopenhagen-saison.json", "application/json;charset=utf-8");
@@ -6601,31 +6488,6 @@ function wireSeasonOverlayEvents() {
   const csv = root.querySelector("#seasonCsvBtn");
   if (csv) csv.addEventListener("click", () => {
     downloadFile("﻿" + createSeasonCsv(), "kopenhagen-saison.csv", "text/csv;charset=utf-8");
-  });
-
-  const restore = root.querySelector("#seasonRestoreBtn");
-  if (restore) restore.addEventListener("click", () => {
-    const inp = document.createElement("input");
-    inp.type = "file";
-    inp.accept = "application/json,.json";
-    inp.addEventListener("change", () => {
-      const file = inp.files && inp.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = () => {
-        try {
-          const data = JSON.parse(reader.result);
-          if (!data || !Array.isArray(data.rounds)) throw new Error("ungültig");
-          saveSeason({ v: 1, name: data.name || "Saison", rounds: data.rounds });
-          showToast("Saison wiederhergestellt");
-          openSeasonTable();
-        } catch (e) {
-          showToast("Datei konnte nicht gelesen werden");
-        }
-      };
-      reader.readAsText(file);
-    });
-    inp.click();
   });
 
   const newBtn = root.querySelector("#seasonNewBtn");
@@ -7412,13 +7274,6 @@ function init() {
     if (token) token.value = "";
     const status = document.getElementById("cloudSyncStatus");
     if (status) status.textContent = "Getrennt – es wird nur noch lokal gespeichert.";
-  });
-
-  document.getElementById("closeShareHelpBtn").addEventListener("click", closeShareHelp);
-  document.getElementById("shareAsLinkBtn").addEventListener("click", function() { closeShareHelp(); shareSeason(); });
-  document.getElementById("shareAsFileBtn").addEventListener("click", function() { closeShareHelp(); shareSeasonAsFile(); });
-  document.getElementById("shareHelpPopup").addEventListener("click", function(e) {
-    if (e.target === this) closeShareHelp();
   });
 
   document.getElementById("raceSpeedSelect").addEventListener("change", function() {
