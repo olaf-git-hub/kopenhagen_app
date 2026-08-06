@@ -8,8 +8,8 @@ Deutschsprachige Golf-Wertungs-App für die Spielrunde „Kopenhagen". Reine Sin
 - **Wichtig: Code-Änderungen immer in BEIDE Dateien übernehmen** (gleiche Stelle, gleiche Logik). Zuerst gern in `test.html` testen, dann nach `index.html` spiegeln.
 
 Speicher-Schlüssel (localStorage):
-- Produktion (`index.html`): `kopenhagen-golf-rechner-v5`, `kopenhagen-saison-v1`, `kopenhagen-weightfactor-v1`
-- Sandbox (`test.html`): `kopenhagen-golf-rechner-TEST-eingabe`, `kopenhagen-saison-TEST-v1`, `kopenhagen-weightfactor-TEST-v1`
+- Produktion (`index.html`): `kopenhagen-golf-rechner-v5`, `kopenhagen-saison-v1`, `kopenhagen-weightfactor-v1`, `kopenhagen-cloudsync-v1`
+- Sandbox (`test.html`): `kopenhagen-golf-rechner-TEST-eingabe`, `kopenhagen-saison-TEST-v1`, `kopenhagen-weightfactor-TEST-v1`, `kopenhagen-cloudsync-TEST-v1`
 
 ## Arbeitsweise / Workflow
 - **Claude editiert nur die Dateien.** Commit + Push macht der User (Olaf) selbst in GitHub Desktop. **Claude committet/pusht nicht.** Remote: `olaf-git-hub/kopenhagen_app`, Branch `main`.
@@ -33,5 +33,6 @@ Speicher-Schlüssel (localStorage):
 - Teilen/Links: `createShareLink` (`#s=`), `createSeasonShareLink` (`#oom=`), `shareRound`, `shareSeason`, Export `exportRound` mit `createRoundCsv` (Kopenhagen) bzw. `createMatchCsv` (Matchplay). Im Matchplay teilt „Runde teilen" nur den Link (kein Ergebnis-Bild); der Share-Link kodiert nur Rohdaten und wird vom Empfänger automatisch als Matchplay erkannt. Export erzeugt `matchplay-…`-Dateien (Lochgewinne/Netto/Loch-Ausgang statt Punkten).
 - Vorgaben-Vorschlag: `openSuggestModal`, `computeSuggestion`/`weightedGrossForName` (form-gewichteter Ø Brutto aus vollen Runden; Regler `suggestWeight` = `factor` 0,5–1,0, jüngste Runde Gewicht 1, jede ältere ×factor; bester Schnitt = 0 Vorgaben, Rest = gerundete Differenz), `renderSuggestTable`, `applySuggestion`. ⓘ im Titel öffnet `suggestInfoPopup` mit dynamischer Erklärung (`buildSuggestExplainHtml`, Text/Gewichte richten sich nach dem aktuellen Reglerwert).
 - Eingabe: `stepScore`, `commitTypedScore`, `confirmHole`, `editHole`/`cancelHoleEdit`, `resetHole`.
+- Cloud-Sync (Saison ↔ privates GitHub-Repo `olaf-git-hub/kopenhagen-daten`, Datei `saison.json`, via Contents-API): Menüpunkt „☁️ Cloud-Sync" unter Loch 19 (`cloudSyncPopup`). Repo + fine-grained Token liegen **nur im localStorage** (`CLOUD_KEY`) – **niemals Token in den Code/das Repo schreiben**. Funktionen: `cloudFetchSeason`/`cloudPushSeason` (base64 + sha, bei 409/422 ein Retry), `scheduleCloudPush` (Hook in `saveSeason`, 1,2 s verzögert), `cloudLoadOnStart` (Start-Abgleich: höhere `seasonMaxId` = neuerer Stand gewinnt; lokal neuer ⇒ Push, sonst Cloud übernehmen; offline ⇒ still lokal). Fehler stets nur als Toast, App bleibt ohne Cloud voll funktionsfähig.
 
 Spieleranzahl: 2 (Matchplay), 3 oder 4. `state.playerCount === 2` ⇒ `isMatchPlay()`.

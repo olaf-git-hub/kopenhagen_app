@@ -1866,6 +1866,21 @@ tr.hole-confirmed td:first-child {
   font-weight: 900;
 }
 
+.cloud-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  margin: 8px 0 3px;
+}
+.cloud-input {
+  width: 100%;
+  padding: 8px 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 13px;
+  background: #fff;
+}
+
 .round-tag {
   display: inline-block;
   font-size: 11px;
@@ -2150,6 +2165,7 @@ tr.hole-confirmed td:first-child {
   <button type="button" id="seasonTableBtn">🏅 Saison-Tabelle</button>
   <button type="button" id="highlightsBtn">🏆 Rundenrückblick</button>
   <button type="button" id="raceReplayBtn">🐌 Replay</button>
+  <button type="button" id="cloudSyncBtn">☁️ Cloud-Sync</button>
 
 </div>
 
@@ -2220,6 +2236,31 @@ tr.hole-confirmed td:first-child {
   </div>
 </div>
 
+<div class="hole-stand-popup season-popup" id="cloudSyncPopup">
+  <div class="hole-stand-card">
+    <div class="hole-stand-head">
+      <span>☁️ Cloud-Sync (GitHub)</span>
+      <button class="secondary small" type="button" id="closeCloudSyncBtn">Schließen</button>
+    </div>
+    <div class="hole-stand-body">
+      <div class="help" style="margin:0 0 8px;">
+        Saison-Daten in einem privaten GitHub-Repo sichern und auf allen Geräten teilen.
+        Repo und Token werden <b>nur auf diesem Gerät</b> gespeichert.
+      </div>
+      <label class="cloud-label" for="cloudRepo">Repository (Besitzer/Name)</label>
+      <input type="text" id="cloudRepo" class="cloud-input" placeholder="olaf-git-hub/kopenhagen-daten" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <label class="cloud-label" for="cloudToken">Access Token</label>
+      <input type="password" id="cloudToken" class="cloud-input" placeholder="github_pat_…" autocomplete="off">
+      <div class="help" id="cloudSyncStatus" style="margin:8px 0 0;"></div>
+      <div class="actions" style="margin-top:12px;">
+        <button type="button" id="cloudSaveBtn">💾 Speichern &amp; testen</button>
+        <button type="button" class="secondary" id="cloudLoadNowBtn">⬇️ Jetzt aus Cloud laden</button>
+        <button type="button" class="secondary" id="cloudDisconnectBtn">✂️ Trennen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="hole-stand-popup season-popup" id="suggestPopup">
   <div class="hole-stand-card">
     <div class="hole-stand-head">
@@ -2283,6 +2324,8 @@ tr.hole-confirmed td:first-child {
 const STORAGE_KEY = "kopenhagen-golf-rechner-TEST-eingabe";
 const SEASON_KEY = "kopenhagen-saison-TEST-v1";
 const WEIGHT_KEY = "kopenhagen-weightfactor-TEST-v1";
+const CLOUD_KEY = "kopenhagen-cloudsync-TEST-v1";
+const CLOUD_FILE = "saison.json";
 
 const courses = {
   velte: {
@@ -5966,6 +6009,7 @@ function loadSeason() {
 
 function saveSeason(season) {
   localStorage.setItem(SEASON_KEY, JSON.stringify(season));
+  scheduleCloudPush();
 }
 
 function loadWeightFactor() {
@@ -5975,6 +6019,148 @@ function loadWeightFactor() {
 
 function saveWeightFactor(v) {
   localStorage.setItem(WEIGHT_KEY, String(v));
+}
+
+// ---- Cloud-Sync: Saison-JSON in privatem GitHub-Repo (Contents-API) ----
+// Konfiguration (Repo + Token) liegt NUR im localStorage dieses Geräts, nie im Code/Repo.
+let cloudSha = null;           // letzter bekannter Datei-Stand (nötig für Updates)
+let cloudPushTimer = null;
+let cloudSuppressPush = false; // beim Übernehmen des Cloud-Stands nicht zurück-pushen
+
+function loadCloudConfig() {
+  try {
+    const c = JSON.parse(localStorage.getItem(CLOUD_KEY) || "null");
+    if (c && typeof c.repo === "string" && typeof c.token === "string" && c.repo.includes("/")) return c;
+  } catch (e) {}
+  return null;
+}
+
+function saveCloudConfig(cfg) {
+  if (cfg) localStorage.setItem(CLOUD_KEY, JSON.stringify(cfg));
+  else localStorage.removeItem(CLOUD_KEY);
+}
+
+function cloudApiUrl(cfg) {
+  return "https://api.github.com/repos/" + cfg.repo + "/contents/" + CLOUD_FILE;
+}
+
+function cloudHeaders(cfg) {
+  return {
+    "Authorization": "Bearer " + cfg.token,
+    "Accept": "application/vnd.github+json",
+    "X-GitHub-Api-Version": "2022-11-28"
+  };
+}
+
+// Cloud-Datei holen: { season, sha } – season ist null, wenn Datei fehlt oder kein gültiges Saison-JSON ist.
+async function cloudFetchSeason(cfg) {
+  const resp = await fetch(cloudApiUrl(cfg), { headers: cloudHeaders(cfg) });
+  if (resp.status === 404) return { season: null, sha: null };
+  if (!resp.ok) throw new Error("GitHub-Status " + resp.status);
+  const data = await resp.json();
+  cloudSha = data.sha || null;
+  let season = null;
+  try {
+    const json = decodeURIComponent(escape(atob(String(data.content || "").replace(/\n/g, ""))));
+    const s = JSON.parse(json);
+    if (s && Array.isArray(s.rounds)) season = { v: 1, name: s.name || "Saison", rounds: s.rounds };
+  } catch (e) {}
+  return { season: season, sha: cloudSha };
+}
+
+// Saison als Commit hochladen. Bei Versions-Konflikt einmal frischen sha holen und erneut versuchen.
+async function cloudPushSeason(cfg, season, secondTry) {
+  const body = {
+    message: "Saison-Update aus der Kopenhagen-App",
+    content: btoa(unescape(encodeURIComponent(JSON.stringify(season, null, 2))))
+  };
+  if (cloudSha) body.sha = cloudSha;
+  const resp = await fetch(cloudApiUrl(cfg), {
+    method: "PUT",
+    headers: Object.assign({ "Content-Type": "application/json" }, cloudHeaders(cfg)),
+    body: JSON.stringify(body)
+  });
+  if ((resp.status === 409 || resp.status === 422) && !secondTry) {
+    await cloudFetchSeason(cfg);
+    return cloudPushSeason(cfg, season, true);
+  }
+  if (!resp.ok) throw new Error("GitHub-Status " + resp.status);
+  const data = await resp.json();
+  if (data && data.content && data.content.sha) cloudSha = data.content.sha;
+}
+
+// Nach jeder Saison-Änderung (leicht verzögert) automatisch in die Cloud schreiben.
+function scheduleCloudPush() {
+  if (cloudSuppressPush) return;
+  const cfg = loadCloudConfig();
+  if (!cfg) return;
+  clearTimeout(cloudPushTimer);
+  cloudPushTimer = setTimeout(async () => {
+    try {
+      await cloudPushSeason(cfg, loadSeason());
+      showToast("☁️ Saison in der Cloud gespeichert");
+    } catch (e) {
+      showToast("⚠️ Cloud-Speichern fehlgeschlagen – Daten sind lokal gesichert");
+    }
+  }, 1200);
+}
+
+// Höchste Runden-ID = Zeitpunkt der zuletzt erfassten Runde (IDs sind zeitbasiert).
+function seasonMaxId(season) {
+  let max = 0;
+  for (const r of (season && season.rounds) || []) {
+    const id = Number(r.id) || 0;
+    if (id > max) max = id;
+  }
+  return max;
+}
+
+// Beim App-Start: Cloud-Stand abgleichen. Neuere lokale Runden gewinnen (werden hochgeladen),
+// sonst wird ein abweichender Cloud-Stand übernommen. Offline: still lokal weiterarbeiten.
+async function cloudLoadOnStart() {
+  const cfg = loadCloudConfig();
+  if (!cfg) return;
+  try {
+    const result = await cloudFetchSeason(cfg);
+    const cloudSeason = result.season;
+    const localSeason = loadSeason();
+    if (!cloudSeason) {
+      if (localSeason.rounds.length) {
+        await cloudPushSeason(cfg, localSeason);
+        showToast("☁️ Lokale Saison in die Cloud übertragen");
+      }
+      return;
+    }
+    if (seasonMaxId(localSeason) > seasonMaxId(cloudSeason)) {
+      await cloudPushSeason(cfg, localSeason);
+      showToast("☁️ Neuere lokale Runden in die Cloud übertragen");
+    } else if (JSON.stringify(cloudSeason) !== JSON.stringify(localSeason)) {
+      cloudSuppressPush = true;
+      saveSeason(cloudSeason);
+      cloudSuppressPush = false;
+      showToast("☁️ Saison aus der Cloud geladen (" + cloudSeason.rounds.length + " Runden)");
+    }
+  } catch (e) {
+    // Offline oder Serverproblem – App läuft normal mit lokalen Daten weiter.
+  }
+}
+
+function openCloudSyncPopup() {
+  const cfg = loadCloudConfig();
+  const repo = document.getElementById("cloudRepo");
+  const token = document.getElementById("cloudToken");
+  const status = document.getElementById("cloudSyncStatus");
+  if (repo) repo.value = cfg ? cfg.repo : "olaf-git-hub/kopenhagen-daten";
+  if (token) token.value = cfg ? cfg.token : "";
+  if (status) status.textContent = cfg
+    ? "Verbunden – Saison wird automatisch synchronisiert."
+    : "Noch nicht verbunden.";
+  document.getElementById("cloudSyncPopup").classList.add("show");
+}
+
+function closeCloudSyncPopup() {
+  const popup = document.getElementById("cloudSyncPopup");
+  if (popup) popup.classList.remove("show");
 }
 
 // Meritpunkte nach Platzierung = gleicher Vektor wie im Spiel (3er: 2/1/0, 4er: 3/2/1/0).
@@ -7065,6 +7251,7 @@ function applySuggestion() {
 function init() {
   state = normalizeState(state);
   loadStateFromUrl();
+  cloudLoadOnStart();
   document.getElementById("summaryJumpBtn").addEventListener("click", toggleSummaryJump);
   window.addEventListener("scroll", syncJumpButtonToScroll, { passive: true });
   syncJumpButtonToScroll();
@@ -7143,6 +7330,62 @@ function init() {
   document.getElementById("closeWhsInfoBtn").addEventListener("click", closeWhsInfoPopup);
   document.getElementById("whsInfoPopup").addEventListener("click", function(e) {
     if (e.target === this) closeWhsInfoPopup();
+  });
+
+  document.getElementById("cloudSyncBtn").addEventListener("click", openCloudSyncPopup);
+  document.getElementById("closeCloudSyncBtn").addEventListener("click", closeCloudSyncPopup);
+  document.getElementById("cloudSyncPopup").addEventListener("click", function(e) {
+    if (e.target === this) closeCloudSyncPopup();
+  });
+  document.getElementById("cloudSaveBtn").addEventListener("click", async function() {
+    const repo = (document.getElementById("cloudRepo").value || "").trim();
+    const token = (document.getElementById("cloudToken").value || "").trim();
+    const status = document.getElementById("cloudSyncStatus");
+    if (!repo.includes("/") || !token) {
+      if (status) status.textContent = "Bitte Repository (Besitzer/Name) und Token eingeben.";
+      return;
+    }
+    const cfg = { repo: repo, token: token };
+    if (status) status.textContent = "Teste Verbindung …";
+    try {
+      const result = await cloudFetchSeason(cfg);
+      saveCloudConfig(cfg);
+      if (status) status.textContent = "✅ Verbunden – Cloud-Stand: " +
+        (result.season ? result.season.rounds.length + " Runde(n)." : "noch keine Saison-Daten.");
+      showToast("Cloud-Sync eingerichtet");
+    } catch (e) {
+      if (status) status.textContent = "❌ Verbindung fehlgeschlagen (" + e.message + ") – Repo-Name und Token prüfen.";
+    }
+  });
+  document.getElementById("cloudLoadNowBtn").addEventListener("click", async function() {
+    const cfg = loadCloudConfig();
+    const status = document.getElementById("cloudSyncStatus");
+    if (!cfg) {
+      if (status) status.textContent = "Bitte zuerst „Speichern & testen“.";
+      return;
+    }
+    if (status) status.textContent = "Lade aus der Cloud …";
+    try {
+      const result = await cloudFetchSeason(cfg);
+      if (!result.season) {
+        if (status) status.textContent = "In der Cloud liegen noch keine Saison-Daten.";
+        return;
+      }
+      cloudSuppressPush = true;
+      saveSeason(result.season);
+      cloudSuppressPush = false;
+      if (status) status.textContent = "✅ Übernommen: " + result.season.rounds.length + " Runde(n).";
+      showToast("☁️ Saison aus der Cloud geladen");
+    } catch (e) {
+      if (status) status.textContent = "❌ Laden fehlgeschlagen (" + e.message + ").";
+    }
+  });
+  document.getElementById("cloudDisconnectBtn").addEventListener("click", function() {
+    saveCloudConfig(null);
+    const token = document.getElementById("cloudToken");
+    if (token) token.value = "";
+    const status = document.getElementById("cloudSyncStatus");
+    if (status) status.textContent = "Getrennt – es wird nur noch lokal gespeichert.";
   });
 
   document.getElementById("closeShareHelpBtn").addEventListener("click", closeShareHelp);
