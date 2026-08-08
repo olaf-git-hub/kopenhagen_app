@@ -1242,9 +1242,12 @@ input.score-triplebogey {
 .race-track {
   position: relative;
   flex: 1;
-  border: 1px solid var(--line);
+  border: 1px solid #6f9c5c;
   border-radius: 18px;
-  background: linear-gradient(90deg, #fff 0%, #eef6eb 100%);
+  /* Golfplatz: sattgrüner Rasen mit gemähten Fairway-Streifen */
+  background:
+    repeating-linear-gradient(90deg, rgba(255,255,255,.06) 0 42px, rgba(0,0,0,.06) 42px 84px),
+    linear-gradient(180deg, #5ea34a 0%, #4e9140 55%, #427f38 100%);
   overflow: hidden;
 }
 
@@ -1254,15 +1257,18 @@ input.score-triplebogey {
   display: grid;
   grid-template-columns: repeat(18, 1fr);
   font-size: 10px;
-  color: var(--muted);
+  color: rgba(255,255,255,.85);
+  text-shadow: 0 1px 2px rgba(0,0,0,.35);
   font-weight: 900;
+  z-index: 1;
 }
 
 .race-lane {
   position: absolute;
   left: 0;
   right: 0;
-  border-top: 1px dashed rgba(0,0,0,.12);
+  border-top: 1px dashed rgba(255,255,255,.35);
+  z-index: 1;
 }
 
 
@@ -1277,25 +1283,155 @@ input.score-triplebogey {
   gap: 6px;
 }
 
-.race-snail {
-  font-size: 36px;
-  line-height: 1;
-  display: inline-block;
+/* SVG-Schnecke (Häuschen in Spielerfarbe) + Kriech-Wackeln während des Rennens */
+.race-snail-svg {
+  display: block;
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,.3));
+}
+.race-track.racing .race-snail-svg {
+  animation: snailWiggle .9s ease-in-out infinite;
+  transform-origin: 50% 85%;
+}
+@keyframes snailWiggle {
+  0%, 100% { transform: rotate(0deg) scaleX(1); }
+  25% { transform: rotate(-2deg) scaleX(1.04); }
+  75% { transform: rotate(2deg) scaleX(.96); }
 }
 
-.race-dot {
-  width: 16px;
-  height: 16px;
+/* Ballspur: kleine "Golfbälle" markieren den Rennverlauf */
+.race-trail-dot {
+  position: absolute;
+  width: 6px;
+  height: 6px;
   border-radius: 999px;
-  display: inline-block;
-  border: 2px solid #fff;
-  box-shadow: 0 1px 5px rgba(0,0,0,.25);
+  background: #fff;
+  transform: translate(-50%, -50%);
+  opacity: .5;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Golfplatz-Deko: Abschlagbox, Grün, Fahne, Bunker, Wasser */
+.race-deco { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+.race-tee {
+  position: absolute;
+  left: 8px;
+  top: 26px;
+  bottom: 14px;
+  width: calc(var(--race-start-x) - 18px);
+  background: linear-gradient(180deg, rgba(255,255,255,.12), rgba(0,0,0,.10));
+  border: 1px dashed rgba(255,255,255,.4);
+  border-radius: 10px;
+}
+.race-green {
+  position: absolute;
+  top: 18px;
+  bottom: 12px;
+  right: calc(var(--race-finish-right) - 56px);
+  width: 118px;
+  background: radial-gradient(ellipse at center, #b9e08a 0%, #96cc64 55%, rgba(150,204,100,0) 75%);
+  border-radius: 50%;
+}
+.race-flag {
+  position: absolute;
+  top: 22px;
+  right: calc(var(--race-finish-right) - 22px);
+}
+.race-bunker {
+  position: absolute;
+  background: radial-gradient(ellipse at 40% 40%, #f3e2b3, #e0c98c);
+  border-radius: 48% 52% 55% 45% / 55% 48% 52% 45%;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,.18);
+  opacity: .95;
+}
+.race-water {
+  position: absolute;
+  background: radial-gradient(ellipse at 45% 40%, #82c7ea, #4f9fd0);
+  border-radius: 55% 45% 50% 50% / 45% 55% 45% 55%;
+  box-shadow: inset 0 2px 5px rgba(0,0,0,.22);
+  opacity: .9;
+}
+
+/* Live-Kommentarzeile unter dem Track */
+.race-comment {
+  display: none;
+  margin-top: 8px;
+  text-align: center;
+  font-weight: 900;
+  font-size: 13px;
+  color: var(--accent-dark);
+  background: var(--soft);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 6px 12px;
+}
+
+/* Fotofinish-Blitz, Siegerbanner, Konfetti */
+.race-photo-flash {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: photoFlash 1.4s ease-out forwards;
+  pointer-events: none;
+}
+.race-photo-flash span {
+  font-size: 20px;
+  font-weight: 950;
+  color: #333;
+  background: rgba(255,255,255,.92);
+  border-radius: 999px;
+  padding: 8px 18px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.25);
+}
+@keyframes photoFlash {
+  0% { background: rgba(255,255,255,.95); }
+  14% { background: rgba(255,255,255,.15); }
+  26% { background: rgba(255,255,255,.85); }
+  40% { background: rgba(255,255,255,.05); }
+  100% { background: rgba(255,255,255,0); }
+}
+.race-winner-banner {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  transform: translate(-50%, -50%);
+  z-index: 6;
+  font-size: 21px;
+  font-weight: 950;
+  color: var(--accent-dark);
+  background: rgba(255,255,255,.95);
+  border: 2px solid var(--accent);
+  border-radius: 16px;
+  padding: 12px 22px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.3);
+  animation: bannerPop .5s cubic-bezier(.2, 1.6, .4, 1);
+  pointer-events: none;
+  white-space: nowrap;
+}
+@keyframes bannerPop {
+  from { transform: translate(-50%, -50%) scale(.3); opacity: 0; }
+}
+.race-confetti-piece {
+  position: absolute;
+  top: -14px;
+  width: 8px;
+  height: 12px;
+  border-radius: 2px;
+  z-index: 5;
+  pointer-events: none;
+  animation: confettiFall linear forwards;
+}
+@keyframes confettiFall {
+  to { top: 105%; transform: rotate(720deg); }
 }
 
 .race-runner-name {
   position: absolute;
   top: -12px;
-  left: 32px;
+  left: 40px;
 
   font-size: 11px;
   font-weight: 950;
@@ -1315,7 +1451,7 @@ input.score-triplebogey {
 
 .race-runner-name.name-left {
   left: auto;
-  right: 32px;
+  right: 40px;
 }
 
 #raceTimeline {
@@ -1444,7 +1580,8 @@ input.score-triplebogey {
 .race-marker-start {
   left: var(--race-start-x);
   width: 3px;
-  background: #8bc34a;
+  background: rgba(255,255,255,.75);
+  z-index: 1;
 }
 
 .race-marker-half {
@@ -1456,14 +1593,18 @@ input.score-triplebogey {
     )
   );
   width: 2px;
-  border-left: 2px dashed #8bc34a;
-  opacity: .65;
+  border-left: 2px dashed rgba(255,255,255,.55);
+  opacity: .8;
+  z-index: 1;
 }
 
 .race-marker-finish {
   right: var(--race-finish-right);
-  width: 6px;
-  background: var(--accent);
+  width: 8px;
+  /* Zielband im Schachbrett-Look */
+  background: repeating-conic-gradient(#fff 0% 25%, #333 0% 50%) 0 0 / 8px 8px;
+  opacity: .95;
+  z-index: 1;
 }
 
 .race-marker-label {
@@ -1472,8 +1613,10 @@ input.score-triplebogey {
   transform: translateX(-50%);
   font-size: 11px;
   font-weight: 950;
-  color: var(--muted);
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0,0,0,.45);
   white-space: nowrap;
+  z-index: 1;
 }
 
 .race-marker-label-start {
@@ -2230,6 +2373,8 @@ body.view-only { padding-top: 38px; }
   <div class="race-track" id="raceTrack">
     <div class="race-hole-labels" id="raceHoleLabels"></div>
   </div>
+
+  <div class="race-comment" id="raceComment"></div>
 
   <div class="analysis-content" id="analysisContent"></div>
 
@@ -5597,14 +5742,38 @@ function getRaceMedal(rank) {
   return String(rank);
 }
 
+// Fahne fürs Ziel-Grün (Inline-SVG, keine externen Dateien).
+const RACE_FLAG_SVG =
+  "<svg viewBox='0 0 40 84' width='30' height='63' aria-hidden='true'>" +
+  "<ellipse cx='14' cy='78' rx='12' ry='4' fill='rgba(0,0,0,.28)'/>" +
+  "<ellipse cx='14' cy='76' rx='7' ry='2.6' fill='#fff' opacity='.92'/>" +
+  "<rect x='12.6' y='8' width='2.8' height='68' rx='1.4' fill='#f4f4f4'/>" +
+  "<path d='M15.4 9 L37 16.5 L15.4 24 Z' fill='#e53935'/>" +
+  "</svg>";
+
+// Die Kult-Schnecke als eigenes SVG – Häuschen in der Spielerfarbe.
+function getRaceSnailSvg(color) {
+  return (
+    "<svg class='race-snail-svg' viewBox='0 0 64 44' width='46' height='32' aria-hidden='true'>" +
+    "<path d='M50 18 Q53 11 57 8' stroke='#7a5c3e' stroke-width='2.4' fill='none' stroke-linecap='round'/>" +
+    "<path d='M53 22 Q58 19 62 19' stroke='#7a5c3e' stroke-width='2.4' fill='none' stroke-linecap='round'/>" +
+    "<circle cx='57.5' cy='7' r='2.5' fill='#4c3a26'/>" +
+    "<circle cx='62' cy='19' r='2.5' fill='#4c3a26'/>" +
+    "<ellipse cx='27' cy='38' rx='25' ry='5.5' fill='#d8b98e'/>" +
+    "<path d='M40 38 L40 26 Q40 16 48 17 Q55 18 53 26 L51 38 Z' fill='#d8b98e'/>" +
+    "<circle cx='49' cy='22' r='7' fill='#d8b98e'/>" +
+    "<circle cx='22' cy='23' r='15' fill='" + color + "' stroke='rgba(0,0,0,.3)' stroke-width='1.5'/>" +
+    "<path d='M31 23 a9 9 0 1 1 -9 -9 a6 6 0 1 1 -6 6 a3.5 3.5 0 1 0 3.5 -3.5' fill='none' stroke='rgba(255,255,255,.6)' stroke-width='2.2' stroke-linecap='round'/>" +
+    "</svg>"
+  );
+}
+
 function getRaceRunnerHtml(playerIndex, name, points, labelLeft) {
   const color = racePlayerColors[playerIndex] || "#555";
 
   return (
-    "<span class='race-snail'>🐌</span>" +
-    "<span class='race-dot' style='background:" +
-    color +
-    "'></span><span class='race-runner-name" + (labelLeft ? " name-left" : "") + "'>" +
+    getRaceSnailSvg(color) +
+    "<span class='race-runner-name" + (labelLeft ? " name-left" : "") + "'>" +
     escapeHtml(name) +
     (points === null ? "" : " (" + formatNum(points) + ")") +
     "</span>"
@@ -5633,6 +5802,103 @@ function playRaceTick() {
   } catch (e) {}
 }
 
+// ---- Renn-Dramaturgie: Kommentarzeile, Fotofinish, gestaffelter Zieleinlauf, Konfetti ----
+let raceFinaleTimers = [];
+
+function clearRaceFinaleFx() {
+  for (const t of raceFinaleTimers) clearTimeout(t);
+  raceFinaleTimers = [];
+  const track = document.getElementById("raceTrack");
+  if (!track) return;
+  track.classList.remove("racing");
+  track.querySelectorAll(".race-photo-flash, .race-winner-banner, .race-confetti-piece, .race-trail-dot").forEach(el => el.remove());
+}
+
+// Automatischer Kommentar zum aktuellen Rennschritt.
+function raceCommentFor(history, stepIndex) {
+  const step = history[stepIndex];
+  if (!step) return "";
+  if (stepIndex === 0) return "🏌️ Auf die Plätze … los!";
+  const prev = history[stepIndex - 1];
+  const lead = step.ranking[0];
+  const coLeaders = step.ranking.filter(p => p.points === lead.points).length;
+  if (coLeaders > 1) return "Loch " + step.hole + ": Gleichstand an der Spitze!";
+  if (lead.index !== prev.ranking[0].index) return "🔥 Loch " + step.hole + ": " + lead.name + " übernimmt die Führung!";
+  // Größter Punktgewinn dieses Lochs abseits der Führung
+  let bestGain = -1, gainer = null;
+  for (const p of step.ranking) {
+    const pv = prev.ranking.find(x => x.index === p.index);
+    const gain = p.points - (pv ? pv.points : 0);
+    if (gain > bestGain) { bestGain = gain; gainer = p; }
+  }
+  if (gainer && gainer.index !== lead.index && bestGain >= 2) {
+    return "Loch " + step.hole + ": " + gainer.name + " holt mächtig auf!";
+  }
+  return "Loch " + step.hole + ": " + lead.name + " führt mit " + formatNum(lead.points) + " Punkten.";
+}
+
+function launchRaceConfetti(track) {
+  const colors = ["#e53935", "#fdd835", "#43a047", "#1e88e5", "#8e24aa", "#fb8c00", "#ffffff"];
+  for (let i = 0; i < 60; i++) {
+    const c = document.createElement("div");
+    c.className = "race-confetti-piece";
+    c.style.left = (Math.random() * 100) + "%";
+    c.style.background = colors[i % colors.length];
+    c.style.animationDelay = (Math.random() * 0.9) + "s";
+    c.style.animationDuration = (1.6 + Math.random() * 1.4) + "s";
+    track.appendChild(c);
+    raceFinaleTimers.push(setTimeout(() => c.remove(), 4500));
+  }
+}
+
+// Zieleinlauf: Fotofinish beim Sieger, danach laufen die Verfolger gestaffelt ein,
+// zum Schluss Konfetti + Siegerbanner.
+function runRaceFinale(history) {
+  const track = document.getElementById("raceTrack");
+  if (!track) return;
+  const ranking = history[history.length - 1].ranking;
+  const comment = document.getElementById("raceComment");
+
+  // 1) Fotofinish-Blitz beim Zieleinlauf des Siegers
+  const flash = document.createElement("div");
+  flash.className = "race-photo-flash";
+  flash.innerHTML = "<span>📸 Fotofinish!</span>";
+  track.appendChild(flash);
+  raceFinaleTimers.push(setTimeout(() => flash.remove(), 1500));
+  if (comment) comment.textContent = "📸 Fotofinish: " + ranking[0].name + " ist im Ziel!";
+  const winner = document.getElementById("raceRunner_" + ranking[0].index);
+  if (winner) {
+    const n = winner.querySelector(".race-runner-name");
+    if (n) n.textContent = "🥇 " + n.textContent;
+  }
+
+  // 2) Die Verfolger laufen nacheinander ins Ziel
+  const finishLeft = track.clientWidth - getRaceFinishRight();
+  ranking.forEach((p, idx) => {
+    if (idx === 0) return;
+    raceFinaleTimers.push(setTimeout(() => {
+      const runner = document.getElementById("raceRunner_" + p.index);
+      if (!runner) return;
+      runner.style.left = finishLeft + "px";
+      const n = runner.querySelector(".race-runner-name");
+      if (n) n.textContent = getRaceMedal(idx + 1) + " " + n.textContent;
+      playRaceTick();
+    }, 1500 + idx * 800));
+  });
+
+  // 3) Konfetti + Siegerbanner
+  raceFinaleTimers.push(setTimeout(() => {
+    launchRaceConfetti(track);
+    const banner = document.createElement("div");
+    banner.className = "race-winner-banner";
+    banner.textContent = "🥇 " + ranking[0].name + " gewinnt!";
+    track.appendChild(banner);
+    if (comment) comment.textContent = "🏆 Sieg für " + ranking[0].name + " – Glückwunsch!";
+    playRankingChangeSound();
+    track.classList.remove("racing");
+  }, 1500 + ranking.length * 800 + 200));
+}
+
 function openRaceReplay() {
   closeLoch19Menu();
 
@@ -5654,6 +5920,7 @@ function openRaceReplay() {
   if (!overlay || !track || !labels) return;
 
   clearInterval(raceTimer);
+  clearRaceFinaleFx();
 
   if (analysis) {
     analysis.style.display = "none";
@@ -5662,6 +5929,24 @@ function openRaceReplay() {
 
   track.style.display = "block";
   track.innerHTML = "<div class='race-hole-labels' id='raceHoleLabels'></div>";
+
+  // Golfplatz-Kulisse: Abschlagbox, Ziel-Grün mit Fahne, Bunker & Wasser.
+  const deco = document.createElement("div");
+  deco.className = "race-deco";
+  deco.innerHTML =
+    "<div class='race-tee'></div>" +
+    "<div class='race-green'></div>" +
+    "<div class='race-bunker' style='left:26%; top:10%; width:58px; height:20px;'></div>" +
+    "<div class='race-bunker' style='left:64%; bottom:4%; width:44px; height:17px;'></div>" +
+    "<div class='race-water' style='left:44%; top:9%; width:72px; height:22px;'></div>" +
+    "<div class='race-flag'>" + RACE_FLAG_SVG + "</div>";
+  track.appendChild(deco);
+
+  const comment = document.getElementById("raceComment");
+  if (comment) {
+    comment.style.display = "block";
+    comment.textContent = "🏌️ Bereit? ▶ Start drücken!";
+  }
 
   if (controls) controls.style.display = "flex";
   if (counter) counter.style.display = "flex";
@@ -5792,9 +6077,25 @@ function showRaceStep(history, stepIndex) {
     // Etikett zeigt nach innen: rechte Hälfte -> Etikett links, sonst rechts.
     const labelLeft = left >= mid;
 
+    // Ballspur: alte Position markieren (nur während des laufenden Rennens).
+    const prevLeft = parseFloat(runner.style.left);
+    if (track && track.classList.contains("racing") && !isNaN(prevLeft) && Math.abs(left - prevLeft) > 6) {
+      const trail = document.createElement("div");
+      trail.className = "race-trail-dot";
+      trail.style.left = prevLeft + "px";
+      trail.style.top = "calc(" + getRaceTopForPlayer(i) + "% + 10px)";
+      trail.style.border = "1.5px solid " + (racePlayerColors[i] || "#555");
+      track.appendChild(trail);
+    }
+
     runner.innerHTML = getRaceRunnerHtml(i, p.name, p.points, labelLeft);
     runner.style.left = left + "px";
     runner.style.top = getRaceTopForPlayer(i) + "%";
+  }
+
+  const commentEl = document.getElementById("raceComment");
+  if (commentEl && track && track.style.display !== "none") {
+    commentEl.textContent = raceCommentFor(history, stepIndex);
   }
 
   const timeline = document.getElementById("raceTimeline");
@@ -5812,8 +6113,9 @@ function setRaceButton(started) {
 function onRaceStartButton() {
   const history = getRaceHistory();
   if (raceStarted) {
-    // Auf Anfang: Lauf stoppen, alle Schnecken zurück an den Start
+    // Auf Anfang: Lauf stoppen, Effekte aufräumen, alle Schnecken zurück an den Start
     clearInterval(raceTimer);
+    clearRaceFinaleFx();
     showRaceStep(history, 0);
     const tl = document.getElementById("raceTimeline");
     if (tl) tl.value = "0";
@@ -5837,6 +6139,10 @@ function startRaceReplay() {
   }
 
   clearInterval(raceTimer);
+  clearRaceFinaleFx();
+
+  const track = document.getElementById("raceTrack");
+  if (track) track.classList.add("racing");
 
   let step = 0;
   showRaceStep(history, step);
@@ -5854,7 +6160,15 @@ function startRaceReplay() {
     showRaceStep(history, step);
 
     if (step === history.length - 1) {
-      playRankingChangeSound(); // Fanfare beim Zieleinlauf
+      clearInterval(raceTimer);
+      const totalHoles = getCourseHoles().length || 18;
+      if (history[step].hole === totalHoles) {
+        // Volle Runde: Fotofinish, gestaffelter Zieleinlauf der Verfolger, Konfetti.
+        runRaceFinale(history);
+      } else {
+        playRankingChangeSound(); // Fanfare beim Zieleinlauf (Teilrunde ohne Finale)
+        if (track) track.classList.remove("racing");
+      }
     } else {
       playRaceTick();
     }
@@ -5863,6 +6177,7 @@ function startRaceReplay() {
 
 function closeRaceReplay() {
   clearInterval(raceTimer);
+  clearRaceFinaleFx();
   const overlay = document.getElementById("raceOverlay");
   if (overlay) overlay.classList.remove("show");
   // Nur zur Loch-19-Auswahl zurück, wenn das Overlay von dort geöffnet wurde
@@ -5893,6 +6208,8 @@ function openAnalysisOverlay(title, html) {
   if (controls) controls.style.display = "none";
   if (counter) counter.style.display = "none";
   if (speed) speed.style.display = "none";
+  const raceComment = document.getElementById("raceComment");
+  if (raceComment) raceComment.style.display = "none";
 
   overlay.classList.add("show");
 
@@ -5907,6 +6224,7 @@ function onRaceTimelineInput() {
   if (!timeline || history.length === 0) return;
 
   clearInterval(raceTimer);
+  clearRaceFinaleFx();
 
   const step = Number(timeline.value);
   showRaceStep(history, step);
