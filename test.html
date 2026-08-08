@@ -1283,19 +1283,19 @@ input.score-triplebogey {
   gap: 6px;
 }
 
-/* SVG-Rennpferd (Satteldecke in Spielerfarbe) + Galopp-Animation während des Rennens */
-.race-horse-svg {
+/* SVG-Schnecke (Häuschen in Spielerfarbe) + Kriech-Wackeln während des Rennens */
+.race-snail-svg {
   display: block;
   filter: drop-shadow(0 2px 2px rgba(0,0,0,.3));
 }
-.race-track.racing .race-horse-svg {
-  animation: horseGallop .5s ease-in-out infinite;
-  transform-origin: 50% 60%;
+.race-track.racing .race-snail-svg {
+  animation: snailWiggle .9s ease-in-out infinite;
+  transform-origin: 50% 85%;
 }
-@keyframes horseGallop {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  30% { transform: translateY(-3px) rotate(2deg); }
-  60% { transform: translateY(1px) rotate(-1.5deg); }
+@keyframes snailWiggle {
+  0%, 100% { transform: rotate(0deg) scaleX(1); }
+  25% { transform: rotate(-2deg) scaleX(1.04); }
+  75% { transform: rotate(2deg) scaleX(.96); }
 }
 
 /* Ballspur: kleine "Golfbälle" markieren den Rennverlauf */
@@ -1381,7 +1381,7 @@ input.score-triplebogey {
   display: flex;
   align-items: center;
   justify-content: center;
-  animation: photoFlash 2s ease-out forwards;
+  animation: photoFlash 3s ease-out forwards;
   pointer-events: none;
 }
 .race-photo-flash span {
@@ -1433,6 +1433,92 @@ input.score-triplebogey {
 }
 @keyframes confettiFall {
   to { top: 105%; transform: rotate(720deg); }
+}
+
+/* Siegerehrung: Podest (2-1-3), der Letzte sitzt heulend daneben */
+.race-podium {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.race-podium-card {
+  background: rgba(255,255,255,.94);
+  border: 2px solid var(--accent);
+  border-radius: 18px;
+  padding: 10px 16px 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.35);
+  animation: bannerPop .5s cubic-bezier(.2, 1.6, .4, 1);
+}
+.race-podium-title {
+  text-align: center;
+  font-weight: 950;
+  font-size: 16px;
+  color: var(--accent-dark);
+  margin-bottom: 8px;
+}
+.race-podium-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+}
+.race-podium-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+.race-podium-name {
+  font-size: 11px;
+  font-weight: 950;
+  color: var(--accent-dark);
+  max-width: 78px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.race-podium-block {
+  width: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 950;
+  font-size: 18px;
+  border-radius: 6px 6px 0 0;
+  border: 1px solid #b5ab90;
+  border-bottom: 0;
+}
+.race-podium-block.p1 { height: 56px; background: linear-gradient(180deg, #ffe27a, #e6b93f); color: #7a5c00; border-color: #cfa437; }
+.race-podium-block.p2 { height: 42px; background: linear-gradient(180deg, #ececf2, #c2c4cc); color: #5a5e6a; border-color: #a9adb8; }
+.race-podium-block.p3 { height: 32px; background: linear-gradient(180deg, #e8c29a, #c8905c); color: #6e4519; border-color: #b07c48; }
+.race-podium-last {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin-left: 6px;
+  align-self: flex-end;
+  padding-bottom: 2px;
+}
+.race-podium-cry {
+  font-size: 22px;
+  animation: cryShake 1s ease-in-out infinite;
+}
+@keyframes cryShake {
+  0%, 100% { transform: translateY(0) rotate(-6deg); }
+  50% { transform: translateY(-3px) rotate(6deg); }
+}
+.race-podium-lastlabel {
+  font-size: 10px;
+  font-weight: 950;
+  color: var(--bad);
+  max-width: 84px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .race-runner-name {
@@ -2357,14 +2443,14 @@ body.view-only { padding-top: 30px; }
   <button type="button" id="addRoundToSeasonBtn">➕ Runde zur Saison hinzufügen</button>
   <button type="button" id="seasonTableBtn">🏅 Saison-Tabelle</button>
   <button type="button" id="highlightsBtn">🏆 Rundenrückblick</button>
-  <button type="button" id="raceReplayBtn">🏇 Replay</button>
+  <button type="button" id="raceReplayBtn">🐌 Replay</button>
   <button type="button" id="cloudSyncBtn">☁️ Cloud-Sync</button>
 
 </div>
 
 <div class="race-overlay" id="raceOverlay">
   <div class="race-head">
-    <strong>🏇 Replay</strong>
+    <strong>🐌 Replay</strong>
     <div class="race-head-right">
       <button class="secondary small" type="button" id="startRaceBtn">▶ Start</button>
       <label class="race-speed-wrap">Tempo
@@ -5756,22 +5842,25 @@ const RACE_FLAG_SVG =
   "<path d='M15.4 9 L37 16.5 L15.4 24 Z' fill='#e53935'/>" +
   "</svg>";
 
-// Rennpferd als eigenes SVG – Satteldecke in der Spielerfarbe.
-function getRaceHorseSvg(color) {
+// Die Kult-Schnecke als eigenes SVG – Häuschen in der Spielerfarbe, mit Glanz und Lächeln.
+function getRaceSnailSvg(color) {
   return (
-    "<svg class='race-horse-svg' viewBox='0 0 72 48' width='52' height='35' aria-hidden='true'>" +
-    "<path d='M14 22 Q6 24 4 31 Q10 30 14 27 Z' fill='#5f3f1e'/>" +
-    "<path d='M22 32 L17 45' stroke='#7a4b22' stroke-width='4' stroke-linecap='round'/>" +
-    "<path d='M28 33 L26 46' stroke='#8d5a2b' stroke-width='4' stroke-linecap='round'/>" +
-    "<path d='M44 33 L47 46' stroke='#8d5a2b' stroke-width='4' stroke-linecap='round'/>" +
-    "<path d='M50 32 L56 44' stroke='#7a4b22' stroke-width='4' stroke-linecap='round'/>" +
-    "<ellipse cx='36' cy='27' rx='19' ry='10' fill='#8d5a2b'/>" +
-    "<path d='M50 24 Q53 12 60 8 L66 12 Q64 16 60 18 Q56 24 54 30 Z' fill='#8d5a2b'/>" +
-    "<path d='M60 8 L66 12 Q70 14 69 17 Q66 19 62 17 Z' fill='#7a4b22'/>" +
-    "<path d='M58 7 L56 2 L61 5 Z' fill='#7a4b22'/>" +
-    "<circle cx='61' cy='11' r='1.6' fill='#2b1a0c'/>" +
-    "<path d='M50 23 Q54 12 60 8 Q55 10 52 16 Q50 20 49 24 Z' fill='#5f3f1e'/>" +
-    "<rect x='27' y='19' width='18' height='13' rx='4' fill='" + color + "' stroke='#fff' stroke-width='1.6'/>" +
+    "<svg class='race-snail-svg' viewBox='0 0 64 44' width='46' height='32' aria-hidden='true'>" +
+    "<path d='M50 18 Q53 11 57 8' stroke='#8a6a47' stroke-width='2.4' fill='none' stroke-linecap='round'/>" +
+    "<path d='M53 22 Q58 19 62 19' stroke='#8a6a47' stroke-width='2.4' fill='none' stroke-linecap='round'/>" +
+    "<circle cx='57.5' cy='7' r='2.6' fill='#4c3a26'/>" +
+    "<circle cx='62' cy='19' r='2.6' fill='#4c3a26'/>" +
+    "<circle cx='58.2' cy='6.3' r='.9' fill='#fff' opacity='.85'/>" +
+    "<circle cx='62.7' cy='18.3' r='.9' fill='#fff' opacity='.85'/>" +
+    "<ellipse cx='27' cy='38' rx='25' ry='5.5' fill='#e0c49a'/>" +
+    "<ellipse cx='27' cy='39.5' rx='25' ry='4' fill='#caa87a' opacity='.5'/>" +
+    "<path d='M40 38 L40 26 Q40 16 48 17 Q55 18 53 26 L51 38 Z' fill='#e0c49a'/>" +
+    "<circle cx='49' cy='22' r='7' fill='#e0c49a'/>" +
+    "<path d='M51 25 Q53 26 52 28' stroke='#4c3a26' stroke-width='1.4' fill='none' stroke-linecap='round'/>" +
+    "<circle cx='46' cy='25' r='1.5' fill='#d98a7a' opacity='.55'/>" +
+    "<circle cx='22' cy='23' r='15' fill='" + color + "' stroke='rgba(0,0,0,.35)' stroke-width='1.6'/>" +
+    "<path d='M31 23 a9 9 0 1 1 -9 -9 a6 6 0 1 1 -6 6 a3.5 3.5 0 1 0 3.5 -3.5' fill='none' stroke='rgba(255,255,255,.65)' stroke-width='2.4' stroke-linecap='round'/>" +
+    "<ellipse cx='16.5' cy='16' rx='6' ry='3.6' fill='#fff' opacity='.3' transform='rotate(-25 16.5 16)'/>" +
     "</svg>"
   );
 }
@@ -5780,7 +5869,7 @@ function getRaceRunnerHtml(playerIndex, name, points, labelLeft) {
   const color = racePlayerColors[playerIndex] || "#555";
 
   return (
-    getRaceHorseSvg(color) +
+    getRaceSnailSvg(color) +
     "<span class='race-runner-name" + (labelLeft ? " name-left" : "") + "'>" +
     escapeHtml(name) +
     (points === null ? "" : " (" + formatNum(points) + ")") +
@@ -5820,7 +5909,7 @@ function clearRaceFinaleFx() {
   const track = document.getElementById("raceTrack");
   if (!track) return;
   track.classList.remove("racing");
-  track.querySelectorAll(".race-photo-flash, .race-winner-banner, .race-confetti-piece, .race-trail-dot, .race-countdown").forEach(el => el.remove());
+  track.querySelectorAll(".race-photo-flash, .race-winner-banner, .race-podium, .race-confetti-piece, .race-trail-dot, .race-countdown").forEach(el => el.remove());
 }
 
 // Automatischer Kommentar zum aktuellen Rennschritt.
@@ -5860,8 +5949,33 @@ function launchRaceConfetti(track) {
   }
 }
 
+// Siegerehrung: Podest 2-1-3 (der Letzte kommt nicht aufs Podest, sondern sitzt heulend daneben).
+function buildRacePodiumHtml(ranking) {
+  const n = ranking.length;
+  const podium = ranking.slice(0, Math.min(3, n - 1));
+  const last = ranking[n - 1];
+  const col = (p, rank) =>
+    "<div class='race-podium-col'>" +
+    "<div class='race-podium-name'>" + getRaceMedal(rank) + " " + escapeHtml(p.name) + "</div>" +
+    getRaceSnailSvg(racePlayerColors[p.index] || "#555") +
+    "<div class='race-podium-block p" + rank + "'>" + rank + "</div>" +
+    "</div>";
+  // Anordnung wie beim echten Podest: 2 – 1 – 3
+  let row = "";
+  if (podium[1]) row += col(podium[1], 2);
+  row += col(podium[0], 1);
+  if (podium[2]) row += col(podium[2], 3);
+  row +=
+    "<div class='race-podium-last'>" +
+    "<div class='race-podium-cry'>😭</div>" +
+    getRaceSnailSvg(racePlayerColors[last.index] || "#555") +
+    "<div class='race-podium-lastlabel'>Letzter: " + escapeHtml(last.name) + "</div>" +
+    "</div>";
+  return "<div class='race-podium-card'><div class='race-podium-title'>🏆 Siegerehrung</div><div class='race-podium-row'>" + row + "</div></div>";
+}
+
 // Zieleinlauf: Fotofinish beim Sieger, danach laufen die Verfolger gestaffelt ein,
-// zum Schluss Konfetti + Siegerbanner.
+// zum Schluss Konfetti + Siegerehrung mit Podest.
 function runRaceFinale(history) {
   const track = document.getElementById("raceTrack");
   if (!track) return;
@@ -5873,7 +5987,7 @@ function runRaceFinale(history) {
   flash.className = "race-photo-flash";
   flash.innerHTML = "<span>📸 Fotofinish!</span>";
   track.appendChild(flash);
-  raceFinaleTimers.push(setTimeout(() => flash.remove(), 2200));
+  raceFinaleTimers.push(setTimeout(() => flash.remove(), 3000));
   if (comment) comment.textContent = "📸 Fotofinish: " + ranking[0].name + " ist im Ziel!";
   const winner = document.getElementById("raceRunner_" + ranking[0].index);
   if (winner) {
@@ -5892,20 +6006,20 @@ function runRaceFinale(history) {
       const n = runner.querySelector(".race-runner-name");
       if (n) n.textContent = getRaceMedal(idx + 1) + " " + n.textContent;
       playRaceTick();
-    }, 2200 + idx * 800));
+    }, 3000 + idx * 800));
   });
 
-  // 3) Konfetti + Siegerbanner
+  // 3) Konfetti + Siegerehrung mit Podest
   raceFinaleTimers.push(setTimeout(() => {
     launchRaceConfetti(track);
-    const banner = document.createElement("div");
-    banner.className = "race-winner-banner";
-    banner.textContent = "🥇 " + ranking[0].name + " gewinnt!";
-    track.appendChild(banner);
-    if (comment) comment.textContent = "🏆 Sieg für " + ranking[0].name + " – Glückwunsch!";
+    const podium = document.createElement("div");
+    podium.className = "race-podium";
+    podium.innerHTML = buildRacePodiumHtml(ranking);
+    track.appendChild(podium);
+    if (comment) comment.textContent = "🏆 Siegerehrung: " + ranking[0].name + " gewinnt – Glückwunsch!";
     playRankingChangeSound();
     track.classList.remove("racing");
-  }, 2200 + ranking.length * 800 + 200));
+  }, 3000 + ranking.length * 800 + 300));
 }
 
 function openRaceReplay() {
@@ -5951,7 +6065,7 @@ function openRaceReplay() {
   const comment = document.getElementById("raceComment");
   if (comment) {
     comment.style.display = "block";
-    comment.textContent = "🏇 Gleich geht's los …";
+    comment.textContent = "🐌 Gleich geht's los …";
   }
 
   if (speed) speed.style.display = "";
@@ -6017,7 +6131,7 @@ track.appendChild(finishMarker);
   overlay.classList.add("show");
 
   const head = overlay.querySelector(".race-head strong");
-  if (head) head.textContent = "🏇 Replay";
+  if (head) head.textContent = "🐌 Replay";
 
   const timeline = document.getElementById("raceTimeline");
   if (timeline) {
@@ -7188,6 +7302,7 @@ function renderPlayerRoundCardHtml(round, name) {
 // Overrides), sichert den echten Zustand und stellt ihn beim Beenden wieder her.
 let viewOnlyRound = null;   // aktive Nur-Lesen-Runde ({dateText, courseName}) oder null
 let viewOnlyBackup = null;  // JSON des echten Zustands für die Rückkehr
+let viewOnlySeasonScroll = 0; // Scroll-Position der Saison-Liste für den Rücksprung
 
 function blockIfViewOnly() {
   if (!viewOnlyRound) return false;
@@ -7233,6 +7348,11 @@ function openRoundReadOnly(roundId) {
   }
   state = normalizeState(st);
 
+  // Scroll-Position der Saison-Liste merken, um beim Beenden dorthin zurückzukehren.
+  const analysisEl = document.getElementById("analysisContent");
+  viewOnlySeasonScroll = (analysisEl && analysisEl.firstElementChild)
+    ? analysisEl.firstElementChild.scrollTop : 0;
+
   closeRoundDetail();
   closePlayerProfile();
   const raceOverlay = document.getElementById("raceOverlay");
@@ -7260,8 +7380,12 @@ function exitRoundReadOnly() {
   buildSetup();
   rerenderEntryAndSummary();
   showToast("Zurück zur aktuellen Runde");
-  // Zurück zur Order-of-Merit-Liste, aus der die Runde geöffnet wurde.
+  // Zurück zur Order-of-Merit-Liste – an die gemerkte Scroll-Position.
   openSeasonTable();
+  const analysisEl = document.getElementById("analysisContent");
+  if (analysisEl && analysisEl.firstElementChild) {
+    analysisEl.firstElementChild.scrollTop = viewOnlySeasonScroll;
+  }
 }
 
 function openRoundDetail(id) {
