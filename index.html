@@ -1435,8 +1435,8 @@ input.score-triplebogey {
   to { top: 105%; transform: rotate(720deg); }
 }
 
-/* Siegerehrung: Podest (2-1-3), der Letzte sitzt heulend daneben */
-.race-podium {
+/* Siegerehrung: Endstand (Kopenhagen) + kleine Brutto-Nebenwertung */
+.race-result {
   position: absolute;
   inset: 0;
   z-index: 6;
@@ -1444,82 +1444,40 @@ input.score-triplebogey {
   align-items: center;
   justify-content: center;
   pointer-events: none;
+  padding: 12px;
 }
-.race-podium-card {
-  background: rgba(255,255,255,.94);
+.race-result-card {
+  background: rgba(255,255,255,.95);
   border: 2px solid var(--accent);
   border-radius: 18px;
-  padding: 10px 16px 12px;
+  padding: 12px 18px 14px;
   box-shadow: 0 10px 30px rgba(0,0,0,.35);
   animation: bannerPop .5s cubic-bezier(.2, 1.6, .4, 1);
-}
-.race-podium-title {
+  max-width: 100%;
   text-align: center;
-  font-weight: 950;
-  font-size: 16px;
-  color: var(--accent-dark);
-  margin-bottom: 8px;
 }
-.race-podium-row {
-  display: flex;
-  align-items: flex-end;
-  gap: 12px;
-}
-.race-podium-col {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-}
-.race-podium-name {
-  font-size: 11px;
+.race-result-winner {
+  font-size: 19px;
   font-weight: 950;
   color: var(--accent-dark);
-  max-width: 78px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  margin-bottom: 7px;
 }
-.race-podium-block {
-  width: 58px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 950;
-  font-size: 18px;
-  border-radius: 6px 6px 0 0;
-  border: 1px solid #b5ab90;
-  border-bottom: 0;
+.race-result-row {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--text);
+  margin-top: 3px;
 }
-.race-podium-block.p1 { height: 56px; background: linear-gradient(180deg, #ffe27a, #e6b93f); color: #7a5c00; border-color: #cfa437; }
-.race-podium-block.p2 { height: 42px; background: linear-gradient(180deg, #ececf2, #c2c4cc); color: #5a5e6a; border-color: #a9adb8; }
-.race-podium-block.p3 { height: 32px; background: linear-gradient(180deg, #e8c29a, #c8905c); color: #6e4519; border-color: #b07c48; }
-.race-podium-last {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  margin-left: 6px;
-  align-self: flex-end;
-  padding-bottom: 2px;
+.race-result-row .gap { color: var(--muted); font-weight: 700; }
+.race-result-gross {
+  margin-top: 9px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--line);
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--muted);
 }
-.race-podium-cry {
-  font-size: 22px;
-  animation: cryShake 1s ease-in-out infinite;
-}
-@keyframes cryShake {
-  0%, 100% { transform: translateY(0) rotate(-6deg); }
-  50% { transform: translateY(-3px) rotate(6deg); }
-}
-.race-podium-lastlabel {
-  font-size: 10px;
-  font-weight: 950;
-  color: var(--bad);
-  max-width: 84px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+.race-result-gross b { color: var(--accent-dark); }
 
 .race-runner-name {
   position: absolute;
@@ -5912,7 +5870,7 @@ function clearRaceFinaleFx() {
   const track = document.getElementById("raceTrack");
   if (!track) return;
   track.classList.remove("racing");
-  track.querySelectorAll(".race-photo-flash, .race-winner-banner, .race-podium, .race-confetti-piece, .race-trail-dot, .race-countdown").forEach(el => el.remove());
+  track.querySelectorAll(".race-photo-flash, .race-winner-banner, .race-result, .race-confetti-piece, .race-trail-dot, .race-countdown").forEach(el => el.remove());
 }
 
 // Automatischer Kommentar zum aktuellen Rennschritt.
@@ -5952,29 +5910,36 @@ function launchRaceConfetti(track) {
   }
 }
 
-// Siegerehrung: Podest 2-1-3 (der Letzte kommt nicht aufs Podest, sondern sitzt heulend daneben).
-function buildRacePodiumHtml(ranking) {
-  const n = ranking.length;
-  const podium = ranking.slice(0, Math.min(3, n - 1));
-  const last = ranking[n - 1];
-  const col = (p, rank) =>
-    "<div class='race-podium-col'>" +
-    "<div class='race-podium-name'>" + getRaceMedal(rank) + " " + escapeHtml(p.name) + "</div>" +
-    getRaceSnailSvg(racePlayerColors[p.index] || "#555") +
-    "<div class='race-podium-block p" + rank + "'>" + rank + "</div>" +
-    "</div>";
-  // Anordnung wie beim echten Podest: 2 – 1 – 3
-  let row = "";
-  if (podium[1]) row += col(podium[1], 2);
-  row += col(podium[0], 1);
-  if (podium[2]) row += col(podium[2], 3);
-  row +=
-    "<div class='race-podium-last'>" +
-    "<div class='race-podium-cry'>😭</div>" +
-    getRaceSnailSvg(racePlayerColors[last.index] || "#555") +
-    "<div class='race-podium-lastlabel'>Letzter: " + escapeHtml(last.name) + "</div>" +
-    "</div>";
-  return "<div class='race-podium-card'><div class='race-podium-title'>🏆 Siegerehrung</div><div class='race-podium-row'>" + row + "</div></div>";
+// Siegerehrung: Endstand der Kopenhagen-Wertung + Brutto als Nebenwertung.
+function buildRaceResultHtml(ranking) {
+  const win = ranking[0];
+  const ordinal = ["", "", "wird Zweiter", "wird Dritter", "wird Vierter"];
+
+  let h = "<div class='race-result-card'>";
+  h += "<div class='race-result-winner'>🥇 " + escapeHtml(win.name) +
+       " gewinnt mit " + formatNum(win.points) + " Punkten</div>";
+
+  for (let i = 1; i < ranking.length; i++) {
+    const p = ranking[i];
+    const gap = win.points - p.points;
+    const isLast = (i === ranking.length - 1);
+    h += "<div class='race-result-row'>" +
+         getRaceMedal(i + 1) + " " + escapeHtml(p.name) + " " +
+         (ordinal[i + 1] || ("wird " + (i + 1) + ".")) +
+         " mit " + formatNum(p.points) + " Punkten " +
+         "<span class='gap'>(" + (gap > 0 ? formatNum(gap) + " zurück" : "gleichauf") + ")</span>" +
+         (isLast ? " 😭" : "") +
+         "</div>";
+  }
+
+  // Nebenwertung: reines Brutto ohne Vorgaben – wer hat das beste Golf gespielt?
+  const gross = ranking.slice().sort((a, b) => a.gross - b.gross);
+  h += "<div class='race-result-gross'>🏌️ Brutto: " +
+       gross.map((p, i) => (i + 1) + ". <b>" + escapeHtml(p.name) + "</b> " + p.gross).join(" · ") +
+       "</div>";
+
+  h += "</div>";
+  return h;
 }
 
 // Zieleinlauf: Fotofinish beim Sieger, danach laufen die Verfolger gestaffelt ein,
@@ -6012,13 +5977,13 @@ function runRaceFinale(history) {
     }, 3000 + idx * 800));
   });
 
-  // 3) Konfetti + Siegerehrung mit Podest
+  // 3) Konfetti + Siegerehrung (Endstand + Brutto-Nebenwertung)
   raceFinaleTimers.push(setTimeout(() => {
     launchRaceConfetti(track);
-    const podium = document.createElement("div");
-    podium.className = "race-podium";
-    podium.innerHTML = buildRacePodiumHtml(ranking);
-    track.appendChild(podium);
+    const result = document.createElement("div");
+    result.className = "race-result";
+    result.innerHTML = buildRaceResultHtml(ranking);
+    track.appendChild(result);
     if (comment) comment.textContent = "🏆 Siegerehrung: " + ranking[0].name + " gewinnt – Glückwunsch!";
     playRankingChangeSound();
     track.classList.remove("racing");
