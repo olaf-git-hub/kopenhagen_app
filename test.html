@@ -2349,6 +2349,7 @@ const CLOUD_KEY = "kopenhagen-cloudsync-TEST-v1";
 const CLOUD_FILE = "saison.json";
 const ADMIN_KEY = "kopenhagen-admin-TEST-v1";
 const ADMIN_HASH = 2904571301; // djb2-Hash des Admin-Passworts (das Passwort selbst steht nicht im Code)
+const OOM_MIN_ROUNDS = 3; // feste Mindestanzahl an Kopenhagen-Runden für die offizielle Wertung
 
 const courses = {
   velte: {
@@ -2711,7 +2712,8 @@ function normalizeState(s) {
     soundOnRankingChange: s.soundOnRankingChange !== false,
     players,
     handicapOverrides: overrides,
-    holes
+    holes,
+    addedToSeason: !!s.addedToSeason
   };
 }
 
@@ -4238,6 +4240,7 @@ function rerenderEntryAndSummary() {
 // +/- an einem Spieler eines Lochs.
 function stepScore(holeKey, playerIndex, delta) {
   if (blockIfViewOnly()) return;
+  state.addedToSeason = false; // Änderung => Schutz vor „Neue Runde" wieder aktiv
   ensureHoleStarted(holeKey);
   const gross = state.holes[holeKey].gross;
   const current = clampScore(Number(gross[playerIndex]));
@@ -4251,6 +4254,7 @@ function stepScore(holeKey, playerIndex, delta) {
 // Direkte Zahleneingabe (wird beim Verlassen des Feldes übernommen).
 function commitTypedScore(holeKey, playerIndex, rawValue) {
   if (blockIfViewOnly()) return;
+  state.addedToSeason = false; // Änderung => Schutz vor „Neue Runde" wieder aktiv
   ensureHoleEntry(holeKey);
   const typed = toNullableInt(rawValue);
   if (typed === null) {
@@ -4407,7 +4411,21 @@ function clearScores() {
 
 function resetRound() {
   if (blockIfViewOnly()) return;
-  if (!confirm("Neue Runde starten und alle aktuellen Daten löschen?")) return;
+  // Strenge Abfrage, wenn Scores erfasst sind, die Runde aber noch nicht in der
+  // Order of Merit gesichert wurde – schützt vor versehentlichem Wegklicken.
+  const anyScores = Object.keys(state.holes || {}).some(k => {
+    const g = state.holes[k] && state.holes[k].gross;
+    return Array.isArray(g) && g.some(v => v !== null && v !== undefined && v !== "");
+  });
+  if (anyScores && !state.addedToSeason) {
+    const answer = prompt("⚠️ Diese Runde wurde noch NICHT zur Order of Merit hinzugefügt und geht beim Zurücksetzen verloren!\n\nZum endgültigen Löschen bitte „ja“ eintippen:");
+    if (answer === null || answer.trim().toLowerCase() !== "ja") {
+      showToast("Abgebrochen – die Runde bleibt erhalten");
+      return;
+    }
+  } else if (!confirm("Neue Runde starten und alle aktuellen Daten löschen?")) {
+    return;
+  }
   state = buildEmptyState(cloneDefault());
   state = normalizeState(state);
   saveState(true);
@@ -5368,6 +5386,7 @@ function parsePlayerScores(tokens) {
 
 function processVoiceScore(rawInput) {
   if (blockIfViewOnly()) return;
+  state.addedToSeason = false; // Änderung => Schutz vor „Neue Runde" wieder aktiv
 
   const status = document.getElementById("voiceStatus");
   const transcripts = Array.isArray(rawInput) ? rawInput : [rawInput];
@@ -6394,6 +6413,9 @@ function addCurrentRoundToSeason() {
   const season = loadSeason();
   season.rounds.push(snap);
   saveSeason(season);
+  // Merker: Diese Runde ist gesichert – "Neue Runde" braucht dann keine strenge Abfrage mehr.
+  state.addedToSeason = true;
+  saveState(false);
   showToast("Runde zur Saison hinzugefügt");
 }
 
@@ -6459,10 +6481,9 @@ function createSeasonCsv() {
   const season = loadSeason();
   const oom = computeOrderOfMerit(season);
 
-  // Wertungsgrenze wie in der Tabelle: offiziell gewertet ab einem Drittel
-  // der bisherigen Saison-Runden. Nicht gewertete bekommen keine Platznummer.
-  const total = season.rounds.length;
-  const threshold = Math.max(1, Math.ceil(total / 3));
+  // Feste Wertungsgrenze wie in der Bildschirm-Tabelle.
+  // Nicht gewertete bekommen keine Platznummer.
+  const threshold = OOM_MIN_ROUNDS;
 
   const ranked = oom.filter(p => p.rounds >= threshold);
   const unranked = oom.filter(p => p.rounds < threshold);
@@ -6504,19 +6525,14 @@ function openSeasonTable() {
   const season = loadSeason();
   const oom = computeOrderOfMerit(season);
 
-  const matchCount = season.rounds.filter(r => r.mode === "match").length;
-
   let html = "<div style='padding:14px; height:100%; overflow:auto;'>";
-  html += "<h3 style='margin:0 0 4px;'>🏅 Order of Merit</h3>";
-  html += "<div class='help' style='margin-bottom:10px;'>" + season.rounds.length + " Runde(n) gespeichert" +
-          (matchCount ? " (davon " + matchCount + " Matchplay)" : "") + "</div>";
+  html += "<h3 style='margin:0 0 10px;'>🏅 Order of Merit</h3>";
 
   if (oom.length === 0) {
     html += "<p class='help'>Noch keine Runden in der Saison. Über „⛳ Loch 19 → ➕ Runde zur Saison hinzufügen“ nimmst du die aktuelle Runde auf.</p>";
   } else {
-    // Wertungsgrenze nur über Kopenhagen-Runden (Lochspiele zählen nicht fürs Ranking).
-    const total = season.rounds.filter(r => r.mode !== "match").length;
-    const threshold = Math.max(1, Math.ceil(total / 3));
+    // Feste Wertungsgrenze (Kopenhagen-Runden; Matchplay zählt nicht fürs Ranking).
+    const threshold = OOM_MIN_ROUNDS;
     const ranked = oom.filter(p => p.rounds >= threshold);
     const unranked = oom.filter(p => p.rounds < threshold);
 
@@ -6527,7 +6543,7 @@ function openSeasonTable() {
       html += renderOomTable(unranked, false);
     }
 
-    html += "<div class='help' style='margin-top:8px;'>Gewertet nach Ø&nbsp;Punkten pro Kopenhagen-Runde. Offizielle Wertung ab " + threshold + " Runde(n) (ein Drittel der Kopenhagen-Runden). Ø&nbsp;Brutto aus allen vollen 18-Loch-Runden (auch Matchplay). (+N) hinter den Runden = zusätzliche Matchplay-Runden. Tippe auf einen Namen für das Spielerprofil.</div>";
+    html += "<div class='help' style='margin-top:8px;'>Gewertet nach Ø&nbsp;Punkten pro Kopenhagen-Runde. Offizielle Wertung ab " + threshold + " Kopenhagen-Runden. Ø&nbsp;Brutto aus allen vollen 18-Loch-Runden (auch Matchplay). (+N) hinter den Runden = zusätzliche Matchplay-Runden. Tippe auf einen Namen für das Spielerprofil.</div>";
   }
 
   if (season.rounds.length) {
