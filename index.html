@@ -1777,7 +1777,17 @@ input.score-triplebogey {
 
 .hole-confirm-btn.confirmed.holding::after {
   width: 100%;
-  transition: width 600ms linear;
+  transition: width 1200ms linear;
+}
+
+/* Bestätigtes Loch: Score-Eingabe gesperrt, bis per Halten entsperrt wird. */
+.score-stepper.locked .step-btn {
+  opacity: .28;
+  pointer-events: none;
+}
+.score-stepper.locked input {
+  background: #f2f5f1;
+  border-style: dashed;
 }
 
 /* Wrapper, damit das Abbrechen-✕ in der Ecke des Bestätigen-Buttons sitzt. */
@@ -3467,10 +3477,16 @@ function buildScoreStepper(holeKey, playerIndex, holeDef, grossVal) {
   const wrap = document.createElement("div");
   wrap.className = "score-stepper";
 
+  // Bestätigtes Loch: Eingaben gesperrt. Erst „hold to edit" gibt sie wieder frei –
+  // so kann ein Fehltipp auf +/- einen fertigen Score nicht mehr verändern.
+  const locked = !!(state.holes[holeKey] && state.holes[holeKey].confirmed);
+  if (locked) wrap.classList.add("locked");
+
   const minus = document.createElement("button");
   minus.type = "button";
   minus.className = "step-btn step-minus";
   minus.textContent = "−";
+  minus.disabled = locked;
   minus.addEventListener("click", (e) => { e.stopPropagation(); stepScore(holeKey, playerIndex, -1); });
 
   const input = document.createElement("input");
@@ -3482,6 +3498,7 @@ function buildScoreStepper(holeKey, playerIndex, holeDef, grossVal) {
   input.dataset.player = String(playerIndex);
   input.value = (grossVal === null || grossVal === undefined || grossVal === "") ? "" : String(grossVal);
   input.placeholder = String(getDefaultScoreForHole(holeDef));
+  input.readOnly = locked;
   const scoreClass = getScoreClassForGross(holeDef, grossVal);
   if (scoreClass) input.classList.add(scoreClass);
   input.addEventListener("focus", function() { this.select(); });
@@ -3491,6 +3508,7 @@ function buildScoreStepper(holeKey, playerIndex, holeDef, grossVal) {
   plus.type = "button";
   plus.className = "step-btn step-plus";
   plus.textContent = "+";
+  plus.disabled = locked;
   plus.addEventListener("click", (e) => { e.stopPropagation(); stepScore(holeKey, playerIndex, +1); });
 
   wrap.appendChild(minus);
@@ -3502,16 +3520,23 @@ function buildScoreStepper(holeKey, playerIndex, holeDef, grossVal) {
 // Bestätigtes Loch nur nach längerem Gedrückthalten zum Bearbeiten öffnen
 // (verhindert versehentliches Entsperren). ~600 ms, mit Fortschritts-Füllung.
 function attachLongPressEdit(btn, holeKey) {
-  const LONG_PRESS_MS = 600;
+  const LONG_PRESS_MS = 1200;
+  const MOVE_TOLERANCE = 10; // px – darüber gilt es als Scrollen, nicht als Halten
   let timer = null;
+  let startX = 0, startY = 0;
 
   const start = (e) => {
     e.stopPropagation();
     if (timer) clearTimeout(timer);
+    startX = e.clientX;
+    startY = e.clientY;
     btn.classList.add("holding");
     timer = setTimeout(() => {
       timer = null;
       btn.classList.remove("holding");
+      // Spürbare/sichtbare Rückmeldung, damit ein Entsperren nie unbemerkt bleibt.
+      try { if (navigator.vibrate) navigator.vibrate(40); } catch (err) {}
+      showToast("🔓 Loch entsperrt – Score kann geändert werden");
       editHole(holeKey);
     }, LONG_PRESS_MS);
   };
@@ -3519,11 +3544,18 @@ function attachLongPressEdit(btn, holeKey) {
     if (timer) { clearTimeout(timer); timer = null; }
     btn.classList.remove("holding");
   };
+  // Beim Scrollen/Verrutschen abbrechen – nur bewusstes Halten entsperrt.
+  const moveCancel = (e) => {
+    if (!timer) return;
+    if (Math.abs(e.clientX - startX) > MOVE_TOLERANCE ||
+        Math.abs(e.clientY - startY) > MOVE_TOLERANCE) cancel();
+  };
 
   btn.addEventListener("pointerdown", start);
   btn.addEventListener("pointerup", cancel);
   btn.addEventListener("pointerleave", cancel);
   btn.addEventListener("pointercancel", cancel);
+  btn.addEventListener("pointermove", moveCancel);
   // Kurzer Tipp darf nichts auslösen; Kontextmenü beim Halten unterdrücken.
   btn.addEventListener("click", (e) => { e.stopPropagation(); e.preventDefault(); });
   btn.addEventListener("contextmenu", (e) => { e.preventDefault(); });
