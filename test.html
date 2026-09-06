@@ -1275,8 +1275,9 @@ input.score-triplebogey {
 .race-runner {
   position: absolute;
   overflow: visible;
+  z-index: 3;
   transform: translate(-50%, -50%);
-  transition: left .8s ease, top .8s ease;
+  transition: left .8s ease, top .8s ease, opacity .35s ease;
   white-space: nowrap;
   display: inline-flex;
   align-items: center;
@@ -1287,6 +1288,7 @@ input.score-triplebogey {
 .race-snail-svg {
   display: block;
   filter: drop-shadow(0 2px 2px rgba(0,0,0,.3));
+  transition: transform .35s cubic-bezier(.3,1.4,.4,1);
 }
 .race-track.racing .race-snail-svg {
   animation: snailWiggle .9s ease-in-out infinite;
@@ -1367,6 +1369,37 @@ input.score-triplebogey {
   color: #fff;
   text-shadow: 0 4px 14px rgba(0,0,0,.45);
   animation: countPop .8s ease-out;
+}
+
+/* Startvorstellung: Abdunklung, Scheinwerfer und Bahn-Schilder */
+.race-dim {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: rgba(0,0,0,.34);
+  opacity: 1;
+  transition: opacity .5s ease;
+  pointer-events: none;
+}
+.race-spot {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 52px;
+  z-index: 2;
+  opacity: 0;
+  border-radius: 8px;
+  background: linear-gradient(90deg, rgba(255,255,255,.26), rgba(255,255,255,.04));
+  transition: top .4s cubic-bezier(.3,1.4,.4,1), opacity .3s ease;
+  pointer-events: none;
+}
+.race-runner.intro-pending { opacity: .2; }
+.race-runner.intro-pending .race-runner-name { opacity: 0; }
+.race-runner.intro-on .race-snail-svg { transform: scale(1.25); }
+.race-runner.intro-on .race-runner-name,
+.race-runner.intro-shown .race-runner-name {
+  font-size: 13px;
+  padding: 4px 10px;
 }
 @keyframes countPop {
   from { transform: scale(2.2); opacity: 0; }
@@ -5860,7 +5893,8 @@ function getRaceRunnerHtml(playerIndex, name, points, labelLeft) {
 
   return (
     getRaceSnailSvg(color) +
-    "<span class='race-runner-name" + (labelLeft ? " name-left" : "") + "'>" +
+    "<span class='race-runner-name" + (labelLeft ? " name-left" : "") +
+      "' style='background:" + color + ";color:#fff;border-color:rgba(255,255,255,.85);'>" +
     escapeHtml(name) +
     (points === null ? "" : " (" + formatNum(points) + ")") +
     "</span>"
@@ -5899,7 +5933,11 @@ function clearRaceFinaleFx() {
   const track = document.getElementById("raceTrack");
   if (!track) return;
   track.classList.remove("racing");
-  track.querySelectorAll(".race-photo-flash, .race-winner-banner, .race-result, .race-confetti-piece, .race-trail-dot, .race-countdown").forEach(el => el.remove());
+  track.querySelectorAll(".race-photo-flash, .race-winner-banner, .race-result, .race-confetti-piece, .race-trail-dot, .race-countdown, .race-dim, .race-spot").forEach(el => el.remove());
+  for (let i = 0; i < 4; i++) {
+    const runner = document.getElementById("raceRunner_" + i);
+    if (runner) runner.classList.remove("intro-pending", "intro-on", "intro-shown");
+  }
 }
 
 // Automatischer Kommentar zum aktuellen Rennschritt.
@@ -5992,7 +6030,9 @@ function runRaceFinale(history) {
     if (n) n.textContent = "🥇 " + n.textContent;
   }
 
-  // 2) Die Verfolger laufen nacheinander ins Ziel
+  // 2) Die Verfolger laufen kurz danach nacheinander ins Ziel
+  const RACE_FINISH_START = 1700;
+  const RACE_FINISH_GAP = 550;
   const finishLeft = track.clientWidth - getRaceFinishRight();
   ranking.forEach((p, idx) => {
     if (idx === 0) return;
@@ -6003,7 +6043,7 @@ function runRaceFinale(history) {
       const n = runner.querySelector(".race-runner-name");
       if (n) n.textContent = getRaceMedal(idx + 1) + " " + n.textContent;
       playRaceTick();
-    }, 3000 + idx * 800));
+    }, RACE_FINISH_START + idx * RACE_FINISH_GAP));
   });
 
   // 3) Konfetti + Siegerehrung (Endstand + Brutto-Nebenwertung)
@@ -6016,7 +6056,7 @@ function runRaceFinale(history) {
     if (comment) comment.textContent = "🏆 Siegerehrung: " + ranking[0].name + " gewinnt – Glückwunsch!";
     playRankingChangeSound();
     track.classList.remove("racing");
-  }, 3000 + ranking.length * 800 + 300));
+  }, RACE_FINISH_START + ranking.length * RACE_FINISH_GAP + 300));
 }
 
 function openRaceReplay() {
@@ -6147,7 +6187,7 @@ track.appendChild(finishMarker);
     if (banner) banner.style.display = "none";
   }
 
-  // Direkt mit Countdown 3-2-1 losrennen.
+  // Direkt mit Countdown + Startvorstellung losrennen.
   if (history.length > 1) startRaceWithCountdown();
 }
 
@@ -6235,7 +6275,14 @@ function showRaceStep(history, stepIndex) {
   if (timeline) timeline.value = String(stepIndex);
 }
 
-// Countdown 3-2-1, dann Rennstart.
+// 5 Sekunden Countdown, dann Startvorstellung der Spieler, dann Rennstart.
+function raceIntroMsPerPlayer() {
+  const n = state.playerCount;
+  if (n <= 2) return 1300;
+  if (n === 3) return 1100;
+  return 900;
+}
+
 function startRaceWithCountdown() {
   const history = getRaceHistory();
   if (history.length <= 1) {
@@ -6249,20 +6296,84 @@ function startRaceWithCountdown() {
   showRaceStep(history, 0);
   setRaceButton(true);
 
+  const comment = document.getElementById("raceComment");
+  if (comment) comment.textContent = "";
+
+  const dim = document.createElement("div");
+  dim.className = "race-dim";
+  track.appendChild(dim);
+
+  const spot = document.createElement("div");
+  spot.className = "race-spot";
+  track.appendChild(spot);
+
   const cd = document.createElement("div");
   cd.className = "race-countdown";
   track.appendChild(cd);
-  const seq = ["3", "2", "1", "Los!"];
-  seq.forEach((txt, i) => {
+
+  // Schilder zeigen während der Vorstellung "Bahn N · Name".
+  for (let i = 0; i < state.playerCount; i++) {
+    const runner = document.getElementById("raceRunner_" + i);
+    if (!runner) continue;
+    const label = runner.querySelector(".race-runner-name");
+    if (label) {
+      label.textContent = "Bahn " + (i + 1) + " · " +
+        (state.players[i].name || ("Spieler " + (i + 1)));
+    }
+    runner.classList.add("intro-pending");
+  }
+
+  // Phase 1: 5 Sekunden Countdown – Zeit, das Handy herumzureichen.
+  const countdown = ["5", "4", "3", "2", "1"];
+  countdown.forEach((txt, i) => {
     raceFinaleTimers.push(setTimeout(() => {
       cd.innerHTML = "<span>" + txt + "</span>";
       playRaceTick();
-    }, i * 800));
+    }, i * 1000));
   });
+
+  // Phase 2: Spieler nacheinander im Scheinwerfer vorstellen, Schilder bleiben stehen.
+  const introStart = countdown.length * 1000;
+  const perPlayer = raceIntroMsPerPlayer();
+  for (let i = 0; i < state.playerCount; i++) {
+    raceFinaleTimers.push(setTimeout(() => {
+      cd.innerHTML = "";
+      for (let k = 0; k < state.playerCount; k++) {
+        const runner = document.getElementById("raceRunner_" + k);
+        if (!runner) continue;
+        runner.classList.remove("intro-pending", "intro-on", "intro-shown");
+        runner.classList.add(k === i ? "intro-on" : (k < i ? "intro-shown" : "intro-pending"));
+      }
+      spot.style.opacity = "1";
+      spot.style.top = "calc(" + getRaceTopForPlayer(i) + "% - 26px)";
+      if (comment) {
+        comment.textContent = "Bahn " + (i + 1) + ": " +
+          (state.players[i].name || ("Spieler " + (i + 1)));
+      }
+      playRaceTick();
+    }, introStart + i * perPlayer));
+  }
+
+  // Phase 3: Los! – Bahnnummern weg, normale Schilder, Rennen startet.
+  const goAt = introStart + state.playerCount * perPlayer;
+  raceFinaleTimers.push(setTimeout(() => {
+    spot.style.opacity = "0";
+    dim.style.opacity = "0";
+    for (let k = 0; k < state.playerCount; k++) {
+      const runner = document.getElementById("raceRunner_" + k);
+      if (runner) runner.classList.remove("intro-pending", "intro-on", "intro-shown");
+    }
+    showRaceStep(history, 0);
+    cd.innerHTML = "<span>Los!</span>";
+    playRaceTick();
+  }, goAt));
+
   raceFinaleTimers.push(setTimeout(() => {
     cd.remove();
+    spot.remove();
+    dim.remove();
     startRaceReplay();
-  }, seq.length * 800));
+  }, goAt + 800));
 }
 
 let raceStarted = false;
