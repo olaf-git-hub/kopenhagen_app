@@ -7053,9 +7053,12 @@ function adminHash(s) {
 function isAdminDevice() {
   return localStorage.getItem(ADMIN_KEY) === "1";
 }
-function requireAdmin() {
-  if (isAdminDevice()) return true;
-  const pw = prompt("Admin-Passwort:");
+// force = true: Passwort auch auf einem bereits freigeschalteten Gerät verlangen.
+// Für unwiderrufliche Aktionen ist die Gerätefreischaltung wertlos – sie macht genau
+// das Gerät des Admins schutzlos, auf dem am häufigsten gelöscht wird.
+function requireAdmin(force, hinweis) {
+  if (!force && isAdminDevice()) return true;
+  const pw = prompt(hinweis ? (hinweis + "\n\nZum Bestätigen das Admin-Passwort eingeben:") : "Admin-Passwort:");
   if (pw === null) return false;
   if (adminHash(pw) === ADMIN_HASH) {
     localStorage.setItem(ADMIN_KEY, "1");
@@ -7579,11 +7582,16 @@ function wireSeasonOverlayEvents() {
   root.querySelectorAll(".season-del").forEach(btn => {
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
-      if (!requireAdmin()) return;
       const id = Number(btn.dataset.id);
-      const cloudHinweis = loadCloudConfig() ? "\nDie Löschung wird über die Cloud auf alle Geräte übertragen." : "";
-      if (!confirm("Diese Runde aus der Saison löschen?" + cloudHinweis)) return;
       const season = loadSeason();
+      const runde = season.rounds.filter(r => Number(r.id) === id)[0];
+      const bez = runde
+        ? ((runde.dateText || "") + (runde.courseName ? " · " + runde.courseName : ""))
+        : ("ID " + id);
+      const cloudHinweis = loadCloudConfig()
+        ? "\nDie Löschung wird über die Cloud auf ALLE Geräte übertragen."
+        : "";
+      if (!requireAdmin(true, "Diese Runde endgültig löschen?\n\n" + bez + cloudHinweis)) return;
       season.rounds = season.rounds.filter(r => Number(r.id) !== id);
       // Lösch-Merkliste: verhindert, dass der Cloud-Abgleich die Runde zurückbringt.
       const del = (season.deleted || []).map(Number);
@@ -7617,12 +7625,11 @@ function wireSeasonOverlayEvents() {
 
   const newBtn = root.querySelector("#seasonNewBtn");
   if (newBtn) newBtn.addEventListener("click", () => {
-    if (!requireAdmin()) return;
     const cfg = loadCloudConfig();
     const frage = cfg
       ? "Neue Saison starten? Die aktuelle Saison wird gelöscht – auch in der Cloud, für ALLE Geräte! Vorher am besten sichern."
       : "Neue Saison starten? Die aktuelle Saison wird gelöscht – vorher am besten sichern!";
-    if (!confirm(frage)) return;
+    if (!requireAdmin(true, frage)) return;
     // resetAt merkt den Reset-Zeitpunkt: ältere Runden werden beim Abgleich dauerhaft aussortiert,
     // damit kein Gerät die alte Saison per Merge zurückbringt.
     const leer = { v: 1, name: "Saison", rounds: [], resetAt: Date.now() * 1000 };
