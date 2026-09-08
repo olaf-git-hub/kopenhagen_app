@@ -2314,14 +2314,15 @@ body.view-only { padding-top: 30px; }
   margin: 2px 0 0;
 }
 
-.match-chart .mc-hole {
-  font-size: 10px;
-  fill: var(--muted);
-}
-
 .match-chart .mc-axis {
   font-size: 11px;
   font-weight: 900;
+}
+
+.match-chart .mc-val {
+  font-size: 9px;
+  font-weight: 900;
+  fill: #fff;
 }
 
 .mk-row {
@@ -6642,13 +6643,16 @@ function buildMatchChartSvg(steps, names) {
     if (s.lead > maxUp) maxUp = s.lead;
     if (-s.lead > maxDown) maxDown = -s.lead;
   });
-  const unit = Math.min(16, 46 / Math.max(1, maxUp, maxDown));
-  const upPx = maxUp * unit, downPx = maxDown * unit;
+  // Feste 16 px je Loch Vorsprung – darunter passt die Zahl nicht mehr in den Balken.
+  const unit = 16;
+  // Ober- und unterhalb der Achse immer etwas Luft freihalten.
+  const upSpace = Math.max(maxUp * unit, 14);
+  const downSpace = Math.max(maxDown * unit, 14);
   // Namen gehören an die Achse: ohne sie liest sich ein Balken nach unten als
   // „schlecht gespielt“ statt als „der andere führt“.
-  const mid = 18 + upPx;
-  const lowLabelY = mid + downPx + 14;
-  const H = lowLabelY + 15;
+  const mid = 14 + upSpace;
+  const lowLabelY = mid + downSpace + 13;
+  const H = lowLabelY + 5;
 
   let svg = "<svg viewBox='0 0 " + W + " " + H.toFixed(1) + "' class='match-chart' role='img'>";
   svg += "<text x='0' y='10' class='mc-axis' fill='" + racePlayerColors[0] + "'>" +
@@ -6658,25 +6662,35 @@ function buildMatchChartSvg(steps, names) {
   svg += "<line x1='0' y1='" + mid.toFixed(1) + "' x2='" + W + "' y2='" + mid.toFixed(1) +
          "' stroke='#c9c9c4' stroke-width='1'/>";
 
+  // Wende nach Loch 9: gestrichelte Senkrechte, vor den Balken gezeichnet und daher
+  // von ihnen verdeckt – so kann sich nichts überlappen.
+  const turnHole = Math.floor((getCourseHoles().length || 18) / 2);
+  let turnIdx = -1;
+  steps.forEach((s, i) => { if (s.hole <= turnHole) turnIdx = i; });
+  if (turnIdx >= 0 && turnIdx < n - 1) {
+    const tx = ((turnIdx + 1) * slot).toFixed(1);
+    svg += "<line x1='" + tx + "' y1='14' x2='" + tx + "' y2='" + (mid + downSpace).toFixed(1) +
+           "' stroke='#c9c9c4' stroke-width='1' stroke-dasharray='3 3'/>";
+  }
+
   steps.forEach((s, i) => {
     const x = i * slot + (slot - bw) / 2;
     if (s.lead === 0) {
-      svg += "<rect x='" + x.toFixed(1) + "' y='" + (mid - 1) + "' width='" + bw.toFixed(1) + "' height='2' rx='1' fill='#9a9a95'/>";
-    } else {
-      const hgt = Math.abs(s.lead) * unit;
-      const y = s.lead > 0 ? mid - hgt : mid;
-      const col = racePlayerColors[s.lead > 0 ? 0 : 1];
-      svg += "<rect x='" + x.toFixed(1) + "' y='" + y.toFixed(1) + "' width='" + bw.toFixed(1) +
-             "' height='" + hgt.toFixed(1) + "' rx='2' fill='" + col + "'/>";
+      svg += "<rect x='" + x.toFixed(1) + "' y='" + (mid - 1).toFixed(1) + "' width='" + bw.toFixed(1) +
+             "' height='2' rx='1' fill='#9a9a95'/>";
+      return;
     }
+    const hgt = Math.abs(s.lead) * unit;
+    const y = s.lead > 0 ? mid - hgt : mid;
+    const col = racePlayerColors[s.lead > 0 ? 0 : 1];
+    svg += "<rect x='" + x.toFixed(1) + "' y='" + y.toFixed(1) + "' width='" + bw.toFixed(1) +
+           "' height='" + hgt.toFixed(1) + "' rx='2' fill='" + col + "'/>";
+    // Vorsprung als Zahl im Balken – bei All Square (0) bleibt der Balken leer.
+    const ty = s.lead > 0 ? (mid - hgt + 9) : (mid + hgt - 3);
+    svg += "<text x='" + (x + bw / 2).toFixed(1) + "' y='" + ty.toFixed(1) +
+           "' class='mc-val' text-anchor='middle'>" + Math.abs(s.lead) + "</text>";
   });
 
-  const marks = n <= 3 ? steps.map((s, i) => i) : [0, Math.floor((n - 1) / 2), n - 1];
-  marks.forEach(i => {
-    const x = i * slot + slot / 2;
-    svg += "<text x='" + x.toFixed(1) + "' y='" + (H - 4).toFixed(1) + "' class='mc-hole' text-anchor='middle'>" +
-           steps[i].hole + "</text>";
-  });
 
   svg += "</svg>";
   return svg;
@@ -6783,8 +6797,7 @@ function openMatchReview() {
   // Matchverlauf
   {
     let inner = buildMatchChartSvg(steps, names);
-    inner += "<div class='hl-note'>" + escapeHtml(formatMatchStatus(m)) +
-             " · Höhe des Balkens = Vorsprung nach dem Loch.</div>";
+    inner += "<div class='hl-note'>" + escapeHtml(formatMatchStatus(m)) + "</div>";
     html += card("📈 Matchverlauf", inner);
   }
 
