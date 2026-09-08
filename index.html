@@ -2319,21 +2319,9 @@ body.view-only { padding-top: 30px; }
   fill: var(--muted);
 }
 
-.mc-legend {
-  display: flex;
-  gap: 14px;
-  font-size: 12px;
-  font-weight: 800;
-  margin-bottom: 4px;
-}
-
-.mc-dot {
-  display: inline-block;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  margin-right: 5px;
-  vertical-align: -1px;
+.match-chart .mc-axis {
+  font-size: 11px;
+  font-weight: 900;
 }
 
 .mk-row {
@@ -6642,7 +6630,7 @@ function buildMatchTimeline(calc) {
 }
 
 // Balken um die Nulllinie: nach oben führt Spieler 1, nach unten Spieler 2.
-function buildMatchChartSvg(steps) {
+function buildMatchChartSvg(steps, names) {
   const W = 340;
   const n = steps.length || 1;
   const slot = W / n;
@@ -6656,11 +6644,19 @@ function buildMatchChartSvg(steps) {
   });
   const unit = Math.min(16, 46 / Math.max(1, maxUp, maxDown));
   const upPx = maxUp * unit, downPx = maxDown * unit;
-  const mid = 10 + upPx;
-  const H = mid + downPx + 20;
+  // Namen gehören an die Achse: ohne sie liest sich ein Balken nach unten als
+  // „schlecht gespielt“ statt als „der andere führt“.
+  const mid = 18 + upPx;
+  const lowLabelY = mid + downPx + 14;
+  const H = lowLabelY + 15;
 
   let svg = "<svg viewBox='0 0 " + W + " " + H.toFixed(1) + "' class='match-chart' role='img'>";
-  svg += "<line x1='0' y1='" + mid + "' x2='" + W + "' y2='" + mid + "' stroke='#c9c9c4' stroke-width='1'/>";
+  svg += "<text x='0' y='10' class='mc-axis' fill='" + racePlayerColors[0] + "'>" +
+         escapeHtml(names[0]) + " vorn</text>";
+  svg += "<text x='0' y='" + lowLabelY.toFixed(1) + "' class='mc-axis' fill='" + racePlayerColors[1] + "'>" +
+         escapeHtml(names[1]) + " vorn</text>";
+  svg += "<line x1='0' y1='" + mid.toFixed(1) + "' x2='" + W + "' y2='" + mid.toFixed(1) +
+         "' stroke='#c9c9c4' stroke-width='1'/>";
 
   steps.forEach((s, i) => {
     const x = i * slot + (slot - bw) / 2;
@@ -6678,7 +6674,7 @@ function buildMatchChartSvg(steps) {
   const marks = n <= 3 ? steps.map((s, i) => i) : [0, Math.floor((n - 1) / 2), n - 1];
   marks.forEach(i => {
     const x = i * slot + slot / 2;
-    svg += "<text x='" + x.toFixed(1) + "' y='" + (H - 6) + "' class='mc-hole' text-anchor='middle'>" +
+    svg += "<text x='" + x.toFixed(1) + "' y='" + (H - 4).toFixed(1) + "' class='mc-hole' text-anchor='middle'>" +
            steps[i].hole + "</text>";
   });
 
@@ -6786,11 +6782,7 @@ function openMatchReview() {
 
   // Matchverlauf
   {
-    let inner = "<div class='mc-legend'>";
-    inner += "<span><span class='mc-dot' style='background:" + racePlayerColors[0] + "'></span>" + escapeHtml(names[0]) + "</span>";
-    inner += "<span><span class='mc-dot' style='background:" + racePlayerColors[1] + "'></span>" + escapeHtml(names[1]) + "</span>";
-    inner += "</div>";
-    inner += buildMatchChartSvg(steps);
+    let inner = buildMatchChartSvg(steps, names);
     inner += "<div class='hl-note'>" + escapeHtml(formatMatchStatus(m)) +
              " · Höhe des Balkens = Vorsprung nach dem Loch.</div>";
     html += card("📈 Matchverlauf", inner);
