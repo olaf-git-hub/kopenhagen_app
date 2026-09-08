@@ -2306,6 +2306,55 @@ body.view-only { padding-top: 30px; }
   margin-top: 2px;
 }
 
+.match-chart {
+  display: block;
+  width: 100%;
+  max-width: 380px;
+  height: auto;
+  margin: 2px 0 0;
+}
+
+.match-chart .mc-hole {
+  font-size: 10px;
+  fill: var(--muted);
+}
+
+.mc-legend {
+  display: flex;
+  gap: 14px;
+  font-size: 12px;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.mc-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  margin-right: 5px;
+  vertical-align: -1px;
+}
+
+.mk-row {
+  display: flex;
+  gap: 8px;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.mk-hole {
+  flex: 0 0 auto;
+  min-width: 56px;
+  font-weight: 900;
+  color: var(--accent-dark);
+}
+
+.mk-text {
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
 /* Replay-Kopf */
 .race-head strong { font-size: 16px; }
 
@@ -4083,8 +4132,14 @@ function renderMatchSummary() {
 }
 
 function renderSummary() {
+  const match = isMatchPlay();
   const rb = document.getElementById("raceReplayBtn");
-  if (rb) rb.style.display = isMatchPlay() ? "none" : "";
+  if (rb) rb.style.display = match ? "none" : "";
+  const hb = document.getElementById("highlightsBtn");
+  if (hb) {
+    hb.style.display = "";
+    hb.textContent = match ? "🤝 Matchplay-Rückblick" : "🏆 Rundenrückblick";
+  }
 
   if (isMatchPlay()) { renderMatchSummary(); return; }
 
@@ -6555,9 +6610,252 @@ function onRaceTimelineInput() {
   showRaceStep(history, step);
 }
 
+// ---- Matchplay-Rückblick ----------------------------------------------------
+// Eigene Karten statt des Kopenhagen-Rückblicks: im Matchplay gibt es keine Punkte,
+// die Dramaturgie steckt im Verlauf des Matchstands.
+
+// Loch für Loch: wer gewann netto bzw. brutto und wie stand das Match danach.
+function buildMatchTimeline(calc) {
+  calc = calc || calculateRound();
+  const steps = [];
+  let lead = 0;
+  for (const h of getCourseHoles()) {
+    const key = String(h.hole);
+    const data = state.holes[key];
+    const res = calc.holeResults[key];
+    if (!(data && data.confirmed && res && res.complete)) continue;
+    const n0 = res.netto[0], n1 = res.netto[1];
+    const g0 = Number(data.gross[0]), g1 = Number(data.gross[1]);
+    const netWinner = n0 < n1 ? 0 : (n1 < n0 ? 1 : -1);
+    const grossWinner = g0 < g1 ? 0 : (g1 < g0 ? 1 : -1);
+    if (netWinner === 0) lead++;
+    else if (netWinner === 1) lead--;
+    steps.push({
+      hole: h.hole,
+      netWinner,
+      grossWinner,
+      strokeDiff: (res.strokes[0] || 0) - (res.strokes[1] || 0),
+      lead
+    });
+  }
+  return steps;
+}
+
+// Balken um die Nulllinie: nach oben führt Spieler 1, nach unten Spieler 2.
+function buildMatchChartSvg(steps) {
+  const W = 340;
+  const n = steps.length || 1;
+  const slot = W / n;
+  const bw = Math.max(3, Math.min(14, slot - 4));
+
+  // Höhe nur so groß wie nötig: führt nie jemand zurück, entfällt der Platz nach unten.
+  let maxUp = 0, maxDown = 0;
+  steps.forEach(s => {
+    if (s.lead > maxUp) maxUp = s.lead;
+    if (-s.lead > maxDown) maxDown = -s.lead;
+  });
+  const unit = Math.min(16, 46 / Math.max(1, maxUp, maxDown));
+  const upPx = maxUp * unit, downPx = maxDown * unit;
+  const mid = 10 + upPx;
+  const H = mid + downPx + 20;
+
+  let svg = "<svg viewBox='0 0 " + W + " " + H.toFixed(1) + "' class='match-chart' role='img'>";
+  svg += "<line x1='0' y1='" + mid + "' x2='" + W + "' y2='" + mid + "' stroke='#c9c9c4' stroke-width='1'/>";
+
+  steps.forEach((s, i) => {
+    const x = i * slot + (slot - bw) / 2;
+    if (s.lead === 0) {
+      svg += "<rect x='" + x.toFixed(1) + "' y='" + (mid - 1) + "' width='" + bw.toFixed(1) + "' height='2' rx='1' fill='#9a9a95'/>";
+    } else {
+      const hgt = Math.abs(s.lead) * unit;
+      const y = s.lead > 0 ? mid - hgt : mid;
+      const col = racePlayerColors[s.lead > 0 ? 0 : 1];
+      svg += "<rect x='" + x.toFixed(1) + "' y='" + y.toFixed(1) + "' width='" + bw.toFixed(1) +
+             "' height='" + hgt.toFixed(1) + "' rx='2' fill='" + col + "'/>";
+    }
+  });
+
+  const marks = n <= 3 ? steps.map((s, i) => i) : [0, Math.floor((n - 1) / 2), n - 1];
+  marks.forEach(i => {
+    const x = i * slot + slot / 2;
+    svg += "<text x='" + x.toFixed(1) + "' y='" + (H - 6) + "' class='mc-hole' text-anchor='middle'>" +
+           steps[i].hole + "</text>";
+  });
+
+  svg += "</svg>";
+  return svg;
+}
+
+// Schlüsselmomente: erste Führung, Ausgleich, Führungswechsel, dormie, Entscheidung.
+function buildMatchKeyHoles(steps, names) {
+  const total = getCourseHoles().length || 18;
+  const items = [];
+  let prev = 0, seenLead = false;
+
+  steps.forEach(s => {
+    if (prev === 0 && s.lead !== 0) {
+      const who = names[s.lead > 0 ? 0 : 1];
+      items.push({ hole: s.hole, text: who + (seenLead ? " geht wieder in Führung" : " geht erstmals in Führung") });
+      seenLead = true;
+    } else if (prev !== 0 && s.lead === 0) {
+      items.push({ hole: s.hole, text: "Ausgleich – All Square" });
+    } else if (prev !== 0 && s.lead !== 0 && (s.lead > 0) !== (prev > 0)) {
+      items.push({ hole: s.hole, text: names[s.lead > 0 ? 0 : 1] + " dreht das Match" });
+      seenLead = true;
+    }
+    prev = s.lead;
+  });
+
+  let decided = null, dormie = null;
+  steps.forEach((s, i) => {
+    if (decided) return;
+    const remaining = total - (i + 1);
+    if (Math.abs(s.lead) > remaining) {
+      decided = { hole: s.hole, text: names[s.lead > 0 ? 0 : 1] + " gewinnt " + Math.abs(s.lead) + " & " + remaining };
+    } else if (!dormie && s.lead !== 0 && Math.abs(s.lead) === remaining) {
+      dormie = { hole: s.hole, text: "dormie – " + names[s.lead > 0 ? 1 : 0] + " muss jedes Loch gewinnen" };
+    }
+  });
+  if (dormie) items.push(dormie);
+  if (decided) items.push(decided);
+
+  items.sort((a, b) => a.hole - b.hole);
+  return items;
+}
+
+// Längste Serie gewonnener Löcher (mindestens zwei in Folge).
+function longestMatchRun(steps) {
+  let best = null, curWinner = -1, curLen = 0, curFrom = 0;
+  for (const s of steps) {
+    if (s.netWinner >= 0 && s.netWinner === curWinner) {
+      curLen++;
+    } else if (s.netWinner >= 0) {
+      curWinner = s.netWinner; curLen = 1; curFrom = s.hole;
+    } else {
+      curWinner = -1; curLen = 0; continue;
+    }
+    if (curLen >= 2 && (!best || curLen > best.len)) {
+      best = { winner: curWinner, len: curLen, from: curFrom, to: s.hole };
+    }
+  }
+  return best;
+}
+
+// Was haben die Vorgaben am Ausgang verändert? Zwei Effekte: gewonnene Löcher
+// und gerettete Halbe – nur beide zusammen erklären die Differenz zum Brutto.
+function matchStrokeEffect(steps) {
+  const eff = {
+    played: steps.length, strokeHoles: 0, strokeHolesFor: [0, 0],
+    wonNet: [0, 0], wonGross: [0, 0], onlyByStroke: [0, 0], savedByStroke: [0, 0], leadGross: 0
+  };
+  steps.forEach(s => {
+    if (s.strokeDiff !== 0) {
+      eff.strokeHoles++;
+      eff.strokeHolesFor[s.strokeDiff > 0 ? 0 : 1]++;
+    }
+    if (s.netWinner >= 0) eff.wonNet[s.netWinner]++;
+    if (s.grossWinner >= 0) eff.wonGross[s.grossWinner]++;
+    if (s.netWinner >= 0 && s.grossWinner !== s.netWinner) eff.onlyByStroke[s.netWinner]++;
+    if (s.netWinner < 0 && s.grossWinner >= 0) eff.savedByStroke[s.grossWinner === 0 ? 1 : 0]++;
+    if (s.grossWinner === 0) eff.leadGross++;
+    else if (s.grossWinner === 1) eff.leadGross--;
+  });
+  return eff;
+}
+
+function openMatchReview() {
+  const calc = calculateRound();
+  const steps = buildMatchTimeline(calc);
+  if (steps.length === 0) {
+    showToast("Noch keine bestätigten Löcher für den Rückblick");
+    return;
+  }
+
+  const m = calculateMatch(calc);
+  const names = [
+    state.players[0].name || "Spieler 1",
+    state.players[1].name || "Spieler 2"
+  ];
+
+  function card(title, inner) {
+    return "<div class='hl-card'><div class='hl-title'>" + title + "</div><div class='hl-body'>" + inner + "</div></div>";
+  }
+
+  let html = "<div style='padding:14px; height:100%; overflow:auto;'>";
+  html += "<h3 style='margin:0 0 10px;'>🤝 Matchplay-Rückblick</h3>";
+
+  // Matchverlauf
+  {
+    let inner = "<div class='mc-legend'>";
+    inner += "<span><span class='mc-dot' style='background:" + racePlayerColors[0] + "'></span>" + escapeHtml(names[0]) + "</span>";
+    inner += "<span><span class='mc-dot' style='background:" + racePlayerColors[1] + "'></span>" + escapeHtml(names[1]) + "</span>";
+    inner += "</div>";
+    inner += buildMatchChartSvg(steps);
+    inner += "<div class='hl-note'>" + escapeHtml(formatMatchStatus(m)) +
+             " · Höhe des Balkens = Vorsprung nach dem Loch.</div>";
+    html += card("📈 Matchverlauf", inner);
+  }
+
+  // Schlüssellöcher
+  {
+    const items = buildMatchKeyHoles(steps, names);
+    let inner = "";
+    if (items.length === 0) {
+      inner = "<div class='hl-note'>Das Match blieb durchgehend ausgeglichen – kein einziger Führungswechsel.</div>";
+    } else {
+      items.forEach(it => {
+        inner += "<div class='mk-row'><span class='mk-hole'>Loch " + it.hole + "</span><span>" +
+                 escapeHtml(it.text) + "</span></div>";
+      });
+    }
+    const run = longestMatchRun(steps);
+    if (run) {
+      inner += "<div class='hl-note'>Längster Lauf: " + escapeHtml(names[run.winner]) +
+               " gewann die Löcher " + run.from + " bis " + run.to + " in Folge (" + run.len + ").</div>";
+    }
+    html += card("🔑 Schlüssellöcher", inner);
+  }
+
+  // Vorgaben-Effekt – nur wenn es überhaupt Vorgabenunterschiede gab.
+  {
+    const eff = matchStrokeEffect(steps);
+    if (eff.strokeHoles > 0) {
+      let inner = "";
+      for (let i = 0; i < 2; i++) {
+        if (eff.strokeHolesFor[i] === 0) continue;
+        const other = i === 0 ? 1 : 0;
+        let satz = escapeHtml(names[i]) + " bekam an " + eff.strokeHolesFor[i] +
+                   (eff.strokeHolesFor[i] === 1 ? " Loch" : " Löchern") + " einen Schlag mehr.";
+        const won = eff.onlyByStroke[i], saved = eff.savedByStroke[i];
+        if (won === 0 && saved === 0) {
+          satz += " Am Ausgang der Löcher hat das nichts geändert.";
+        } else {
+          const teile = [];
+          if (won > 0) teile.push(won === 1 ? "ein Loch wurde erst dadurch gewonnen" :
+                                              won + " Löcher wurden erst dadurch gewonnen");
+          if (saved > 0) teile.push(saved === 1 ? "ein weiteres endete dadurch geteilt statt verloren" :
+                                                  saved + " weitere endeten dadurch geteilt statt verloren");
+          satz += " " + teile.join(", ").replace(/^./, c => c.toUpperCase()) + ".";
+        }
+        inner += "<div class='mk-text'>" + satz + "</div>";
+      }
+      const grossTxt = eff.leadGross === 0
+        ? "Brutto stand es nach " + eff.played + " Löchern All Square"
+        : "Brutto stand es nach " + eff.played + " Löchern " + Math.abs(eff.leadGross) +
+          " up für " + escapeHtml(names[eff.leadGross > 0 ? 0 : 1]);
+      inner += "<div class='hl-note'>" + grossTxt + " – netto wurde daraus: " +
+               escapeHtml(formatMatchStatus(m)) + ".</div>";
+      html += card("⚖️ Der Vorgaben-Effekt", inner);
+    }
+  }
+
+  html += "</div>";
+  openAnalysisOverlay("🤝 Matchplay-Rückblick", html);
+}
+
 function openHighlights() {
   if (isMatchPlay()) {
-    showToast("Rundenrückblick gibt es nur im Kopenhagen-Modus");
+    openMatchReview();
     return;
   }
   const calc = calculateRound();
