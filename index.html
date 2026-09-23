@@ -199,6 +199,10 @@
       align-items: end;
     }
 
+    .player-line.with-tee {
+      grid-template-columns: 30px 1fr 92px 76px;
+    }
+
     .badge {
       width: 30px;
       height: 30px;
@@ -817,6 +821,10 @@
       .player-line {
         grid-template-columns: 26px 1fr 72px;
         gap: 6px;
+      }
+
+      .player-line.with-tee {
+        grid-template-columns: 26px 1fr 62px 60px;
       }
 
       .badge {
@@ -2106,9 +2114,9 @@ tr.hole-confirmed td:first-child {
   font-weight: 900;
   margin-left: 4px;
 }
-.whs-tee {
+.tee-select {
   width: 100%;
-  padding: 6px 8px;
+  padding: 6px 4px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #fff;
@@ -2723,6 +2731,36 @@ const defaultState = {
   holes: {}
 };
 
+// Velte-Abschläge mit Course Rating / Slope. Alle hier gelisteten sind Par 72.
+// Tee 33 wird bewusst NICHT unterstützt: Par 61 statt 72, also eine eigene Lochtabelle
+// nötig – und er wird bei uns nicht gespielt. Endgültige Entscheidung, nicht nachrüsten.
+// Steht absichtlich vor `state`, damit normalizeState die Werte sicher nutzen kann.
+const VELTE_TEES = [
+  { key: "h61", short: "H 61", label: "Herren · Tee 61", cr: 71.3, slope: 124 },
+  { key: "h56", short: "H 56", label: "Herren · Tee 56", cr: 69.1, slope: 119 },
+  { key: "h52", short: "H 52", label: "Herren · Tee 52", cr: 66.7, slope: 114 },
+  { key: "d56", short: "D 56", label: "Damen · Tee 56",  cr: 75.1, slope: 122 },
+  { key: "d52", short: "D 52", label: "Damen · Tee 52",  cr: 71.7, slope: 120 },
+  { key: "d49", short: "D 49", label: "Damen · Tee 49",  cr: 69.9, slope: 115 }
+];
+// Schlüssel aus der Zeit mit nur zwei Abschlägen.
+const TEE_LEGACY = { herren: "h61", damen: "d52" };
+function teeByKey(key) {
+  const k = TEE_LEGACY[key] || key;
+  for (const t of VELTE_TEES) if (t.key === k) return t;
+  return null;
+}
+// Bei uns spielen nur diese Namen von den Damen-Tees; alle anderen Herren.
+const WHS_FEMALE_NAMES = ["astrid", "jutta", "caroline"];
+function defaultVelteTeeKey(name) {
+  return WHS_FEMALE_NAMES.indexOf(seasonNameKey(name)) >= 0 ? "d52" : "h61";
+}
+// Abschlag einer gespeicherten Runde. Altrunden haben kein `tee` – dort gilt die
+// Annahme, die die App bisher ohnehin getroffen hat (Herren 61 / Damen 52), damit sich
+// rückwirkend keine einzige Zahl ändert.
+function teeForResult(res, name) {
+  return teeByKey(res && res.tee) || teeByKey(defaultVelteTeeKey(name));
+}
 
 let state = loadState();
 
@@ -2950,25 +2988,35 @@ function normalizeState(s) {
   const courseId = courses[s.courseId] ? s.courseId : "velte";
   const courseHoles = courses[courseId].holes;
 
+  // Abschlag je Spieler: gespeicherten Wert übernehmen, sonst nach Namen vorbelegen.
+  const withTee = (name, allowance, tee) => ({
+    name: name,
+    allowance: allowance,
+    tee: (teeByKey(tee) || teeByKey(defaultVelteTeeKey(name))).key
+  });
+
   let players = [];
   if (Array.isArray(s.players) && s.players.length > 0 && typeof s.players[0] === "object") {
-    players = s.players.slice(0, playerCount).map((p, idx) => ({
-      name: (p.name && String(p.name).trim()) ? String(p.name).trim() : "Spieler " + (idx + 1),
-      allowance: Math.max(0, toIntOrZero(p.allowance))
-    }));
+    players = s.players.slice(0, playerCount).map((p, idx) => withTee(
+      (p.name && String(p.name).trim()) ? String(p.name).trim() : "Spieler " + (idx + 1),
+      Math.max(0, toIntOrZero(p.allowance)),
+      p.tee
+    ));
   } else if (Array.isArray(s.players)) {
-    players = s.players.slice(0, playerCount).map((name, idx) => ({
-      name: (name && String(name).trim()) ? String(name).trim() : "Spieler " + (idx + 1),
-      allowance: 0
-    }));
+    players = s.players.slice(0, playerCount).map((name, idx) => withTee(
+      (name && String(name).trim()) ? String(name).trim() : "Spieler " + (idx + 1),
+      0,
+      null
+    ));
   }
 
   while (players.length < playerCount) {
     const idx = players.length;
-    players.push({
-      name: base.players[idx] ? base.players[idx].name : "Spieler " + (idx + 1),
-      allowance: 0
-    });
+    players.push(withTee(
+      base.players[idx] ? base.players[idx].name : "Spieler " + (idx + 1),
+      0,
+      null
+    ));
   }
 
   const holes = {};
@@ -3378,7 +3426,9 @@ function buildSetup() {
 
   for (let i = 0; i < state.playerCount; i++) {
     const wrap = document.createElement("div");
-    wrap.className = "player-line";
+    // Abschlagwahl nur dort, wo CR/Slope hinterlegt sind (Velte).
+    const showTee = getCourse().id === "velte";
+    wrap.className = "player-line" + (showTee ? " with-tee" : "");
 
     const badge = document.createElement("div");
     badge.className = "badge";
@@ -3404,7 +3454,15 @@ inp.addEventListener("focus", () => {
 });
 
     inp.addEventListener("input", () => {
-    state.players[i].name = inp.value.trim() || ("Spieler " + (i + 1));
+    const altName = state.players[i].name;
+    const neuName = inp.value.trim() || ("Spieler " + (i + 1));
+    state.players[i].name = neuName;
+    // Solange der Abschlag noch die Vorbelegung des alten Namens war, zieht er mit um.
+    if (state.players[i].tee === defaultVelteTeeKey(altName)) {
+      state.players[i].tee = defaultVelteTeeKey(neuName);
+      const sel = document.getElementById("tee_" + i);
+      if (sel) sel.value = state.players[i].tee;
+    }
     saveState(false);
     buildTable();
     renderMobileCards();
@@ -3443,6 +3501,33 @@ inp.addEventListener("focus", () => {
     wrap.appendChild(badge);
     wrap.appendChild(fieldWrap);
     wrap.appendChild(allowanceWrap);
+
+    if (showTee) {
+      const teeWrap = document.createElement("div");
+      const teeLabel = document.createElement("label");
+      teeLabel.textContent = "Tee";
+      teeLabel.htmlFor = "tee_" + i;
+
+      const teeSel = document.createElement("select");
+      teeSel.id = "tee_" + i;
+      teeSel.className = "tee-select";
+      for (const t of VELTE_TEES) {
+        const opt = document.createElement("option");
+        opt.value = t.key;
+        opt.textContent = t.short;
+        teeSel.appendChild(opt);
+      }
+      teeSel.value = (teeByKey(state.players[i].tee) || teeByKey(defaultVelteTeeKey(state.players[i].name))).key;
+      teeSel.addEventListener("change", () => {
+        state.players[i].tee = teeSel.value;
+        saveState(false);
+      });
+
+      teeWrap.appendChild(teeLabel);
+      teeWrap.appendChild(teeSel);
+      wrap.appendChild(teeWrap);
+    }
+
     box.appendChild(wrap);
   }
 
@@ -4671,9 +4756,12 @@ function readSetupInputs() {
   for (let i = 0; i < newCount; i++) {
     const inp = document.getElementById("playerName_" + i);
     const allowance = document.getElementById("allowance_" + i);
+    const teeSel = document.getElementById("tee_" + i);
+    const name = (inp && inp.value.trim()) ? inp.value.trim() : ("Spieler " + (i + 1));
     newPlayers.push({
-      name: (inp && inp.value.trim()) ? inp.value.trim() : ("Spieler " + (i + 1)),
-      allowance: allowance ? Math.max(0, toIntOrZero(allowance.value)) : 0
+      name: name,
+      allowance: allowance ? Math.max(0, toIntOrZero(allowance.value)) : 0,
+      tee: ((teeSel && teeByKey(teeSel.value)) || teeByKey(defaultVelteTeeKey(name))).key
     });
   }
 
@@ -7299,6 +7387,10 @@ function buildRoundSnapshot(dateText) {
   results.forEach(r => {
     const pi = snapPlayerNames.indexOf(r.name);
     r.strokes = pi >= 0 ? strokeTotals[pi] : 0;
+    // Abschlag mitschreiben – ohne ihn lässt sich der WHS-Index später nicht sauber rechnen.
+    r.tee = (pi >= 0 && teeByKey(state.players[pi].tee))
+      ? teeByKey(state.players[pi].tee).key
+      : defaultVelteTeeKey(r.name);
   });
 
   // 2er-Lochspiel: nach Lochgewinnen ordnen, Punkte/Merit neutralisieren,
@@ -7948,24 +8040,18 @@ function whsBestCount(m) {
   return 8;
 }
 
-// Velte-Tees mit Course Rating / Slope (geschlechtsabhängig: Herren Tee 61, Damen Tee 52).
-const VELTE_TEES = [
-  { key: "herren", label: "Herren · Tee 61", cr: 71.3, slope: 124 },
-  { key: "damen", label: "Damen · Tee 52", cr: 71.7, slope: 120 }
-];
-// Bei uns spielen nur diese Namen von den Damen-Tees; alle anderen Herren.
-const WHS_FEMALE_NAMES = ["astrid", "caroline"];
-function defaultVelteTeeKey(name) {
-  return WHS_FEMALE_NAMES.indexOf(seasonNameKey(name)) >= 0 ? "damen" : "herren";
-}
-
 // Echter WHS-Index (Annäherung): Schnitt der besten N Score-Differentials der letzten max. 20 Runden.
-// Differential = (113 / Slope) × (Brutto − Course Rating).
-function whsIndexFromGross(grossList, cr, slope) {
-  const recent = grossList.slice(Math.max(0, grossList.length - 20));
+// Differential = (113 / Slope) × (Brutto − Course Rating) – je Runde mit dem Abschlag
+// DIESER Runde. Ein gemeinsames CR/Slope für alle Runden wäre falsch, sobald jemand
+// die Teebox wechselt.
+function velteDifferential(gross, tee) {
+  return (113 / tee.slope) * (gross - tee.cr);
+}
+function whsIndexFromRounds(list) {
+  const recent = list.slice(Math.max(0, list.length - 20));
   const n = whsBestCount(recent.length);
   if (n === 0) return null;
-  const diffs = recent.map(g => (113 / slope) * (g - cr)).sort((a, b) => a - b);
+  const diffs = recent.map(x => velteDifferential(x.gross, x.tee)).sort((a, b) => a - b);
   const bestN = diffs.slice(0, n);
   return { index: bestN.reduce((a, b) => a + b, 0) / n, n: n, m: recent.length };
 }
@@ -7986,7 +8072,7 @@ function buildWhsExplainHtml(m) {
   h += "<div class='whs-formula'>Differential = (113 ÷ Slope) × (Brutto − CR)<br>Index = Ø der <b>besten</b> Differentiale der letzten 20 Runden</div>";
   h += "<div class='whs-mini'>Unter 20 Runden zählen weniger „beste\" (WHS-Tabelle 5.2a) – hervorgehoben: deine Stufe:</div>";
   h += "<div class='whs-grid'>" + cells + "</div>";
-  h += "<div class='whs-mini'>Näherung auf Brutto (ohne Netto-Doppelbogey-Cap), nur Velte vom gewählten Tee – kein offiziell geführtes Handicap.</div>";
+  h += "<div class='whs-mini'>Näherung auf Brutto (ohne Netto-Doppelbogey-Cap), nur volle Velte-Runden – jede mit CR und Slope ihres tatsächlich gespielten Abschlags. Kein offiziell geführtes Handicap.</div>";
   h += "</div>";
   return h;
 }
@@ -8009,11 +8095,15 @@ function openPlayerProfile(name) {
   }
 
   // Nur volle Velte-Runden – Basis für den WHS-Index (CR/Slope gelten nur für Velte).
-  const velteGrossChrono = [];
+  // Der Abschlag hängt an der Runde, nicht am Spieler; bei Altrunden greift die
+  // bisherige Annahme aus teeForResult.
+  const velteRoundsChrono = [];
   for (const r of season.rounds) {
     if (!r.complete || r.courseId !== "velte") continue;
     const me = r.results.find(x => sameSeasonName(x.name, name));
-    if (me && me.gross !== null && me.gross !== undefined) velteGrossChrono.push(Number(me.gross));
+    if (me && me.gross !== null && me.gross !== undefined) {
+      velteRoundsChrono.push({ id: r.id, gross: Number(me.gross), tee: teeForResult(me, name) });
+    }
   }
 
   const title = document.getElementById("playerProfileTitle");
@@ -8063,18 +8153,19 @@ function openPlayerProfile(name) {
     html += "</div>";
   }
 
-  if (velteGrossChrono.length >= 3) {
-    const defKey = defaultVelteTeeKey(name);
+  if (velteRoundsChrono.length >= 3) {
+    const whsRes = whsIndexFromRounds(velteRoundsChrono);
+    const whsRecent = velteRoundsChrono.slice(Math.max(0, velteRoundsChrono.length - 20));
+    const teeCount = {};
+    whsRecent.forEach(x => { teeCount[x.tee.key] = (teeCount[x.tee.key] || 0) + 1; });
+    const teeTxt = Object.keys(teeCount).map(k => teeByKey(k).short + " (" + teeCount[k] + "×)").join(" · ");
     html += "<div class='profile-roundstat' id='whsCard'>";
     html += "<div class='profile-roundstat-head'>🌍 WHS-Handicap-Index <span class='whs-info' id='whsInfoBtn' title='Erklärung anzeigen'>ⓘ</span></div>";
-    html += "<div class='help' style='margin:0 0 4px;'>Velte · Abschlag/Tee:</div>";
-    html += "<select id='whsTee' class='whs-tee'>";
-    for (const t of VELTE_TEES) {
-      html += "<option value='" + t.key + "'" + (t.key === defKey ? " selected" : "") + ">" + t.label + " (CR " + formatNum(t.cr) + " / Slope " + t.slope + ")</option>";
+    html += "<div class='profile-roundstat-val'>Index:<strong>" + (whsRes ? formatNum(whsRes.index) : "–") + "</strong></div>";
+    if (whsRes) {
+      html += "<div class='help' style='margin:2px 0 0;'>aus den besten " + whsRes.n + " der letzten " + whsRes.m + " Velte-Runden</div>";
     }
-    html += "</select>";
-    html += "<div class='profile-roundstat-val' style='margin-top:8px;'>Index:<strong id='whsIdx'>–</strong></div>";
-    html += "<div class='help' id='whsSub' style='margin:2px 0 0;'></div>";
+    html += "<div class='help' style='margin:2px 0 0;'>Abschlag: " + teeTxt + "</div>";
     html += "</div>";
   }
 
@@ -8095,19 +8186,23 @@ function openPlayerProfile(name) {
   }
 
   // WHS-Markierung: welche Runden zählen (beste N) bzw. liegen im Fenster der letzten 20 wertbaren.
-  const whsMarking = velteGrossChrono.length >= 3;
+  const whsMarking = velteRoundsChrono.length >= 3;
   const whsCountIds = new Set(), whsWindowIds = new Set();
   if (whsMarking) {
     const eligible = [];
     for (const r of rounds) {
       if (!r.complete || r.courseId !== "velte") continue;
       const me = r.results.find(x => sameSeasonName(x.name, name));
-      if (me && me.gross !== null && me.gross !== undefined) eligible.push({ id: r.id, gross: Number(me.gross) });
+      if (me && me.gross !== null && me.gross !== undefined) {
+        eligible.push({ id: r.id, diff: velteDifferential(Number(me.gross), teeForResult(me, name)) });
+      }
     }
     const windowList = eligible.slice(0, 20);
     windowList.forEach(x => whsWindowIds.add(x.id));
     const nBest = whsBestCount(windowList.length);
-    windowList.slice().sort((a, b) => a.gross - b.gross).slice(0, nBest).forEach(x => whsCountIds.add(x.id));
+    // Nach Differential sortieren, nicht nach rohem Brutto – bei gemischten Abschlägen
+    // wären sonst die falschen Runden markiert.
+    windowList.slice().sort((a, b) => a.diff - b.diff).slice(0, nBest).forEach(x => whsCountIds.add(x.id));
     html += "<div class='help' style='margin:-4px 0 8px;'>Linker Balken: <span class='whs-dot count'></span> zählt für den WHS-Index · <span class='whs-dot window'></span> in den letzten 20 wertbaren Runden.</div>";
   }
 
@@ -8178,30 +8273,16 @@ function openPlayerProfile(name) {
     updatePrs();
   }
 
-  // WHS-Handicap-Index (Velte): Tee-Auswahl + Erklärbox.
-  const whsTee = document.getElementById("whsTee");
-  if (whsTee) {
-    const idxOut = document.getElementById("whsIdx");
-    const sub = document.getElementById("whsSub");
-    const updateIdx = () => {
-      const tee = VELTE_TEES.find(t => t.key === whsTee.value) || VELTE_TEES[0];
-      const res = whsIndexFromGross(velteGrossChrono, tee.cr, tee.slope);
-      if (!res) { if (idxOut) idxOut.textContent = "–"; if (sub) sub.textContent = ""; return; }
-      if (idxOut) idxOut.textContent = formatNum(res.index);
-      if (sub) sub.textContent = "aus den besten " + res.n + " der letzten " + res.m + " Velte-Runden";
-    };
-    whsTee.addEventListener("change", updateIdx);
-    updateIdx();
-
-    const whsInfoBtn = document.getElementById("whsInfoBtn");
-    if (whsInfoBtn) {
-      whsInfoBtn.addEventListener("click", () => {
-        const body = document.getElementById("whsInfoBody");
-        const pop = document.getElementById("whsInfoPopup");
-        if (body) body.innerHTML = buildWhsExplainHtml(Math.min(20, velteGrossChrono.length));
-        if (pop) pop.classList.add("show");
-      });
-    }
+  // WHS-Karte: Der Index steht fest im HTML (je Runde mit ihrem eigenen Abschlag
+  // gerechnet), es bleibt nur die Erklärbox.
+  const whsInfoBtn = document.getElementById("whsInfoBtn");
+  if (whsInfoBtn) {
+    whsInfoBtn.addEventListener("click", () => {
+      const infoBody = document.getElementById("whsInfoBody");
+      const pop = document.getElementById("whsInfoPopup");
+      if (infoBody) infoBody.innerHTML = buildWhsExplainHtml(Math.min(20, velteRoundsChrono.length));
+      if (pop) pop.classList.add("show");
+    });
   }
 
   popup.classList.add("show");
