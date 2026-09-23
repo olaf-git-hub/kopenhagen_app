@@ -2637,6 +2637,27 @@ body.view-only { padding-top: 30px; }
   </div>
 </div>
 
+<div class="hole-stand-popup season-popup" id="addRoundPopup">
+  <div class="hole-stand-card">
+    <div class="hole-stand-head">
+      <span>➕ Runde zur Saison</span>
+      <button class="secondary small" type="button" id="closeAddRoundBtn">Schließen</button>
+    </div>
+    <div class="hole-stand-body">
+      <div class="help" id="addRoundInfo" style="margin:0 0 8px;"></div>
+      <label class="cloud-label" for="addRoundDate">Spieltag</label>
+      <input type="date" id="addRoundDate" class="cloud-input">
+      <div class="help" style="margin:8px 0 0;">
+        Vorbelegt mit heute. Trägst du eine Runde nach, die an einem anderen Tag gespielt
+        wurde, stell das Datum hier um – sonst steht später der Tag der Eingabe in der Saison.
+      </div>
+      <div class="actions" style="margin-top:12px;">
+        <button type="button" id="addRoundConfirmBtn">✔ Zur Saison hinzufügen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="hole-stand-popup season-popup" id="suggestPopup">
   <div class="hole-stand-card">
     <div class="hole-stand-head">
@@ -7435,7 +7456,20 @@ function buildRoundSnapshot(dateText) {
   };
 }
 
-function addCurrentRoundToSeason() {
+// Heute als YYYY-MM-DD in lokaler Zeit – toISOString() wäre UTC und könnte
+// abends auf den Folgetag springen.
+function todayIsoDate() {
+  const d = new Date();
+  const p = n => (n < 10 ? "0" : "") + n;
+  return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate());
+}
+
+function isoToDateText(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || "");
+  return m ? (m[3] + "." + m[2] + "." + m[1]) : null;
+}
+
+function openAddRoundPopup() {
   if (blockIfViewOnly()) return;
   closeLoch19Menu();
 
@@ -7444,12 +7478,42 @@ function addCurrentRoundToSeason() {
     showToast("Noch keine bestätigten Löcher");
     return;
   }
-  if (calc.playedHoles < 18) {
-    if (!confirm("Erst " + calc.playedHoles + " von 18 Löchern bestätigt. Runde trotzdem zur Saison hinzufügen?")) return;
+
+  const info = document.getElementById("addRoundInfo");
+  if (info) {
+    info.textContent = (calc.playedHoles < 18)
+      ? ("⚠️ Erst " + calc.playedHoles + " von 18 Löchern bestätigt – die Runde zählt dann nicht als volle Runde.")
+      : ("18 Löcher bestätigt · " + state.playerCount + " Spieler");
+  }
+  const inp = document.getElementById("addRoundDate");
+  if (inp) inp.value = todayIsoDate();
+
+  const popup = document.getElementById("addRoundPopup");
+  if (popup) popup.classList.add("show");
+}
+
+function closeAddRoundPopup() {
+  const popup = document.getElementById("addRoundPopup");
+  if (popup) popup.classList.remove("show");
+}
+
+function addCurrentRoundToSeason() {
+  if (blockIfViewOnly()) return;
+
+  const calc = calculateRound();
+  if (calc.playedHoles === 0) {
+    showToast("Noch keine bestätigten Löcher");
+    return;
   }
 
-  const now = new Date();
-  const dateText = now.toLocaleString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
+  // Spieltag aus dem Feld – nicht mehr stillschweigend der Tag der Eingabe.
+  const inp = document.getElementById("addRoundDate");
+  const dateText = isoToDateText(inp ? inp.value : "");
+  if (!dateText) {
+    showToast("Bitte einen gültigen Spieltag wählen");
+    return;
+  }
+
   const snap = buildRoundSnapshot(dateText);
   if (!snap) {
     showToast("Keine bestätigten Löcher");
@@ -7462,7 +7526,8 @@ function addCurrentRoundToSeason() {
   // Merker: Diese Runde ist gesichert – "Neue Runde" braucht dann keine strenge Abfrage mehr.
   state.addedToSeason = true;
   saveState(false);
-  showToast("Runde zur Saison hinzugefügt");
+  closeAddRoundPopup();
+  showToast("Runde zur Saison hinzugefügt (" + dateText + ")");
 }
 
 // Saison-Namensschlüssel: tolerant gegen Groß-/Kleinschreibung und Leerzeichen
@@ -8526,7 +8591,12 @@ function init() {
   document.getElementById("raceTimeline").addEventListener("input", onRaceTimelineInput);
   document.getElementById("closeRaceBtn").addEventListener("click", closeRaceReplay);
 
-  document.getElementById("addRoundToSeasonBtn").addEventListener("click", addCurrentRoundToSeason);
+  document.getElementById("addRoundToSeasonBtn").addEventListener("click", openAddRoundPopup);
+  document.getElementById("closeAddRoundBtn").addEventListener("click", closeAddRoundPopup);
+  document.getElementById("addRoundConfirmBtn").addEventListener("click", addCurrentRoundToSeason);
+  document.getElementById("addRoundPopup").addEventListener("click", function(e) {
+    if (e.target === this) closeAddRoundPopup();
+  });
   document.getElementById("seasonTableBtn").addEventListener("click", () => { overlayFromLoch19 = true; openSeasonTable(); });
   document.getElementById("seasonTopBtn").addEventListener("click", () => { overlayFromLoch19 = false; openSeasonTable(); });
 
