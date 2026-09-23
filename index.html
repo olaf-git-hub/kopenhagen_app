@@ -2114,6 +2114,14 @@ tr.hole-confirmed td:first-child {
   font-weight: 900;
   margin-left: 4px;
 }
+.round-tee {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 6px 0 8px;
+  line-height: 1.45;
+}
+.round-tee b { color: var(--accent-dark); }
+
 .tee-select {
   width: 100%;
   padding: 6px 4px;
@@ -7789,6 +7797,26 @@ function roundPlayerStrokes(round, res) {
   return null;
 }
 
+// Abschläge einer Runde, nach Box gruppiert. Bewusst eine Zeile unter der Tabelle und
+// keine weitere Spalte: die Tabelle hat auf dem Handy schon sechs und scrollt sonst.
+function roundTeeSummaryHtml(round) {
+  if (!round || round.courseId !== "velte") return "";
+  const groups = [];
+  (round.results || []).forEach(res => {
+    const tee = teeForResult(res, res.name);
+    let g = null;
+    for (const x of groups) if (x.key === tee.key) g = x;
+    if (!g) { g = { key: tee.key, tee: tee, names: [] }; groups.push(g); }
+    g.names.push(res.name);
+  });
+  if (groups.length === 0) return "";
+  if (groups.length === 1) {
+    return "<div class='round-tee'>⛳ Abschlag: <b>" + escapeHtml(groups[0].tee.label) + "</b> (alle)</div>";
+  }
+  const parts = groups.map(g => "<b>" + escapeHtml(g.tee.short) + "</b> – " + escapeHtml(g.names.join(", ")));
+  return "<div class='round-tee'>⛳ Abschläge: " + parts.join(" · ") + "</div>";
+}
+
 function renderRoundStandingsHtml(round, highlightName) {
   const hasPar = !!round.hasPar;
   const matchMode = round.mode === "match";
@@ -7813,6 +7841,7 @@ function renderRoundStandingsHtml(round, highlightName) {
     h += "</tr>";
   });
   h += "</tbody></table></div>";
+  h += roundTeeSummaryHtml(round);
   return h;
 }
 
@@ -7820,7 +7849,18 @@ function renderRoundStandingsHtml(round, highlightName) {
 function renderPlayerRoundCardHtml(round, name) {
   const idx = Array.isArray(round.players) ? round.players.indexOf(name) : -1;
 
+  // Abschlag der Runde: gehört zum Protokoll, auch wenn alle Runden von derselben Box sind.
+  // Bei Altrunden liefert teeForResult die bisherige Annahme (Herren 61 / Damen 52).
+  let teeLine = "";
+  if (round.courseId === "velte") {
+    const meRes = (round.results || []).find(x => sameSeasonName(x.name, name));
+    const tee = teeForResult(meRes, name);
+    teeLine = "<div class='round-tee'>⛳ Abschlag: <b>" + escapeHtml(tee.label) +
+              "</b> · CR " + formatNum(tee.cr) + " / Slope " + tee.slope + "</div>";
+  }
+
   if (idx < 0 || !round.holeDetails) {
+    // Kein eigener teeLine: renderRoundStandingsHtml hängt die Abschläge aller Spieler an.
     return "<div class='help'>Für diese ältere Runde sind keine Loch-Details gespeichert.</div>" +
            renderRoundStandingsHtml(round, name);
   }
@@ -7865,7 +7905,7 @@ function renderPlayerRoundCardHtml(round, name) {
     });
   }
 
-  let html = "";
+  let html = teeLine;
 
   if (hasPar) {
     html += "<div class='player-detail-stats'>";
@@ -8206,6 +8246,16 @@ function openPlayerProfile(name) {
     html += "<div class='help' style='margin:-4px 0 8px;'>Linker Balken: <span class='whs-dot count'></span> zählt für den WHS-Index · <span class='whs-dot window'></span> in den letzten 20 wertbaren Runden.</div>";
   }
 
+  // In der Liste nur dann je Runde den Abschlag nennen, wenn der Spieler überhaupt von
+  // mehreren gespielt hat – sonst stünde 20-mal dieselbe Box da.
+  const teeKeysUsed = new Set();
+  for (const r of rounds) {
+    if (r.courseId !== "velte") continue;
+    const me = r.results.find(x => sameSeasonName(x.name, name));
+    if (me) teeKeysUsed.add(teeForResult(me, name).key);
+  }
+  const showTeeInList = teeKeysUsed.size > 1;
+
   if (rounds.length === 0) {
     html += "<p class='help'>Keine Runden gefunden.</p>";
   } else {
@@ -8223,9 +8273,12 @@ function openPlayerProfile(name) {
       if (r.id === bestId) tag += " <span class='round-tag best'>Beste</span>";
       else if (r.id === worstId) tag += " <span class='round-tag worst'>Schlechteste</span>";
 
-      const subLine = isMatch
+      let subLine = isMatch
         ? ((r.matchResult ? escapeHtml(r.matchResult) : "Matchplay") + " · Brutto " + myGross + parTxt)
         : ((sym ? sym + " " : "") + "Platz " + myPos + " von " + r.playerCount + " · Brutto " + myGross + parTxt);
+      if (showTeeInList && me && r.courseId === "velte") {
+        subLine += " · " + teeForResult(me, name).short;
+      }
 
       let whsClass = "";
       if (whsMarking) {
