@@ -7466,6 +7466,9 @@ function buildRoundSnapshot(dateText) {
     r.tee = (pi >= 0 && teeByKey(state.players[pi].tee))
       ? teeByKey(state.players[pi].tee).key
       : defaultVelteTeeKey(r.name);
+    // Course Handicap von heute festschreiben. loadSeason() liefert hier noch den Stand
+    // OHNE diese Runde – also genau den Index, der vor ihr galt.
+    if (course.id === "velte") r.whsCh = velteCourseHandicapAtNow(r.name, teeByKey(r.tee));
   });
 
   // 2er-Lochspiel: nach Lochgewinnen ordnen, Punkte/Merit neutralisieren,
@@ -8243,6 +8246,13 @@ function strokesForHoleFromHandicap(total, hole) {
 // Liefert null, wenn die Runde keine Loch-Details hat – dann bleibt das rohe Brutto.
 function adjustedGrossForRound(round, name, courseHandicap) {
   if (!round || !round.holeDetails) return null;
+
+  // Vorrang hat das beim Eintragen festgeschriebene Course Handicap. Nur so entspricht
+  // die Kappung der Regel „Index zum Zeitpunkt der Runde". Fehlt es (Altbestand), bleibt
+  // es beim übergebenen Näherungswert. whsCh === null heißt: damals kein Index ⇒ Par + 5.
+  const meRes = (round.results || []).find(x => sameSeasonName(x.name, name));
+  if (meRes && meRes.whsCh !== undefined) courseHandicap = meRes.whsCh;
+
   let pi = -1;
   if (Array.isArray(round.players)) {
     for (let i = 0; i < round.players.length; i++) {
@@ -8265,6 +8275,26 @@ function adjustedGrossForRound(round, name, courseHandicap) {
     if (g > max) { sum += max; capped++; } else { sum += g; }
   }
   return { gross: sum, capped: capped };
+}
+
+
+// Course Handicap eines Spielers aus dem Stand der Saison, WIE ER JETZT IST – also vor
+// dem Hinzufügen der laufenden Runde. Genau dieser Wert wird in den Schnappschuss
+// geschrieben, damit die Runde später nicht mit einem Index gekappt wird, den der
+// Spieler damals gar nicht hatte. null = noch kein Index ⇒ beim Kappen gilt Par + 5.
+function velteCourseHandicapAtNow(name, tee) {
+  if (!tee) return null;
+  const season = loadSeason();
+  const list = [];
+  for (const r of season.rounds) {
+    if (!r.complete || r.courseId !== "velte") continue;
+    const me = (r.results || []).find(x => sameSeasonName(x.name, name));
+    if (me && me.gross !== null && me.gross !== undefined) {
+      list.push({ id: r.id, gross: Number(me.gross), tee: teeForResult(me, name), round: r });
+    }
+  }
+  const res = whsAdjustedResult(list, name) || whsIndexFromRounds(list);
+  return res ? velteCourseHandicap(res.index, tee) : null;
 }
 
 // Index aus gewerteten Bruttoergebnissen. Die Kappung hängt am Course Handicap und
@@ -8310,7 +8340,8 @@ function buildWhsExplainHtml(m) {
   h += "<div class='whs-formula'>Differential = (113 ÷ Slope) × (<b>gewertetes Brutto</b> − CR)<br>Index = Ø der <b>besten</b> Differentiale der letzten 20 Runden</div>";
   h += "<div class='whs-mini'>Unter 20 Runden zählen weniger „beste\" (WHS-Tabelle 5.2a) – hervorgehoben: deine Stufe:</div>";
   h += "<div class='whs-grid'>" + cells + "</div>";
-  h += "<div class='whs-mini'><b>Gewertetes Brutto</b> nach WHS-Regel 3.2: je Loch höchstens Netto-Doppelbogey = Par + 2 + Vorgabenschläge aus dem eigenen Course Handicap. Nur volle Velte-Runden, jede mit CR und Slope ihres Abschlags. Näherung (der Index von heute statt dem zum Zeitpunkt der Runde) – kein offiziell geführtes Handicap.</div>";
+  h += "<div class='whs-mini'><b>Gewertetes Brutto</b> nach WHS-Regel 3.2: je Loch höchstens Netto-Doppelbogey = Par + 2 + Vorgabenschläge aus dem eigenen Course Handicap. Nur volle Velte-Runden, jede mit CR und Slope ihres Abschlags.</div>";
+  h += "<div class='whs-mini'>Was dem offiziellen System gegenüber <b>fehlt</b>: die tägliche Platzanpassung <b>PCC</b> (dafür bräuchte es die Ergebnisse eines ganzen Feldes), die Anstiegsbremsen <b>Soft Cap</b> und <b>Hard Cap</b>, die <b>Abzüge für außergewöhnliche Runden</b>. Neu eingetragene Runden halten das Course Handicap ihres Tages fest; nur bei Runden von vor dieser Funktion wird ersatzweise mit dem heutigen Index gekappt. Eine gute Näherung – aber <b>kein offiziell geführtes Handicap</b>.</div>";
   h += "</div>";
   return h;
 }
@@ -8552,14 +8583,9 @@ function openPlayerProfile(name) {
       html += "<div class='help' style='margin:2px 0 0;'>aus den besten " + whsRes.n + " der letzten " + whsRes.m + " Velte-Runden</div>";
     }
     html += "<div class='help' style='margin:2px 0 0;'>Abschlag: " + teeTxt + "</div>";
-    if (whsAdj && whsRaw) {
-      if (whsAdj.capped > 0) {
-        html += "<div class='help' style='margin:2px 0 0;'>Gewertetes Brutto: " + whsAdj.capped +
-                (whsAdj.capped === 1 ? " Loch" : " Löcher") + " auf Netto-Doppelbogey gekappt · ohne Kappung wäre der Index " +
-                formatNum(whsRaw.index) + "</div>";
-      } else {
-        html += "<div class='help' style='margin:2px 0 0;'>Gewertetes Brutto: keine Kappung nötig.</div>";
-      }
+    // Die Kappung selbst wird nicht ausgewiesen – sie ist die Regel, keine Besonderheit.
+    // Gemeldet wird nur, wenn sie irgendwo NICHT angewendet werden konnte.
+    if (whsAdj) {
       const ohneDetails = velteRoundsChrono.length - whsAdj.adjustable;
       if (ohneDetails > 0) {
         html += "<div class='help' style='margin:2px 0 0;'>" + ohneDetails +
