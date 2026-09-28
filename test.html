@@ -2655,6 +2655,16 @@ body.view-only { padding-top: 30px; }
   </div>
 </div>
 
+<div class="hole-stand-popup season-popup" id="meritInfoPopup">
+  <div class="hole-stand-card">
+    <div class="hole-stand-head">
+      <span>🏅 Ø Punkte</span>
+      <button class="secondary small" type="button" id="closeMeritInfoBtn">Schließen</button>
+    </div>
+    <div class="hole-stand-body" id="meritInfoBody"></div>
+  </div>
+</div>
+
 <div class="hole-stand-popup season-popup" id="cloudSyncPopup">
   <div class="hole-stand-card">
     <div class="hole-stand-head">
@@ -8395,6 +8405,33 @@ function buildFormChartSvg(list, avg) {
   return svg;
 }
 
+
+// Erklärt die Ø-Punkte der Order of Merit. Wird im Spielerprofil über das ⓘ an der
+// Ø-Punkte-Kachel geöffnet und rechnet das Beispiel mit den echten Werten des Spielers.
+function buildMeritExplainHtml(agg) {
+  let h = "";
+  h += "<p class='help' style='margin:0 0 8px;'>Für jede Kopenhagen-Runde gibt es <b>Meritpunkte nach der Platzierung</b>:</p>";
+  h += "<div style='background:var(--soft); border-radius:8px; padding:8px 10px; font-size:13px; line-height:1.7; margin-bottom:8px;'>";
+  h += "<b>4 Spieler:</b> 3 · 2 · 1 · 0<br><b>3 Spieler:</b> 2 · 1 · 0";
+  h += "</div>";
+  h += "<p class='help' style='margin:0 0 8px;'>Dahinter steckt eine einfache Regel: <b>Ein Punkt für jeden Mitspieler, den du hinter dir lässt.</b> Der Sieger einer Viererrunde schlägt drei Gegner und bekommt 3, der Sieger einer Dreierrunde schlägt zwei und bekommt 2.</p>";
+  h += "<p class='help' style='margin:0 0 8px;'>Bei echtem Gleichstand – gleiche Punkte <b>und</b> gleiche Schläge – werden die Meritpunkte der betroffenen Plätze geteilt. Wer gleichzieht, hat den anderen eben halb geschlagen.</p>";
+  h += "<p class='help' style='margin:0 0 8px;'>Der Schnitt ist dann einfach <b>Meritpunkte ÷ Kopenhagen-Runden</b>. Matchplay zählt hier nicht mit, weder in die Punkte noch in die Rundenzahl.</p>";
+  if (agg && agg.rounds) {
+    h += "<div style='background:var(--soft); border-radius:8px; padding:8px 10px; font-size:13px; margin-bottom:8px;'>Bei dir: <b>" +
+         formatNum2(agg.merit) + "</b> Meritpunkte ÷ <b>" + agg.rounds + "</b> Runden = <b>" +
+         formatNum2(agg.avgMerit) + "</b></div>";
+  }
+  h += "<p class='help' style='margin:0 0 8px;'>In der Order of Merit offiziell gewertet wird ab <b>" + OOM_MIN_ROUNDS + " Kopenhagen-Runden</b>.</p>";
+  h += "<p class='help' style='margin:0;'>Weil im Vierer ein Gegner mehr zu schlagen ist, liegt der durchschnittliche Ertrag dort höher (1,5 gegenüber 1,0 je Runde). Solange alle ungefähr gleich oft zu dritt und zu viert spielen, gleicht sich das vollständig aus.</p>";
+  return h;
+}
+
+function closeMeritInfoPopup() {
+  const popup = document.getElementById("meritInfoPopup");
+  if (popup) popup.classList.remove("show");
+}
+
 function openPlayerProfile(name) {
   const season = loadSeason();
   const agg = computeOrderOfMerit(season).find(p => sameSeasonName(p.name, name));
@@ -8481,6 +8518,8 @@ function openPlayerProfile(name) {
     const mpRunden = agg.matchRounds || 0;
     const vollRunden = grossChrono.length;   // genau die Runden, aus denen der Ø Brutto entsteht
     const bruttoTxt = (agg.avgGross === null) ? "–" : formatNum(agg.avgGross);
+    const punktePill = "<span class='mini-pill'>Ø Punkte: " + formatNum2(agg.avgMerit) +
+                       " <span class='whs-info' id='meritInfoBtn' title='Wie wird das gerechnet?'>ⓘ</span></span>";
 
     if (mpRunden > 0) {
       // Zuerst die Gesamtleistung über alle Runden – daraus ergibt sich der Ø Brutto.
@@ -8512,7 +8551,7 @@ function openPlayerProfile(name) {
       if (agg.rounds > 0) {
         html += "<div class='profile-block-head'>Kopenhagen · " + agg.rounds + " Runden</div>";
         html += "<div class='profile-stats'>";
-        html += "<span class='mini-pill'>Ø Punkte: " + formatNum2(agg.avgMerit) + "</span>";
+        html += punktePill;
         html += "<span class='mini-pill'>Siege: " + agg.wins + "</span>";
         html += "</div>";
         if (badges) html += "<div class='profile-placements'>" + badges + "</div>";
@@ -8526,7 +8565,7 @@ function openPlayerProfile(name) {
       // Ohne Matchplay wären „Gesamt" und „Kopenhagen" dieselbe Zahl – dann kompakt lassen.
       html += "<div class='profile-stats'>";
       html += "<span class='mini-pill'>Runden: " + agg.rounds + "</span>";
-      html += "<span class='mini-pill'>Ø Punkte: " + formatNum2(agg.avgMerit) + "</span>";
+      html += punktePill;
       html += "<span class='mini-pill'>Siege: " + agg.wins + "</span>";
       html += "<span class='mini-pill'>Ø Brutto: " + bruttoTxt + "</span>";
       html += "</div>";
@@ -8713,6 +8752,16 @@ function openPlayerProfile(name) {
 
   // WHS-Karte: Der Index steht fest im HTML (je Runde mit ihrem eigenen Abschlag
   // gerechnet), es bleibt nur die Erklärbox.
+  const meritInfoBtn = document.getElementById("meritInfoBtn");
+  if (meritInfoBtn) {
+    meritInfoBtn.addEventListener("click", () => {
+      const mb = document.getElementById("meritInfoBody");
+      const pop = document.getElementById("meritInfoPopup");
+      if (mb) mb.innerHTML = buildMeritExplainHtml(agg);
+      if (pop) pop.classList.add("show");
+    });
+  }
+
   const whsInfoBtn = document.getElementById("whsInfoBtn");
   if (whsInfoBtn) {
     whsInfoBtn.addEventListener("click", () => {
@@ -8966,6 +9015,10 @@ function init() {
   });
   document.getElementById("playerProfilePopup").addEventListener("click", function(e) {
     if (e.target === this) closePlayerProfile();
+  });
+  document.getElementById("closeMeritInfoBtn").addEventListener("click", closeMeritInfoPopup);
+  document.getElementById("meritInfoPopup").addEventListener("click", function(e) {
+    if (e.target === this) closeMeritInfoPopup();
   });
   document.getElementById("closeWhsInfoBtn").addEventListener("click", closeWhsInfoPopup);
   document.getElementById("whsInfoPopup").addEventListener("click", function(e) {
