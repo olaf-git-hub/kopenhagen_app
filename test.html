@@ -8185,6 +8185,84 @@ function whsIndexFromRounds(list) {
   return { index: bestN.reduce((a, b) => a + b, 0) / n, n: n, m: recent.length };
 }
 
+// Par der Velte-Runde – aus der Lochtabelle gerechnet, damit es stimmt, falls sie
+// einmal geändert wird (alle sechs Abschläge sind Par 72).
+function veltePar() {
+  let p = 0;
+  for (const h of courses.velte.holes) p += Number(h.par) || 0;
+  return p;
+}
+
+// Course Handicap nach WHS: Index × (Slope / 113) + (CR − Par).
+// Reproduziert die Course-Handicap-Tabellen des Platzes exakt.
+function velteCourseHandicap(index, tee) {
+  return Math.round(index * (tee.slope / 113) + (tee.cr - veltePar()));
+}
+
+// Verteilung eines Course Handicaps auf die Löcher nach deren HCP-Index.
+// Bewusst ohne getCourse(): Hier geht es um gespeicherte Runden, nicht um die laufende.
+function strokesForHoleFromHandicap(total, hole) {
+  if (hole.hcp === null || hole.hcp === undefined) return 0;
+  const v = Math.max(0, Math.round(total));
+  return Math.floor(v / 18) + (hole.hcp <= (v % 18) ? 1 : 0);
+}
+
+// Gewertetes Bruttoergebnis einer Runde (WHS Regel 3.2): je Loch höchstens
+// Netto-Doppelbogey = Par + 2 + Vorgabenschläge. Ohne Index gilt stattdessen Par + 5.
+// Liefert null, wenn die Runde keine Loch-Details hat – dann bleibt das rohe Brutto.
+function adjustedGrossForRound(round, name, courseHandicap) {
+  if (!round || !round.holeDetails) return null;
+  let pi = -1;
+  if (Array.isArray(round.players)) {
+    for (let i = 0; i < round.players.length; i++) {
+      if (sameSeasonName(round.players[i], name)) { pi = i; break; }
+    }
+  }
+  if (pi < 0) return null;
+
+  const holes = (courses[round.courseId] || courses.velte).holes;
+  let sum = 0, capped = 0;
+  for (const h of holes) {
+    const arr = round.holeDetails[String(h.hole)];
+    const cell = arr ? arr[pi] : null;
+    if (!cell || cell.g === null || cell.g === undefined) return null;
+    if (h.par === null || h.par === undefined) return null;
+    const max = (courseHandicap === null)
+      ? (h.par + 5)
+      : (h.par + 2 + strokesForHoleFromHandicap(courseHandicap, h));
+    const g = Number(cell.g);
+    if (g > max) { sum += max; capped++; } else { sum += g; }
+  }
+  return { gross: sum, capped: capped };
+}
+
+// Index aus gewerteten Bruttoergebnissen. Die Kappung hängt am Course Handicap und
+// dieses wiederum am Index – also iterativ, bis sich der Index nicht mehr bewegt.
+// Offiziell gilt der Index zum Zeitpunkt der Runde; wir nähern mit dem heutigen.
+function whsAdjustedResult(list, name) {
+  let res = whsIndexFromRounds(list);
+  if (!res) return null;
+  let out = null;
+  for (let it = 0; it < 5; it++) {
+    let capped = 0, adjustable = 0;
+    const neu = list.map(x => {
+      const a = adjustedGrossForRound(x.round, name, velteCourseHandicap(res.index, x.tee));
+      if (!a) return x;
+      adjustable++;
+      capped += a.capped;
+      return { id: x.id, gross: a.gross, tee: x.tee, round: x.round };
+    });
+    const r2 = whsIndexFromRounds(neu);
+    if (!r2) break;
+    const stabil = Math.abs(r2.index - res.index) < 0.005;
+    res = r2;
+    out = { index: r2.index, n: r2.n, m: r2.m, capped: capped, adjustable: adjustable, list: neu };
+    if (stabil) break;
+  }
+  return out;
+}
+
+
 // Dynamische Erklärbox: Formel + WHS-Tabelle 5.2a, Zeile der aktuellen Rundenzahl hervorgehoben.
 function buildWhsExplainHtml(m) {
   const table = [
@@ -8198,10 +8276,10 @@ function buildWhsExplainHtml(m) {
     cells += "<span" + (active ? " class='active'" : "") + ">" + label + " → beste " + row.n + "</span>";
   }
   let h = "<div class='whs-explain'>";
-  h += "<div class='whs-formula'>Differential = (113 ÷ Slope) × (Brutto − CR)<br>Index = Ø der <b>besten</b> Differentiale der letzten 20 Runden</div>";
+  h += "<div class='whs-formula'>Differential = (113 ÷ Slope) × (<b>gewertetes Brutto</b> − CR)<br>Index = Ø der <b>besten</b> Differentiale der letzten 20 Runden</div>";
   h += "<div class='whs-mini'>Unter 20 Runden zählen weniger „beste\" (WHS-Tabelle 5.2a) – hervorgehoben: deine Stufe:</div>";
   h += "<div class='whs-grid'>" + cells + "</div>";
-  h += "<div class='whs-mini'>Näherung auf Brutto (ohne Netto-Doppelbogey-Cap), nur volle Velte-Runden – jede mit CR und Slope ihres tatsächlich gespielten Abschlags. Kein offiziell geführtes Handicap.</div>";
+  h += "<div class='whs-mini'><b>Gewertetes Brutto</b> nach WHS-Regel 3.2: je Loch höchstens Netto-Doppelbogey = Par + 2 + Vorgabenschläge aus dem eigenen Course Handicap. Nur volle Velte-Runden, jede mit CR und Slope ihres Abschlags. Näherung (der Index von heute statt dem zum Zeitpunkt der Runde) – kein offiziell geführtes Handicap.</div>";
   h += "</div>";
   return h;
 }
@@ -8231,7 +8309,7 @@ function openPlayerProfile(name) {
     if (!r.complete || r.courseId !== "velte") continue;
     const me = r.results.find(x => sameSeasonName(x.name, name));
     if (me && me.gross !== null && me.gross !== undefined) {
-      velteRoundsChrono.push({ id: r.id, gross: Number(me.gross), tee: teeForResult(me, name) });
+      velteRoundsChrono.push({ id: r.id, gross: Number(me.gross), tee: teeForResult(me, name), round: r });
     }
   }
 
@@ -8353,8 +8431,15 @@ function openPlayerProfile(name) {
     html += "</div>";
   }
 
+  // Index aus gewerteten Bruttoergebnissen (Netto-Doppelbogey); der rohe Wert dient
+  // nur noch dem Vergleich in der Anzeige.
+  const whsRaw = whsIndexFromRounds(velteRoundsChrono);
+  const whsAdj = whsAdjustedResult(velteRoundsChrono, name);
+  const whsRes = whsAdj || whsRaw;
+  const whsAdjMap = {};
+  if (whsAdj) whsAdj.list.forEach(x => { whsAdjMap[String(x.id)] = x.gross; });
+
   if (velteRoundsChrono.length >= 3) {
-    const whsRes = whsIndexFromRounds(velteRoundsChrono);
     const whsRecent = velteRoundsChrono.slice(Math.max(0, velteRoundsChrono.length - 20));
     const teeCount = {};
     whsRecent.forEach(x => { teeCount[x.tee.key] = (teeCount[x.tee.key] || 0) + 1; });
@@ -8366,6 +8451,20 @@ function openPlayerProfile(name) {
       html += "<div class='help' style='margin:2px 0 0;'>aus den besten " + whsRes.n + " der letzten " + whsRes.m + " Velte-Runden</div>";
     }
     html += "<div class='help' style='margin:2px 0 0;'>Abschlag: " + teeTxt + "</div>";
+    if (whsAdj && whsRaw) {
+      if (whsAdj.capped > 0) {
+        html += "<div class='help' style='margin:2px 0 0;'>Gewertetes Brutto: " + whsAdj.capped +
+                (whsAdj.capped === 1 ? " Loch" : " Löcher") + " auf Netto-Doppelbogey gekappt · ohne Kappung wäre der Index " +
+                formatNum(whsRaw.index) + "</div>";
+      } else {
+        html += "<div class='help' style='margin:2px 0 0;'>Gewertetes Brutto: keine Kappung nötig.</div>";
+      }
+      const ohneDetails = velteRoundsChrono.length - whsAdj.adjustable;
+      if (ohneDetails > 0) {
+        html += "<div class='help' style='margin:2px 0 0;'>" + ohneDetails +
+                " ältere Runde(n) ohne Loch-Details – dort zählt das rohe Brutto.</div>";
+      }
+    }
     html += "</div>";
   }
 
@@ -8394,7 +8493,9 @@ function openPlayerProfile(name) {
       if (!r.complete || r.courseId !== "velte") continue;
       const me = r.results.find(x => sameSeasonName(x.name, name));
       if (me && me.gross !== null && me.gross !== undefined) {
-        eligible.push({ id: r.id, diff: velteDifferential(Number(me.gross), teeForResult(me, name)) });
+        // Gewertetes Brutto, sonst würden hier andere Runden markiert als der Index nutzt.
+        const g = whsAdjMap.hasOwnProperty(String(r.id)) ? whsAdjMap[String(r.id)] : Number(me.gross);
+        eligible.push({ id: r.id, diff: velteDifferential(g, teeForResult(me, name)) });
       }
     }
     const windowList = eligible.slice(0, 20);
