@@ -2061,8 +2061,26 @@ tr.hole-confirmed td:first-child {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin: 2px 0 12px;
+  margin: 2px 0 8px;
 }
+
+.profile-block-head {
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--accent-dark);
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  margin: 14px 0 4px;
+}
+.profile-block-head:first-child { margin-top: 0; }
+
+.profile-note {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0 0 4px;
+  line-height: 1.45;
+}
+.profile-note b { color: var(--accent-dark); }
 
 .place-badge {
   display: inline-flex;
@@ -2552,8 +2570,8 @@ body.view-only { padding-top: 30px; }
       <label class="race-speed-wrap">Tempo
         <select id="raceSpeedSelect" class="race-speed-select">
           <option value="10">10s</option>
-          <option value="20">20s</option>
-          <option value="30" selected>30s</option>
+          <option value="20" selected>20s</option>
+          <option value="30">30s</option>
         </select>
       </label>
       <button class="secondary small" type="button" id="closeRaceBtn">✕</button>
@@ -2813,7 +2831,7 @@ let selectedPlayerDetailIndex = null;
 
 let lastRankMoveByPlayer = {};
 
-let raceReplaySeconds = 30;
+let raceReplaySeconds = 20;
 let raceTimer = null;
 
 function getRaceStartX() {
@@ -7479,12 +7497,16 @@ function openAddRoundPopup() {
     return;
   }
 
-  const info = document.getElementById("addRoundInfo");
-  if (info) {
-    info.textContent = (calc.playedHoles < 18)
-      ? ("⚠️ Erst " + calc.playedHoles + " von 18 Löchern bestätigt – die Runde zählt dann nicht als volle Runde.")
-      : ("18 Löcher bestätigt · " + state.playerCount + " Spieler");
+  // Wie im Turnier: nicht zu Ende gespielt ⇒ kein Ergebnis. Unvollständige Runden
+  // kommen gar nicht erst in die Saison – sonst verfälschten sie Ø Punkte, Siege
+  // und Medaillen, während sie beim Ø Brutto und beim WHS-Index ohnehin herausfielen.
+  if (calc.playedHoles < 18) {
+    showToast("Erst " + calc.playedHoles + " von 18 Löchern – nur vollständige Runden kommen in die Saison");
+    return;
   }
+
+  const info = document.getElementById("addRoundInfo");
+  if (info) info.textContent = "18 Löcher bestätigt · " + state.playerCount + " Spieler";
   const inp = document.getElementById("addRoundDate");
   if (inp) inp.value = todayIsoDate();
 
@@ -7503,6 +7525,11 @@ function addCurrentRoundToSeason() {
   const calc = calculateRound();
   if (calc.playedHoles === 0) {
     showToast("Noch keine bestätigten Löcher");
+    return;
+  }
+  // Doppelt gesichert – nur volle 18-Loch-Runden zählen für die Saison.
+  if (calc.playedHoles < 18) {
+    showToast("Nur vollständig gespielte Runden kommen in die Saison (" + calc.playedHoles + "/18 Löcher)");
     return;
   }
 
@@ -8218,20 +8245,15 @@ function openPlayerProfile(name) {
   let html = "";
 
   if (agg) {
-    html += "<div class='profile-stats'>";
-    html += "<span class='mini-pill'>Ø Pkt: " + formatNum2(agg.avgMerit) + "</span>";
-    html += "<span class='mini-pill'>Runden: " + agg.rounds + "</span>";
-    html += "<span class='mini-pill'>Siege: " + agg.wins + "</span>";
-    html += "<span class='mini-pill'>Ø Brutto: " + (agg.avgGross === null ? "–" : formatNum(agg.avgGross)) + "</span>";
-    html += "</div>";
+    // Erst zählen, dann rendern – der Aufbau hängt davon ab, ob es Matchplay gibt.
 
     // Platzierungen feldgrößen-gerecht: „Letzter" wird gesondert gezählt
     // (kein Bronze für den Letzten im Dreierspiel).
     const medals = { gold: 0, silver: 0, bronze: 0, last: 0 };
     for (const r of rounds) {
-      // Nur Kopenhagen-Runden – wie oben bei Ø Pkt, Runden und Siege. Sonst geht die Summe
-      // der Medaillen nicht mit der Rundenzahl auf, und ein geteiltes Matchplay (beide auf
-      // Position 1) würde sogar zwei Goldmedaillen vergeben.
+      // Nur Kopenhagen-Runden – sonst geht die Summe der Medaillen nicht mit der
+      // Rundenzahl auf, und ein geteiltes Matchplay (beide auf Position 1) würde
+      // sogar zwei Goldmedaillen vergeben.
       if (r.mode === "match") continue;
       const me = r.results.find(x => sameSeasonName(x.name, name));
       if (!me) continue;
@@ -8246,7 +8268,79 @@ function openPlayerProfile(name) {
     if (medals.silver) badges += "<span class='place-badge' title='2. Platz'>🥈 <span class='cnt'>" + medals.silver + "×</span></span>";
     if (medals.bronze) badges += "<span class='place-badge' title='3. Platz (nicht Letzter)'>🥉 <span class='cnt'>" + medals.bronze + "×</span></span>";
     if (medals.last)   badges += "<span class='place-badge' title='Letzter Platz'>😱 <span class='cnt'>" + medals.last + "×</span></span>";
-    if (badges) html += "<div class='profile-placements'>" + badges + "</div>";
+
+    // Matchplay-Bilanz: gehört nicht zu den Medaillen, ist aber eigene Information.
+    const mp = { win: 0, halved: 0, loss: 0 };
+    for (const r of rounds) {
+      if (r.mode !== "match") continue;
+      const me = r.results.find(x => sameSeasonName(x.name, name));
+      if (!me) continue;
+      if (r.matchWinner !== undefined) {
+        // matchWinner ist bei geteiltem Match bewusst null.
+        mp[r.matchWinner === null ? "halved" : (sameSeasonName(r.matchWinner, name) ? "win" : "loss")]++;
+      } else {
+        // Ältere Runden ohne matchWinner: geteilt steht dort als Position 1 bei beiden.
+        const geteilt = r.results.filter(x => x.position === 1).length > 1;
+        mp[geteilt ? "halved" : (me.position === 1 ? "win" : "loss")]++;
+      }
+    }
+    const mpTeile = [];
+    if (mp.win) mpTeile.push(mp.win + (mp.win === 1 ? " Sieg" : " Siege"));
+    if (mp.halved) mpTeile.push(mp.halved + " geteilt");
+    if (mp.loss) mpTeile.push(mp.loss + (mp.loss === 1 ? " Niederlage" : " Niederlagen"));
+
+    const mpRunden = agg.matchRounds || 0;
+    const vollRunden = grossChrono.length;   // genau die Runden, aus denen der Ø Brutto entsteht
+    const bruttoTxt = (agg.avgGross === null) ? "–" : formatNum(agg.avgGross);
+
+    if (mpRunden > 0) {
+      // Zuerst die Gesamtleistung über alle Runden – daraus ergibt sich der Ø Brutto.
+      const teileRunden = [];
+      if (agg.rounds) teileRunden.push(agg.rounds + " Kopenhagen");
+      teileRunden.push(mpRunden + " Matchplay");
+
+      html += "<div class='profile-block-head'>Gesamt</div>";
+      html += "<div class='profile-stats'>";
+      html += "<span class='mini-pill'>Runden: " + (agg.rounds + mpRunden) + "</span>";
+      html += "<span class='mini-pill'>Ø Brutto: " + bruttoTxt + "</span>";
+      html += "</div>";
+      // Seit unvollständige Runden gar nicht mehr aufgenommen werden, ist die Zahl der
+      // vollen Runden normalerweise die Rundenzahl – nur bei Altbestand kann sie abweichen.
+      const bruttoAbweichend = vollRunden > 0 && vollRunden !== (agg.rounds + mpRunden);
+      html += "<div class='profile-note'>" + teileRunden.join(" + ") +
+              (bruttoAbweichend ? (" · Ø Brutto aus " + vollRunden + " vollen 18-Loch-Runden") : "") +
+              "</div>";
+
+      if (agg.rounds > 0) {
+        html += "<div class='profile-block-head'>Kopenhagen · " + agg.rounds + " Runden</div>";
+        html += "<div class='profile-stats'>";
+        html += "<span class='mini-pill'>Ø Punkte: " + formatNum2(agg.avgMerit) + "</span>";
+        html += "<span class='mini-pill'>Siege: " + agg.wins + "</span>";
+        html += "</div>";
+        if (badges) html += "<div class='profile-placements'>" + badges + "</div>";
+        html += "<div class='profile-note'>Ø Punkte, Siege und Medaillen zählen nur diese Runden.</div>";
+      }
+
+      html += "<div class='profile-block-head'>Matchplay · " + mpRunden + " Runden</div>";
+      html += "<div class='profile-note'>" +
+              (mpTeile.length ? ("<b>" + mpTeile.join("</b> · <b>") + "</b>") : "–") +
+              " · zählt nicht in die Punktewertung</div>";
+    } else {
+      // Ohne Matchplay wären „Gesamt" und „Kopenhagen" dieselbe Zahl – dann kompakt lassen.
+      html += "<div class='profile-stats'>";
+      html += "<span class='mini-pill'>Runden: " + agg.rounds + "</span>";
+      html += "<span class='mini-pill'>Ø Punkte: " + formatNum2(agg.avgMerit) + "</span>";
+      html += "<span class='mini-pill'>Siege: " + agg.wins + "</span>";
+      html += "<span class='mini-pill'>Ø Brutto: " + bruttoTxt + "</span>";
+      html += "</div>";
+      if (badges) html += "<div class='profile-placements'>" + badges + "</div>";
+      // Ohne Matchplay beziehen sich alle vier Werte auf dieselben Runden – ein Hinweis
+      // lohnt nur, wenn der Ø Brutto auf weniger Runden beruht (Altbestand).
+      if (vollRunden > 0 && vollRunden !== agg.rounds) {
+        html += "<div class='profile-note'>Ø Brutto aus " + vollRunden +
+                " vollen 18-Loch-Runden – ältere unvollständige Runden zählen dort nicht mit.</div>";
+      }
+    }
   }
 
   if (grossChrono.length >= 2) {
@@ -8718,7 +8812,7 @@ function init() {
   document.getElementById("viewOnlyExitBtn").addEventListener("click", exitRoundReadOnly);
 
   document.getElementById("raceSpeedSelect").addEventListener("change", function() {
-  raceReplaySeconds = Number(this.value) || 30;
+  raceReplaySeconds = Number(this.value) || 20;
   });
 
   const details = document.getElementById("setupDetails");
