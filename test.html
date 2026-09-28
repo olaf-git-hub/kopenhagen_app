@@ -2082,6 +2082,34 @@ tr.hole-confirmed td:first-child {
 }
 .profile-note b { color: var(--accent-dark); }
 
+.form-badge {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 2px 9px;
+  margin-right: 6px;
+  font-size: 12px;
+  font-weight: 900;
+}
+.form-badge.up { background: #e8f3e2; color: #2e6b20; }
+.form-badge.down { background: #fdecec; color: #a33; }
+.form-badge.flat { background: #f1f1ef; color: #666; }
+
+.form-chart {
+  display: block;
+  width: 100%;
+  max-width: 380px;
+  height: auto;
+  margin: 4px 0 8px;
+}
+.form-chart .form-line {
+  fill: none;
+  stroke: var(--accent-dark);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+.form-chart .form-dot { fill: var(--accent-dark); }
+.form-chart .form-cap { font-size: 10px; fill: var(--muted); }
+
 .place-badge {
   display: inline-flex;
   align-items: center;
@@ -8284,6 +8312,58 @@ function buildWhsExplainHtml(m) {
   return h;
 }
 
+
+// Formtendenz: die letzten K Runden gegen alle davor. Bewusst nicht gegen den
+// Gesamtschnitt – darin stecken die letzten K mit drin und dämpfen genau das Signal.
+// Unter 10 vollen Runden gar keine Aussage: dort entscheidet eine einzelne Runde.
+function formTrend(grossList) {
+  const n = grossList.length;
+  if (n < 10) return null;
+  const K = 5;
+  const last = grossList.slice(n - K);
+  const prev = grossList.slice(0, n - K);
+  const avgLast = last.reduce((a, b) => a + b, 0) / last.length;
+  const avgPrev = prev.reduce((a, b) => a + b, 0) / prev.length;
+  const delta = avgPrev - avgLast;   // positiv = zuletzt weniger Schläge = besser
+  let label = "Stabil", cls = "flat";
+  if (delta >= 1.5) { label = "In Form"; cls = "up"; }
+  else if (delta <= -1.5) { label = "Schwächere Phase"; cls = "down"; }
+  return { delta: delta, label: label, cls: cls, k: K, prevCount: prev.length };
+}
+
+function formTrendText(t) {
+  if (t.cls === "flat") return "praktisch unverändert gegenüber den " + t.prevCount + " Runden davor";
+  return "<b>" + formatNum(Math.abs(t.delta)) + " Schläge " + (t.delta > 0 ? "besser" : "schlechter") +
+         "</b> als in den " + t.prevCount + " Runden davor";
+}
+
+// Verlauf des Brutto. Achse in normaler Richtung: viele Schläge oben, wenige unten –
+// eine FALLENDE Linie bedeutet also bessere Form. Das ist die Leserichtung, die
+// Golfer von Handicap-Kurven kennen; umgekehrt wird sie zuverlässig missverstanden.
+function buildFormChartSvg(list, avg) {
+  const W = 340, top = 12, h = 46, H = 84;
+  const n = list.length;
+  if (n < 2) return "";
+  let lo = Math.min.apply(null, list), hi = Math.max.apply(null, list);
+  lo = Math.min(lo, avg); hi = Math.max(hi, avg);
+  if (hi === lo) hi = lo + 1;
+  const x = i => 6 + i * (W - 12) / (n - 1);
+  const y = v => top + (hi - v) / (hi - lo) * h;
+
+  let svg = "<svg viewBox='0 0 " + W + " " + H + "' class='form-chart' role='img'>";
+  svg += "<line x1='0' y1='" + y(avg).toFixed(1) + "' x2='" + W + "' y2='" + y(avg).toFixed(1) +
+         "' stroke='#c9c9c4' stroke-width='1' stroke-dasharray='3 3'/>";
+  svg += "<polyline class='form-line' points='" +
+         list.map((v, i) => x(i).toFixed(1) + "," + y(v).toFixed(1)).join(" ") + "'/>";
+  list.forEach((v, i) => {
+    svg += "<circle class='form-dot' cx='" + x(i).toFixed(1) + "' cy='" + y(v).toFixed(1) + "' r='2.4'/>";
+  });
+  svg += "<text x='0' y='" + (H - 4) + "' class='form-cap'>älteste Runde links · gestrichelt = Ø " +
+         formatNum(avg) + " · fallende Linie = weniger Schläge</text>";
+  svg += "</svg>";
+  return svg;
+}
+
 function openPlayerProfile(name) {
   const season = loadSeason();
   const agg = computeOrderOfMerit(season).find(p => sameSeasonName(p.name, name));
@@ -8389,6 +8469,15 @@ function openPlayerProfile(name) {
               (bruttoAbweichend ? (" · Ø Brutto aus " + vollRunden + " vollen 18-Loch-Runden") : "") +
               "</div>";
 
+      // Formtendenz auf Basis derselben Runden wie der Ø Brutto darüber.
+      const formT = formTrend(grossChrono);
+      if (formT) {
+        const formAvg = grossChrono.reduce((a, b) => a + b, 0) / grossChrono.length;
+        html += "<div class='profile-note'><span class='form-badge " + formT.cls + "'>" +
+                formT.label + "</span>" + formTrendText(formT) + "</div>";
+        html += buildFormChartSvg(grossChrono.slice(Math.max(0, grossChrono.length - 12)), formAvg);
+      }
+
       if (agg.rounds > 0) {
         html += "<div class='profile-block-head'>Kopenhagen · " + agg.rounds + " Runden</div>";
         html += "<div class='profile-stats'>";
@@ -8396,13 +8485,12 @@ function openPlayerProfile(name) {
         html += "<span class='mini-pill'>Siege: " + agg.wins + "</span>";
         html += "</div>";
         if (badges) html += "<div class='profile-placements'>" + badges + "</div>";
-        html += "<div class='profile-note'>Ø Punkte, Siege und Medaillen zählen nur diese Runden.</div>";
       }
 
       html += "<div class='profile-block-head'>Matchplay · " + mpRunden + " Runden</div>";
       html += "<div class='profile-note'>" +
               (mpTeile.length ? ("<b>" + mpTeile.join("</b> · <b>") + "</b>") : "–") +
-              " · zählt nicht in die Punktewertung</div>";
+              "</div>";
     } else {
       // Ohne Matchplay wären „Gesamt" und „Kopenhagen" dieselbe Zahl – dann kompakt lassen.
       html += "<div class='profile-stats'>";
@@ -8411,6 +8499,16 @@ function openPlayerProfile(name) {
       html += "<span class='mini-pill'>Siege: " + agg.wins + "</span>";
       html += "<span class='mini-pill'>Ø Brutto: " + bruttoTxt + "</span>";
       html += "</div>";
+
+      // Formtendenz auf Basis derselben Runden wie der Ø Brutto darüber.
+      const formT = formTrend(grossChrono);
+      if (formT) {
+        const formAvg = grossChrono.reduce((a, b) => a + b, 0) / grossChrono.length;
+        html += "<div class='profile-note'><span class='form-badge " + formT.cls + "'>" +
+                formT.label + "</span>" + formTrendText(formT) + "</div>";
+        html += buildFormChartSvg(grossChrono.slice(Math.max(0, grossChrono.length - 12)), formAvg);
+      }
+
       if (badges) html += "<div class='profile-placements'>" + badges + "</div>";
       // Ohne Matchplay beziehen sich alle vier Werte auf dieselben Runden – ein Hinweis
       // lohnt nur, wenn der Ø Brutto auf weniger Runden beruht (Altbestand).
