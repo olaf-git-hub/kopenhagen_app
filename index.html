@@ -8524,72 +8524,72 @@ function openPlayerProfile(name) {
     const punktePill = "<span class='mini-pill'>Ø Punkte: " + formatNum2(agg.avgMerit) +
                        " <span class='whs-info' id='meritInfoBtn' title='Wie wird das gerechnet?'>ⓘ</span></span>";
 
-    if (mpRunden > 0) {
-      // Zuerst die Gesamtleistung über alle Runden – daraus ergibt sich der Ø Brutto.
-      const teileRunden = [];
-      if (agg.rounds) teileRunden.push(agg.rounds + " Kopenhagen");
-      teileRunden.push(mpRunden + " Matchplay");
+    // Bewusst IMMER derselbe Aufbau – Gesamt, Kopenhagen, Matchplay. Wo nichts zu zeigen
+    // ist, steht ein Hinweis statt einer Lücke: Sonst sehen zwei Spielerprofile völlig
+    // verschieden aus, je nachdem wie viel jemand schon gespielt hat.
+    const gesamtRunden = agg.rounds + mpRunden;
 
-      html += "<div class='profile-block-head'>Gesamt</div>";
-      html += "<div class='profile-stats'>";
-      html += "<span class='mini-pill'>Runden: " + (agg.rounds + mpRunden) + "</span>";
-      html += "<span class='mini-pill'>Ø Brutto: " + bruttoTxt + "</span>";
-      html += "</div>";
-      // Seit unvollständige Runden gar nicht mehr aufgenommen werden, ist die Zahl der
-      // vollen Runden normalerweise die Rundenzahl – nur bei Altbestand kann sie abweichen.
-      const bruttoAbweichend = vollRunden > 0 && vollRunden !== (agg.rounds + mpRunden);
-      html += "<div class='profile-note'>" + teileRunden.join(" + ") +
-              (bruttoAbweichend ? (" · Ø Brutto aus " + vollRunden + " vollen 18-Loch-Runden") : "") +
-              "</div>";
+    // ---- Gesamt ----
+    html += "<div class='profile-block-head'>Gesamt</div>";
+    html += "<div class='profile-stats'>";
+    html += "<span class='mini-pill'>Runden: " + gesamtRunden + "</span>";
+    html += "<span class='mini-pill'>Ø Brutto: " + bruttoTxt + "</span>";
+    html += "</div>";
 
-      // Formtendenz auf Basis derselben Runden wie der Ø Brutto darüber.
-      const formT = formTrend(grossChrono);
-      if (formT) {
-        const formAvg = grossChrono.reduce((a, b) => a + b, 0) / grossChrono.length;
-        html += "<div class='profile-note'><span class='form-badge " + formT.cls + "'>" +
-                formT.label + "</span>" + formTrendText(formT) + "</div>";
-        html += buildFormChartSvg(grossChrono.slice(Math.max(0, grossChrono.length - 12)), formAvg);
-      }
+    const teileRunden = [];
+    if (agg.rounds) teileRunden.push(agg.rounds + " Kopenhagen");
+    if (mpRunden) teileRunden.push(mpRunden + " Matchplay");
+    let gesamtNote = teileRunden.join(" + ");
+    if (vollRunden === 0) {
+      gesamtNote += (gesamtNote ? " · " : "") + "noch keine volle 18-Loch-Runde für den Ø Brutto";
+    } else if (vollRunden !== gesamtRunden) {
+      // Seit unvollständige Runden nicht mehr aufgenommen werden, kann das nur Altbestand sein.
+      gesamtNote += " · Ø Brutto aus " + vollRunden + " vollen 18-Loch-Runden";
+    }
+    if (gesamtNote) html += "<div class='profile-note'>" + gesamtNote + "</div>";
 
-      if (agg.rounds > 0) {
-        html += "<div class='profile-block-head'>Kopenhagen · " + agg.rounds + " Runden</div>";
-        html += "<div class='profile-stats'>";
-        html += punktePill;
-        html += "<span class='mini-pill'>Siege: " + agg.wins + "</span>";
-        html += "</div>";
-        if (badges) html += "<div class='profile-placements'>" + badges + "</div>";
-      }
-
-      html += "<div class='profile-block-head'>Matchplay · " + mpRunden + " Runden</div>";
-      html += "<div class='profile-note'>" +
-              (mpTeile.length ? ("<b>" + mpTeile.join("</b> · <b>") + "</b>") : "–") +
-              "</div>";
+    // Formtendenz auf Basis derselben Runden wie der Ø Brutto darüber.
+    const formT = formTrend(grossChrono);
+    if (formT) {
+      const formAvg = grossChrono.reduce((a, b) => a + b, 0) / grossChrono.length;
+      html += "<div class='profile-note'><span class='form-badge " + formT.cls + "'>" +
+              formT.label + "</span>" + formTrendText(formT) + "</div>";
+      html += buildFormChartSvg(grossChrono.slice(Math.max(0, grossChrono.length - 12)), formAvg);
     } else {
-      // Ohne Matchplay wären „Gesamt" und „Kopenhagen" dieselbe Zahl – dann kompakt lassen.
+      html += "<div class='profile-note'><span class='form-badge flat'>Formtendenz</span>" +
+              "ab 10 vollen Runden – aktuell " + vollRunden + ".</div>";
+    }
+
+    // ---- Kopenhagen ----
+    html += "<div class='profile-block-head'>Kopenhagen · " + agg.rounds +
+            (agg.rounds === 1 ? " Runde" : " Runden") + "</div>";
+    if (agg.rounds > 0) {
       html += "<div class='profile-stats'>";
-      html += "<span class='mini-pill'>Runden: " + agg.rounds + "</span>";
       html += punktePill;
       html += "<span class='mini-pill'>Siege: " + agg.wins + "</span>";
-      html += "<span class='mini-pill'>Ø Brutto: " + bruttoTxt + "</span>";
       html += "</div>";
-
-      // Formtendenz auf Basis derselben Runden wie der Ø Brutto darüber.
-      const formT = formTrend(grossChrono);
-      if (formT) {
-        const formAvg = grossChrono.reduce((a, b) => a + b, 0) / grossChrono.length;
-        html += "<div class='profile-note'><span class='form-badge " + formT.cls + "'>" +
-                formT.label + "</span>" + formTrendText(formT) + "</div>";
-        html += buildFormChartSvg(grossChrono.slice(Math.max(0, grossChrono.length - 12)), formAvg);
-      }
-
       if (badges) html += "<div class='profile-placements'>" + badges + "</div>";
-      // Ohne Matchplay beziehen sich alle vier Werte auf dieselben Runden – ein Hinweis
-      // lohnt nur, wenn der Ø Brutto auf weniger Runden beruht (Altbestand).
-      if (vollRunden > 0 && vollRunden !== agg.rounds) {
-        html += "<div class='profile-note'>Ø Brutto aus " + vollRunden +
-                " vollen 18-Loch-Runden – ältere unvollständige Runden zählen dort nicht mit.</div>";
-      }
+    } else {
+      html += "<div class='profile-note'>Noch keine Kopenhagen-Runde gespielt.</div>";
     }
+
+    // ---- Matchplay ----
+    html += "<div class='profile-block-head'>Matchplay · " + mpRunden +
+            (mpRunden === 1 ? " Runde" : " Runden") + "</div>";
+    if (mpRunden > 0) {
+      html += "<div class='profile-note'>" +
+              (mpTeile.length ? ("<b>" + mpTeile.join("</b> · <b>") + "</b>") : "–") + "</div>";
+    } else {
+      html += "<div class='profile-note'>Noch keine Matchplay-Runde gespielt.</div>";
+    }
+  }
+
+  if (grossChrono.length < 2) {
+    html += "<div class='profile-roundstat'>";
+    html += "<div class='profile-roundstat-head'>📊 Rundenstatistik – Ø Brutto</div>";
+    html += "<div class='help' style='margin:0;'>Ab 2 vollen 18-Loch-Runden – aktuell " +
+            grossChrono.length + ".</div>";
+    html += "</div>";
   }
 
   if (grossChrono.length >= 2) {
@@ -8609,6 +8609,14 @@ function openPlayerProfile(name) {
   const whsRes = whsAdj || whsRaw;
   const whsAdjMap = {};
   if (whsAdj) whsAdj.list.forEach(x => { whsAdjMap[String(x.id)] = x.gross; });
+
+  if (velteRoundsChrono.length < 3) {
+    html += "<div class='profile-roundstat'>";
+    html += "<div class='profile-roundstat-head'>🌍 WHS-Handicap-Index</div>";
+    html += "<div class='help' style='margin:0;'>Ab 3 vollen Velte-Runden – aktuell " +
+            velteRoundsChrono.length + ".</div>";
+    html += "</div>";
+  }
 
   if (velteRoundsChrono.length >= 3) {
     const whsRecent = velteRoundsChrono.slice(Math.max(0, velteRoundsChrono.length - 20));
