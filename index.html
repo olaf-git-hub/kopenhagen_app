@@ -8232,6 +8232,10 @@ function openPlayerProfile(name) {
     // (kein Bronze für den Letzten im Dreierspiel).
     const medals = { gold: 0, silver: 0, bronze: 0, last: 0 };
     for (const r of rounds) {
+      // Nur Kopenhagen-Runden – wie oben bei Ø Pkt, Runden und Siege. Sonst geht die Summe
+      // der Medaillen nicht mit der Rundenzahl auf, und ein geteiltes Matchplay (beide auf
+      // Position 1) würde sogar zwei Goldmedaillen vergeben.
+      if (r.mode === "match") continue;
       const me = r.results.find(x => sameSeasonName(x.name, name));
       if (!me) continue;
       const pos = me.position, pc = r.playerCount;
