@@ -2160,6 +2160,25 @@ tr.hole-confirmed td:first-child {
   font-weight: 900;
   margin-left: 4px;
 }
+.round-idx {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0 0 8px;
+  line-height: 1.45;
+}
+.round-idx b { color: var(--accent-dark); }
+
+.idx-delta {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 1px 7px;
+  margin-left: 4px;
+  font-size: 11px;
+  font-weight: 900;
+}
+.idx-delta.better { background: #e8f3e2; color: #2e6b20; }
+.idx-delta.worse { background: #fdecec; color: #a33; }
+
 .round-gbe {
   font-size: 12px;
   font-weight: 800;
@@ -7900,6 +7919,13 @@ function wireSeasonOverlayEvents() {
   });
 }
 
+// Handicap-Indizes immer mit einer Nachkommastelle: „18" neben „16,7" sieht aus
+// wie ein Tippfehler. formatNum schneidet die Null ab, deshalb ein eigener Helfer.
+function formatIndex(n) {
+  if (n === null || n === undefined || Number.isNaN(n)) return "";
+  return (Math.round(n * 10) / 10).toFixed(1).replace(".", ",");
+}
+
 function formatNum2(n) {
   if (n === null || n === undefined || Number.isNaN(n)) return "";
   const r = Math.round(n * 100) / 100;
@@ -8001,7 +8027,7 @@ function renderRoundStandingsHtml(round, highlightName) {
 }
 
 // Persönliche Loch-für-Loch-Tageskarte eines Spielers (wie das ⊕ im Gesamtstand).
-function renderPlayerRoundCardHtml(round, name, caps) {
+function renderPlayerRoundCardHtml(round, name, caps, idxInfo) {
   const idx = Array.isArray(round.players) ? round.players.indexOf(name) : -1;
 
   // Abschlag der Runde: gehört zum Protokoll, auch wenn alle Runden von derselben Box sind.
@@ -8014,9 +8040,31 @@ function renderPlayerRoundCardHtml(round, name, caps) {
               "</b> · CR " + formatNum(tee.cr) + " / Slope " + tee.slope + "</div>";
   }
 
+  // Was die Runde am Handicap-Index verändert hat. Nur bei Velte – nur dort zählt sie.
+  let idxLine = "";
+  if (round.courseId === "velte" && idxInfo && idxInfo.nachher !== null) {
+    if (idxInfo.vorher === null) {
+      idxLine = "<div class='round-idx'>🌍 WHS-Index: erstmals <b>" + formatIndex(idxInfo.nachher) + "</b></div>";
+    } else {
+      // Auf die angezeigte Genauigkeit runden, BEVOR die Differenz gebildet wird –
+      // sonst steht da „18,0 → 16,7 −1,2" und die Rechnung geht sichtbar nicht auf.
+      const v = Math.round(idxInfo.vorher * 10) / 10;
+      const nn = Math.round(idxInfo.nachher * 10) / 10;
+      const d = nn - v;
+      if (Math.abs(d) < 0.05) {
+        idxLine = "<div class='round-idx'>🌍 WHS-Index: <b>" + formatIndex(v) + "</b> · unverändert</div>";
+      } else {
+        idxLine = "<div class='round-idx'>🌍 WHS-Index: " + formatIndex(v) + " → <b>" +
+                  formatIndex(nn) + "</b> <span class='idx-delta " + (d < 0 ? "better" : "worse") +
+                  "'>" + (d < 0 ? "−" : "+") + formatIndex(Math.abs(d)) + "</span></div>";
+      }
+    }
+  }
+
   if (idx < 0 || !round.holeDetails) {
     // Kein eigener teeLine: renderRoundStandingsHtml hängt die Abschläge aller Spieler an.
-    return "<div class='help'>Für diese ältere Runde sind keine Loch-Details gespeichert.</div>" +
+    return idxLine +
+           "<div class='help'>Für diese ältere Runde sind keine Loch-Details gespeichert.</div>" +
            renderRoundStandingsHtml(round, name);
   }
 
@@ -8061,7 +8109,7 @@ function renderPlayerRoundCardHtml(round, name, caps) {
     });
   }
 
-  let html = teeLine;
+  let html = teeLine + idxLine;
 
   if (hasPar) {
     html += "<div class='player-detail-stats'>";
@@ -8315,6 +8363,31 @@ function adjustedGrossForRound(round, name, courseHandicap) {
   return { gross: sum, capped: capped, caps: caps };
 }
 
+
+
+// Index aus einer Liste fertiger Differentiale (beste N der letzten 20).
+function indexFromDiffs(diffs) {
+  const recent = diffs.slice(Math.max(0, diffs.length - 20));
+  const n = whsBestCount(recent.length);
+  if (n === 0) return null;
+  const sorted = recent.slice().sort((a, b) => a - b);
+  return sorted.slice(0, n).reduce((a, b) => a + b, 0) / n;
+}
+
+// Index-Verlauf: je Runde der Stand davor und danach. Rekonstruktion aus dem heutigen
+// Datenbestand, kein historisches Protokoll – wurde eine Runde gelöscht, sieht die Kette
+// anders aus, als sie damals aussah. Basis sind die bereits gewerteten Brutto-Werte,
+// es wird also nicht erneut gekappt.
+function buildIndexHistory(list) {
+  const out = {};
+  const diffs = [];
+  for (const x of list) {
+    const vorher = indexFromDiffs(diffs);
+    diffs.push(velteDifferential(x.gross, x.tee));
+    out[String(x.id)] = { vorher: vorher, nachher: indexFromDiffs(diffs) };
+  }
+  return out;
+}
 
 // Course Handicap eines Spielers aus dem Stand der Saison, WIE ER JETZT IST – also vor
 // dem Hinzufügen der laufenden Runde. Genau dieser Wert wird in den Schnappschuss
@@ -8638,6 +8711,8 @@ function openPlayerProfile(name) {
   // id -> { gross, capped, caps } der gewerteten Runde
   const whsAdjMap = {};
   if (whsAdj) whsAdj.list.forEach(x => { whsAdjMap[String(x.id)] = x; });
+  // id -> { vorher, nachher } des WHS-Index
+  const whsIdxHist = buildIndexHistory(whsAdj ? whsAdj.list : velteRoundsChrono);
 
   if (velteRoundsChrono.length < 3) {
     html += "<div class='profile-roundstat'>";
@@ -8654,7 +8729,7 @@ function openPlayerProfile(name) {
     const teeTxt = Object.keys(teeCount).map(k => teeByKey(k).short + " (" + teeCount[k] + "×)").join(" · ");
     html += "<div class='profile-roundstat' id='whsCard'>";
     html += "<div class='profile-roundstat-head'>🌍 WHS-Handicap-Index <span class='whs-info' id='whsInfoBtn' title='Erklärung anzeigen'>ⓘ</span></div>";
-    html += "<div class='profile-roundstat-val'>Index:<strong>" + (whsRes ? formatNum(whsRes.index) : "–") + "</strong></div>";
+    html += "<div class='profile-roundstat-val'>Index:<strong>" + (whsRes ? formatIndex(whsRes.index) : "–") + "</strong></div>";
     if (whsRes) {
       html += "<div class='help' style='margin:2px 0 0;'>aus den besten " + whsRes.n + " der letzten " + whsRes.m + " Velte-Runden</div>";
     }
@@ -8763,7 +8838,7 @@ function openPlayerProfile(name) {
               "<div class='hole-small'>" + subLine + "</div>" + gbeLine + "</div>";
       html += "<span class='summary-toggle'>⊕</span>";
       html += "</div>";
-      html += "<div class='profile-round-body' style='display:none;'>" + renderPlayerRoundCardHtml(r, name, gewertetR ? gewertetR.caps : null) + "</div>";
+      html += "<div class='profile-round-body' style='display:none;'>" + renderPlayerRoundCardHtml(r, name, gewertetR ? gewertetR.caps : null, whsIdxHist[String(r.id)] || null) + "</div>";
       html += "</div>";
     }
   }
