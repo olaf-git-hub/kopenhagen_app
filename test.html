@@ -2160,6 +2160,31 @@ tr.hole-confirmed td:first-child {
   font-weight: 900;
   margin-left: 4px;
 }
+.round-gbe {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--accent-dark);
+  margin-top: 2px;
+}
+
+.player-detail-table tr.hcp-capped td { background: #eef4ea; }
+
+.hcp-cap-val {
+  display: block;
+  margin-top: 1px;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1.1;
+  color: var(--accent-dark);
+}
+
+.hcp-cap-legend {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 6px;
+  line-height: 1.45;
+}
+
 .round-tee {
   font-size: 12px;
   color: var(--muted);
@@ -7976,7 +8001,7 @@ function renderRoundStandingsHtml(round, highlightName) {
 }
 
 // Persönliche Loch-für-Loch-Tageskarte eines Spielers (wie das ⊕ im Gesamtstand).
-function renderPlayerRoundCardHtml(round, name) {
+function renderPlayerRoundCardHtml(round, name, caps) {
   const idx = Array.isArray(round.players) ? round.players.indexOf(name) : -1;
 
   // Abschlag der Runde: gehört zum Protokoll, auch wenn alle Runden von derselben Box sind.
@@ -8031,7 +8056,8 @@ function renderPlayerRoundCardHtml(round, name) {
       netto: cell.n,
       points: cell.p,
       scoreName,
-      scoreClass
+      scoreClass,
+      cap: (caps && caps.hasOwnProperty(String(h.hole))) ? caps[String(h.hole)] : null
     });
   }
 
@@ -8060,10 +8086,11 @@ function renderPlayerRoundCardHtml(round, name) {
   html += "</tr></thead><tbody>";
 
   for (const r of rows) {
-    html += "<tr>";
+    html += "<tr" + (r.cap !== null ? " class='hcp-capped'" : "") + ">";
     html += "<td>" + r.hole + "</td>";
     if (hasPar) html += "<td>" + (r.par === null || r.par === undefined ? "–" : r.par) + "</td>";
-    html += "<td><span class='score-symbol " + r.scoreClass + "'>" + r.gross + "</span></td>";
+    html += "<td><span class='score-symbol " + r.scoreClass + "'>" + r.gross + "</span>" +
+            (r.cap !== null ? " <span class='hcp-cap-val'>(" + r.cap + ")</span>" : "") + "</td>";
     html += "<td>" + r.strokes + "</td>";
     html += "<td>" + (r.netto === null || r.netto === undefined ? "–" : r.netto) + "</td>";
     html += "<td>" + (r.points === null || r.points === undefined ? "–" : formatNum(r.points)) + "</td>";
@@ -8072,6 +8099,9 @@ function renderPlayerRoundCardHtml(round, name) {
   }
 
   html += "</tbody></table></div>";
+  if (rows.some(r => r.cap !== null)) {
+    html += "<div class='hcp-cap-legend'>In Klammern: fürs Handicap gedeckelt (Netto-Doppelbogey = Par + 2 + Vorgabenschläge).</div>";
+  }
   return html;
 }
 
@@ -8270,6 +8300,7 @@ function adjustedGrossForRound(round, name, courseHandicap) {
 
   const holes = (courses[round.courseId] || courses.velte).holes;
   let sum = 0, capped = 0;
+  const caps = {};   // Lochnummer -> gewerteter Score, für die Anzeige im Rundendetail
   for (const h of holes) {
     const arr = round.holeDetails[String(h.hole)];
     const cell = arr ? arr[pi] : null;
@@ -8279,9 +8310,9 @@ function adjustedGrossForRound(round, name, courseHandicap) {
       ? (h.par + 5)
       : (h.par + 2 + strokesForHoleFromHandicap(courseHandicap, h));
     const g = Number(cell.g);
-    if (g > max) { sum += max; capped++; } else { sum += g; }
+    if (g > max) { sum += max; capped++; caps[String(h.hole)] = max; } else { sum += g; }
   }
-  return { gross: sum, capped: capped };
+  return { gross: sum, capped: capped, caps: caps };
 }
 
 
@@ -8318,7 +8349,7 @@ function whsAdjustedResult(list, name) {
       if (!a) return x;
       adjustable++;
       capped += a.capped;
-      return { id: x.id, gross: a.gross, tee: x.tee, round: x.round };
+      return { id: x.id, gross: a.gross, tee: x.tee, round: x.round, capped: a.capped, caps: a.caps };
     });
     const r2 = whsIndexFromRounds(neu);
     if (!r2) break;
@@ -8604,8 +8635,9 @@ function openPlayerProfile(name) {
   const whsRaw = whsIndexFromRounds(velteRoundsChrono);
   const whsAdj = whsAdjustedResult(velteRoundsChrono, name);
   const whsRes = whsAdj || whsRaw;
+  // id -> { gross, capped, caps } der gewerteten Runde
   const whsAdjMap = {};
-  if (whsAdj) whsAdj.list.forEach(x => { whsAdjMap[String(x.id)] = x.gross; });
+  if (whsAdj) whsAdj.list.forEach(x => { whsAdjMap[String(x.id)] = x; });
 
   if (velteRoundsChrono.length < 3) {
     html += "<div class='profile-roundstat'>";
@@ -8665,7 +8697,8 @@ function openPlayerProfile(name) {
       const me = r.results.find(x => sameSeasonName(x.name, name));
       if (me && me.gross !== null && me.gross !== undefined) {
         // Gewertetes Brutto, sonst würden hier andere Runden markiert als der Index nutzt.
-        const g = whsAdjMap.hasOwnProperty(String(r.id)) ? whsAdjMap[String(r.id)] : Number(me.gross);
+        const gewertet = whsAdjMap[String(r.id)];
+        const g = gewertet ? gewertet.gross : Number(me.gross);
         eligible.push({ id: r.id, diff: velteDifferential(g, teeForResult(me, name)) });
       }
     }
@@ -8718,12 +8751,19 @@ function openPlayerProfile(name) {
         else if (whsWindowIds.has(r.id)) whsClass = " whs-window";
       }
       html += "<div class='profile-round" + whsClass + "'>";
+      // Gewertetes Bruttoergebnis nur zeigen, wenn es vom Brutto abweicht – sonst
+      // wiederholte die Zeile nur die Zahl von darüber.
+      const gewertetR = whsAdjMap[String(r.id)];
+      const gbeLine = (gewertetR && gewertetR.capped > 0)
+        ? "<div class='round-gbe'>Fürs Handicap gewertet: <b>" + gewertetR.gross + "</b></div>"
+        : "";
+
       html += "<div class='profile-round-head' data-rid='" + r.id + "'>";
       html += "<div><strong>" + escapeHtml(r.dateText || "") + "</strong> · " + escapeHtml(r.courseName || "") + tag +
-              "<div class='hole-small'>" + subLine + "</div></div>";
+              "<div class='hole-small'>" + subLine + "</div>" + gbeLine + "</div>";
       html += "<span class='summary-toggle'>⊕</span>";
       html += "</div>";
-      html += "<div class='profile-round-body' style='display:none;'>" + renderPlayerRoundCardHtml(r, name) + "</div>";
+      html += "<div class='profile-round-body' style='display:none;'>" + renderPlayerRoundCardHtml(r, name, gewertetR ? gewertetR.caps : null) + "</div>";
       html += "</div>";
     }
   }
